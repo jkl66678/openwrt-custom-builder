@@ -25,6 +25,28 @@
         "kmod-e1000", "kmod-igb", "kmod-r8169", "kmod-usb3", "kmod-i2c-i801"
       ]
     }
-  ]
+      ],
+  "chips": [
+    {
+      "name": "mt7981",
+      "kernel_target": "mediatek/filogic",
+      "drivers": ["kmod-mt7981-firmware", "kmod-mt7921e", "kmod-switch-mt7530", "kmod-usb3"]
+    },
+    {
+      "name": "mt7621",
+      "kernel_target": "ramips/mt7621",
+      "drivers": ["kmod-mt7603", "kmod-mt7615e", "kmod-switch-rtl8367s"]
+    },
+    {
+      "name": "ipq8065",
+      "kernel_target": "ipq806x/generic",
+      "drivers": ["kmod-ath10k-ct", "kmod-qca-nss-dp"]
+    },
+    {
+      "name": "x86_64",
+      "kernel_target": "x86/64",
+      "drivers": ["kmod-e1000", "kmod-igb", "kmod-r8169"]
+    }
+  ] 
 }
     
