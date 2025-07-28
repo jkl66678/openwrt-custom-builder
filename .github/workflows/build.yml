@@ -18,30 +18,28 @@ jobs:
           sudo apt update
           sudo apt install -y git jq
 
-      - name: 运行设备同步脚本
+      - name: 生成设备同步脚本（关键修复）
         run: |
-          if [ ! -f "scripts/sync-devices.sh" ]; then
-            mkdir -p scripts
-            # 关键修复：heredoc内容与EOF严格对齐，无多余缩进
-            cat > scripts/sync-devices.sh << 'EOF'
+          # 直接创建脚本文件，避免heredoc格式冲突
+          cat > scripts/sync-devices.sh << EOF
 #!/bin/bash
 OPENWRT_REPO="https://git.openwrt.org/openwrt/openwrt.git"
 BRANCH="openwrt-23.05"
 TMP_DIR="./tmp-openwrt"
 OUTPUT_FILE="device-drivers.json"
 
-rm -rf $TMP_DIR $OUTPUT_FILE
+rm -rf \$TMP_DIR \$OUTPUT_FILE
 
-echo "🔍 从 $OPENWRT_REPO 同步设备信息..."
-if ! git clone --depth 1 --branch $BRANCH --single-branch $OPENWRT_REPO $TMP_DIR &> /dev/null; then
+echo "🔍 从 \$OPENWRT_REPO 同步设备信息..."
+if ! git clone --depth 1 --branch \$BRANCH --single-branch \$OPENWRT_REPO \$TMP_DIR &> /dev/null; then
   echo "❌ 拉取源码失败，使用本地缓存（若有）"
-  [ -f "$OUTPUT_FILE" ] || { echo "❌ 无本地缓存，同步失败"; exit 1; }
+  [ -f "\$OUTPUT_FILE" ] || { echo "❌ 无本地缓存，同步失败"; exit 1; }
   exit 0
 fi
 
-cd $TMP_DIR/target/linux || exit 1
+cd \$TMP_DIR/target/linux || exit 1
 
-echo '{"devices": [], "chips": []}' > ../../$OUTPUT_FILE
+echo '{"devices": [], "chips": []}' > ../../\$OUTPUT_FILE
 
 declare -A platform_chip_map=(
   ["mediatek"]="mt7981 mt7621 mt7620"
@@ -50,50 +48,54 @@ declare -A platform_chip_map=(
   ["x86"]="x86_64"
 )
 
-for platform in $(ls -d */ | cut -d'/' -f1); do
-  echo "📦 处理平台：$platform"
-  chips=${platform_chip_map[$platform]:-""}
+for platform in \$(ls -d */ | cut -d'/' -f1); do
+  echo "📦 处理平台：\$platform"
+  chips=\${platform_chip_map[\$platform]:-""}
 
-  for device_file in $(find $platform -name "*.mk" -o -name "*.dts"); do
-    if [[ $device_file == *.mk ]]; then
-      device_name=$(grep "DEVICE_NAME" "$device_file" | cut -d'=' -f2 | tr -d '"' | sed 's/ //g')
-      default_pkgs=$(grep "DEFAULT_PACKAGES" "$device_file" | cut -d'=' -f2)
-      drivers=$(echo "$default_pkgs" | grep -oE "kmod-[a-z0-9-]+" | tr '\n' ' ')
-      chip=$(echo "$device_file $chips" | grep -oE "mt7981|mt7621|ipq8065|x86_64" | head -n1)
-      kernel_target="$platform/generic"
+  for device_file in \$(find \$platform -name "*.mk" -o -name "*.dts"); do
+    if [[ \$device_file == *.mk ]]; then
+      device_name=\$(grep "DEVICE_NAME" "\$device_file" | cut -d'=' -f2 | tr -d '"' | sed 's/ //g')
+      default_pkgs=\$(grep "DEFAULT_PACKAGES" "\$device_file" | cut -d'=' -f2)
+      drivers=\$(echo "\$default_pkgs" | grep -oE "kmod-[a-z0-9-]+" | tr '\n' ' ')
+      chip=\$(echo "\$device_file \$chips" | grep -oE "mt7981|mt7621|ipq8065|x86_64" | head -n1)
+      kernel_target="\$platform/generic"
 
-      if [[ -n "$device_name" && -n "$chip" && -n "$drivers" ]]; then
-        echo "  - 新增设备：$device_name（芯片：$chip）"
-        jq --arg name "$device_name" \
-           --arg chip "$chip" \
-           --arg target "$kernel_target" \
-           --arg drivers "$drivers" \
-           '.devices += [{"name": $name, "chip": $chip, "kernel_target": $target, "drivers": ($drivers | split(" ") | map(select(length > 0)))}]' \
-           ../../$OUTPUT_FILE > ../../$OUTPUT_FILE.tmp && mv ../../$OUTPUT_FILE.tmp ../../$OUTPUT_FILE
+      if [[ -n "\$device_name" && -n "\$chip" && -n "\$drivers" ]]; then
+        echo "  - 新增设备：\$device_name（芯片：\$chip）"
+        jq --arg name "\$device_name" \
+           --arg chip "\$chip" \
+           --arg target "\$kernel_target" \
+           --arg drivers "\$drivers" \
+           '.devices += [{"name": \$name, "chip": \$chip, "kernel_target": \$target, "drivers": (\$drivers | split(" ") | map(select(length > 0)))}]' \
+           ../../\$OUTPUT_FILE > ../../\$OUTPUT_FILE.tmp && mv ../../\$OUTPUT_FILE.tmp ../../\$OUTPUT_FILE
       fi
     fi
   done
 
-  if [[ -n "$chips" ]]; then
-    for chip in $chips; do
-      chip_drivers=$(grep "DEFAULT_PACKAGES" "$platform/Makefile" 2>/dev/null | grep -oE "kmod-[a-z0-9-]+" | tr '\n' ' ')
-      if [[ -n "$chip_drivers" ]]; then
-        echo "  - 新增芯片：$chip（通用驱动）"
-        jq --arg name "$chip" \
-           --arg target "$kernel_target" \
-           --arg drivers "$chip_drivers" \
-           '.chips += [{"name": $name, "kernel_target": $target, "drivers": ($drivers | split(" ") | map(select(length > 0)))}]' \
-           ../../$OUTPUT_FILE > ../../$OUTPUT_FILE.tmp && mv ../../$OUTPUT_FILE.tmp ../../$OUTPUT_FILE
+  if [[ -n "\$chips" ]]; then
+    for chip in \$chips; do
+      chip_drivers=\$(grep "DEFAULT_PACKAGES" "\$platform/Makefile" 2>/dev/null | grep -oE "kmod-[a-z0-9-]+" | tr '\n' ' ')
+      if [[ -n "\$chip_drivers" ]]; then
+        echo "  - 新增芯片：\$chip（通用驱动）"
+        jq --arg name "\$chip" \
+           --arg target "\$kernel_target" \
+           --arg drivers "\$chip_drivers" \
+           '.chips += [{"name": \$name, "kernel_target": \$target, "drivers": (\$drivers | split(" ") | map(select(length > 0)))}]' \
+           ../../\$OUTPUT_FILE > ../../\$OUTPUT_FILE.tmp && mv ../../\$OUTPUT_FILE.tmp ../../\$OUTPUT_FILE
       fi
     done
   fi
 done
 
-cd ../../ && rm -rf $TMP_DIR
+cd ../../ && rm -rf \$TMP_DIR
 echo "✅ 设备同步完成，生成device-drivers.json"
 EOF
-          fi
+          # 确保脚本有执行权限
+          mkdir -p scripts
           chmod +x scripts/sync-devices.sh
+
+      - name: 执行设备同步
+        run: |
           ./scripts/sync-devices.sh
 
       - name: 自动提交设备更新
