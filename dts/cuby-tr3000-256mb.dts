@@ -1,0 +1,25 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "mediatek,mt7981", "mediatek,filogic-820";
+    model = "Cuby TR3000 256MB Flash Version";
+    description = "Cuby TR3000 with MT7981, 256MB SPI NOR, MT7976C Wi-Fi 6";
+
+    // 硬件组件描述
+    wireless {
+        compatible = "mediatek,mt7976c";
+        status = "okay";
+    };
+
+    switch {
+        compatible = "mediatek,mt7530";
+        status = "okay";
+    };
+
+    usb {
+        compatible = "mediatek,mtk-usb3";
+        status = "okay";
+    };
+};
+    
