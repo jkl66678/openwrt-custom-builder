@@ -3,7 +3,7 @@ name: 全功能OpenWrt自定义编译系统（设备/芯片双模式）
 on:
   workflow_dispatch:
     inputs:
-      # 1. 编译模式选择（设备/芯片二选一）
+      # 1. 编译模式选择
       select_mode:
         type: choice
         description: 选择编译模式（设备/芯片）
@@ -28,22 +28,22 @@ on:
         description: 选择芯片型号（仅芯片模式）
         required: false
         options:
-          - mt7981    # 联发科MT7981（如Cuby TR3000）
-          - mt7621    # 联发科MT7621（如红米AC2100）
-          - ipq8065   # 高通IPQ8065（如网件R7800）
-          - x86_64    # x86_64架构（软路由）
+          - mt7981
+          - mt7621
+          - ipq8065
+          - x86_64
 
-      # 4. 源码版本（含内核信息）
+      # 4. 源码版本
       source_branch:
         type: choice
         description: 选择源码分支（含内核版本）
         required: true
         options:
-          - openwrt-22.03      # 官方稳定版（内核5.10，老设备适用）
-          - openwrt-23.05      # 官方稳定版（内核5.15，主流选择）
-          - openwrt-master     # 官方开发版（最新内核，如6.1/6.6）
-          - immortalwrt-23.05  # 增强稳定版（内核5.15，网络优化）
-          - immortalwrt-master # 增强开发版（最新内核，新硬件支持好）
+          - openwrt-22.03
+          - openwrt-23.05
+          - openwrt-master
+          - immortalwrt-23.05
+          - immortalwrt-master
 
       # 5. 根分区大小
       rootfs_size:
@@ -132,7 +132,7 @@ jobs:
 
       - name: 编译前关键自检
         run: |
-          # 检查模式与选择是否匹配
+          # 检查模式与选择匹配
           if [ "${{ github.event.inputs.select_mode }}" = "device" ] && [ -z "${{ github.event.inputs.device }}" ]; then
             echo "❌ 错误：设备模式下必须选择设备型号"
             exit 1
@@ -157,13 +157,13 @@ jobs:
             fi
           fi
 
-          # 检查自定义脚本（若启用）
+          # 检查自定义脚本
           if [ "${{ github.event.inputs.run_custom_script }}" = "true" ] && [ ! -f "scripts/custom-init.sh" ]; then
             echo "❌ 错误：未找到自定义脚本 scripts/custom-init.sh"
             exit 1
           fi
 
-          # 检查分区大小合理性
+          # 检查分区大小
           if [ ${{ github.event.inputs.rootfs_size }} -lt 32 ] || [ ${{ github.event.inputs.rootfs_size }} -gt 2048 ]; then
             echo "❌ 错误：根分区大小必须在32-2048MB之间"
             exit 1
@@ -194,25 +194,24 @@ jobs:
               branch="master"
               ;;
           esac
-          git clone --depth 1 --branch $branch $repo openwrt-src
-          echo "SRC_DIR=$(pwd)/openwrt-src" >> $GITHUB_ENV
+          git clone --depth 1 --branch "$branch" "$repo" openwrt-src
+          echo "SRC_DIR=$(pwd)/openwrt-src" >> "$GITHUB_ENV"
 
       - name: 初始化源码与Feeds
         run: |
-          cd ${{ env.SRC_DIR }}
+          cd "${{ env.SRC_DIR }}"
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
       - name: 添加第三方软件源
         run: |
-          cd ${{ env.SRC_DIR }}
+          cd "${{ env.SRC_DIR }}"
           # 添加Argon主题
           echo 'src-git argon https://github.com/jerrykuku/luci-theme-argon.git' >> feeds.conf.default
 
           # 添加OpenClash（非ImmortalWrt分支）
           if [[ "${{ github.event.inputs.extra_packages }}" == *"luci-app-openclash"* && 
-                "${{ github.event.inputs.source_branch }}" != "immortalwrt-master" && 
-                "${{ github.event.inputs.source_branch }}" != "immortalwrt-23.05" ]]; then
+                ! "${{ github.event.inputs.source_branch }}" == *"immortalwrt"* ]]; then
             echo 'src-git openclash https://github.com/vernesong/OpenClash.git' >> feeds.conf.default
           fi
 
@@ -222,7 +221,7 @@ jobs:
       - name: 执行自定义初始化脚本
         if: ${{ github.event.inputs.run_custom_script == 'true' }}
         run: |
-          cd ${{ env.SRC_DIR }}
+          cd "${{ env.SRC_DIR }}"
           chmod +x ../scripts/custom-init.sh
           ../scripts/custom-init.sh
           echo "✅ 自定义脚本执行完成"
@@ -239,12 +238,12 @@ jobs:
 
           kernel_target=$(echo "$config_info" | jq -r '.kernel_target')
           drivers=$(echo "$config_info" | jq -r '.drivers[]' | tr '\n' ' ')
-          echo "KERNEL_TARGET=$kernel_target" >> $GITHUB_ENV
-          echo "DRIVERS=$drivers" >> $GITHUB_ENV
+          echo "KERNEL_TARGET=$kernel_target" >> "$GITHUB_ENV"
+          echo "DRIVERS=$drivers" >> "$GITHUB_ENV"
 
       - name: 生成编译配置
         run: |
-          cd ${{ env.SRC_DIR }}
+          cd "${{ env.SRC_DIR }}"
           target=$(echo "${{ env.KERNEL_TARGET }}" | tr '/' '_')
 
           # 基础设备配置
@@ -312,18 +311,18 @@ jobs:
 
       - name: 开始编译固件
         run: |
-          cd ${{ env.SRC_DIR }}
+          cd "${{ env.SRC_DIR }}"
           if [ "${{ github.event.inputs.compiler_optimization }}" = "O3" ]; then
             threads=1
           else
             threads=2
           fi
-          make -j$threads V=s 2>&1 | tee compile.log
+          make -j"$threads" V=s 2>&1 | tee compile.log
 
       - name: 编译错误处理
         if: failure()
         run: |
-          cd ${{ env.SRC_DIR }}
+          cd "${{ env.SRC_DIR }}"
           echo "❌ 编译失败，错误分析："
           
           if grep -q "Killed signal terminated program cc1" compile.log; then
@@ -345,7 +344,7 @@ jobs:
       - name: 重命名固件
         run: |
           firmware_name="${{ github.event.inputs.device || github.event.inputs.chip }}-${{ github.event.inputs.source_branch }}-$(date +%Y%m%d)-${{ github.event.inputs.firmware_suffix }}"
-          find ${{ env.SRC_DIR }}/bin/targets/ -name "*.bin" -exec sh -c '
+          find "${{ env.SRC_DIR }}/bin/targets/" -name "*.bin" -exec sh -c '
             for file do
               mv "$file" "${file%.bin}-$1.bin"
             done
