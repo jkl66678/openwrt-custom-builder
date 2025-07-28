@@ -1,4 +1,4 @@
-name: OpenWrt全功能编译系统（最终版）
+name: OpenWrt完整编译系统（独立脚本版）
 
 on:
   workflow_dispatch:
@@ -15,14 +15,14 @@ on:
         type: choice
         description: 设备型号（仅设备模式）
         required: false
-        options: [cudy-tr3000-256mb, redmi-ac2100, x86_64-generic, newifi-d2, mi-router-4a]
+        options: [cudy-tr3000-256mb, redmi-ac2100, x86_64-generic, newifi-d2, mi-router-4a, phicomm-k2p]
 
       # 3. 芯片选择（仅芯片模式）
       chip:
         type: choice
         description: 芯片型号（仅芯片模式）
         required: false
-        options: [mt7981, mt7621, ipq8065, x86_64, rt3050, mt7986]
+        options: [mt7981, mt7621, ipq8065, x86_64, rt3050, mt7986, bcm53573]
 
       # 4. 源码版本
       source_branch:
@@ -55,7 +55,7 @@ on:
         type: string
         description: 软件包（格式：包1,包2，如"openclash,samba"）
         required: false
-        default: "openclash,samba,ddns-scripts"
+        default: "openclash,samba,ddns-scripts,luci-app-upnp"
 
       # 8. 根分区大小
       rootfs_size:
@@ -84,152 +84,48 @@ on:
 
 
 jobs:
-  # 任务1：动态同步设备与芯片信息（含自动候选提醒）
+  # 任务1：使用独立脚本同步设备与芯片信息
   sync-devices:
-    name: 动态同步设备与芯片信息
+    name: 同步设备与芯片信息
     runs-on: ubuntu-latest
     steps:
-      - name: 拉取仓库代码
+      - name: 拉取仓库代码（含独立同步脚本）
         uses: actions/checkout@v4
 
-      - name: 安装依赖工具
+      - name: 检查同步脚本是否存在
         run: |
-          sudo apt update && sudo apt install -y git jq gh  # 新增gh用于创建Issue提醒
+          if [ ! -f "scripts/sync-devices.sh" ]; then
+            echo "❌ 错误：未找到独立同步脚本 scripts/sync-devices.sh"
+            exit 1
+          fi
 
-      - name: 动态生成并执行同步脚本
+      - name: 安装同步所需依赖
         run: |
-          # 动态生成同步脚本（含芯片候选提取）
-          SYNC_SCRIPT=$(cat << 'EOF'
-#!/bin/bash
-# 最终版设备同步脚本：含芯片候选提取与提醒
-OPENWRT_REPO="https://git.openwrt.org/openwrt/openwrt.git"
-BACKUP_REPO="https://github.com/openwrt/openwrt.git"
-BRANCH="openwrt-23.05"
-TMP_DIR="./tmp-openwrt"
-OUTPUT_FILE="device-drivers.json"
-CANDIDATES_FILE="chip-candidates.txt"
+          sudo apt update && sudo apt install -y git jq gh
 
-# 清理旧文件
-rm -rf $TMP_DIR $CANDIDATES_FILE
-
-# 克隆源码（支持备用仓库）
-clone_repo() {
-  local repo=$1
-  if git clone --depth 1 --branch "$BRANCH" "$repo" "$TMP_DIR"; then
-    return 0
-  fi
-  return 1
-}
-
-echo "🔍 从官方仓库同步设备信息..."
-if ! clone_repo "$OPENWRT_REPO"; then
-  echo "⚠️ 官方仓库克隆失败，尝试备用仓库..."
-  if ! clone_repo "$BACKUP_REPO"; then
-    echo "⚠️ 所有仓库克隆失败，使用现有设备配置（若有）"
-    [ -f "$OUTPUT_FILE" ] || { echo "❌ 无可用设备配置"; exit 1; }
-    exit 0
-  fi
-fi
-
-cd "$TMP_DIR/target/linux" || { echo "❌ 找不到设备配置目录"; exit 1; }
-
-# 初始化JSON
-echo '{"devices": [], "chips": []}' > ../../"$OUTPUT_FILE"
-
-# 平台-芯片映射表（人工维护部分，确保准确性）
-declare -A PLATFORM_CHIPS=(
-  ["mediatek"]="mt7981 mt7621 mt7986 mt7620"
-  ["ramips"]="mt7621 mt7620 rt3050 rt5350"
-  ["ipq806x"]="ipq8065 ipq8064"
-  ["x86"]="x86_64 i386"
-  ["qualcommax"]="ipq6018 ipq807x"
-  ["bcm53xx"]="bcm53573 bcm4709"
-)
-
-# 提取所有疑似芯片型号（用于自动提醒）
-extract_candidates() {
-  echo "🔍 提取疑似芯片型号..."
-  # 从文件名和驱动中提取可能的芯片型号（正则匹配常见芯片格式）
-  find . -name "*.mk" -o -name "*.dts" | \
-    grep -oE "mt[0-9]{4,5}|ipq[0-9]{4,5}|rt[0-9]{3,5}|bcm[0-9]{4,6}|x86_64|i386" | \
-    sort -u > ../../"$CANDIDATES_FILE"
-  
-  # 过滤已在映射表中的芯片，只保留新候选
-  mapped_chips=$(echo "${PLATFORM_CHIPS[@]}" | tr ' ' '\n' | sort -u)
-  new_candidates=$(comm -23 ../../"$CANDIDATES_FILE" <(echo "$mapped_chips"))
-  echo "$new_candidates" > ../../"$CANDIDATES_FILE"
-}
-
-# 遍历平台提取设备信息
-for platform in "${!PLATFORM_CHIPS[@]}"; do
-  [ -d "$platform" ] || continue
-  echo "📦 处理平台：$platform（芯片：${PLATFORM_CHIPS[$platform]}）"
-  
-  # 提取设备配置文件
-  find "$platform" -name "*.mk" | while read -r file; do
-    # 提取设备名称
-    device_name=$(grep "DEVICE_NAME" "$file" | cut -d'=' -f2 | tr -d '"' | sed 's/ //g')
-    [ -z "$device_name" ] && continue  # 跳过无名称设备
-    
-    # 提取驱动包
-    default_pkgs=$(grep "DEFAULT_PACKAGES" "$file" | cut -d'=' -f2)
-    drivers=$(echo "$default_pkgs" | grep -oE "kmod-[a-z0-9-]+" | sort -u | tr '\n' ' ')
-    [ -z "$drivers" ] && continue  # 跳过无驱动设备
-    
-    # 提取芯片型号（优先从文件名+映射表匹配）
-    chip=$(echo "$file ${PLATFORM_CHIPS[$platform]}" | grep -oE "mt7981|mt7621|ipq8065|x86_64|rt3050|mt7986" | head -n1)
-    [ -z "$chip" ] && chip=$(echo "${PLATFORM_CHIPS[$platform]}" | cut -d' ' -f1)  # 兜底取平台主芯片
-    
-    # 内核目标路径
-    kernel_target="$platform/generic"
-    
-    # 写入设备信息
-    echo "  - 新增设备：$device_name（芯片：$chip）"
-    jq --arg name "$device_name" \
-       --arg chip "$chip" \
-       --arg target "$kernel_target" \
-       --arg drivers "$drivers" \
-       '.devices += [{"name": $name, "chip": $chip, "kernel_target": $target, "drivers": ($drivers | split(" ") | map(select(length > 0)))}]' \
-       ../../"$OUTPUT_FILE" > ../../"$OUTPUT_FILE.tmp" && mv ../../"$OUTPUT_FILE.tmp" ../../"$OUTPUT_FILE"
-  done
-  
-  # 提取芯片通用驱动
-  chip=$(echo "${PLATFORM_CHIPS[$platform]}" | cut -d' ' -f1)
-  [ -z "$chip" ] && continue
-  chip_drivers=$(grep "DEFAULT_PACKAGES" "$platform/Makefile" 2>/dev/null | grep -oE "kmod-[a-z0-9-]+" | sort -u | tr '\n' ' ')
-  if [ -n "$chip_drivers" ]; then
-    echo "  - 新增芯片驱动：$chip"
-    jq --arg name "$chip" \
-       --arg target "$platform/generic" \
-       --arg drivers "$chip_drivers" \
-       '.chips += [{"name": $name, "kernel_target": $target, "drivers": ($drivers | split(" ") | map(select(length > 0)))}]' \
-       ../../"$OUTPUT_FILE" > ../../"$OUTPUT_FILE.tmp" && mv ../../"$OUTPUT_FILE.tmp" ../../"$OUTPUT_FILE"
-  fi
-done
-
-# 提取疑似新芯片并生成提醒
-extract_candidates
-
-# 清理临时文件
-cd ../../ && rm -rf "$TMP_DIR"
-echo "✅ 设备同步完成：$(jq '.devices | length' "$OUTPUT_FILE")个设备，$(jq '.chips | length' "$OUTPUT_FILE")个芯片"
-EOF
-          )
-
-          # 执行动态生成的脚本
-          echo "$SYNC_SCRIPT" > sync-tmp.sh
-          chmod +x sync-tmp.sh
-          ./sync-tmp.sh
+      - name: 执行独立同步脚本（带权限设置）
+        run: |
+          # 确保脚本有执行权限
+          chmod +x scripts/sync-devices.sh
+          # 执行同步脚本并显示详细输出
+          echo "📝 开始执行同步脚本..."
+          if ! ./scripts/sync-devices.sh; then
+            echo "❌ 同步脚本执行失败，请检查脚本日志"
+            exit 1
+          fi
 
       - name: 新芯片候选提醒（自动创建Issue）
         run: |
           if [ -s "chip-candidates.txt" ]; then
             echo "⚠️ 发现以下新的疑似芯片，建议更新PLATFORM_CHIPS映射表："
             cat chip-candidates.txt
-            # 自动创建GitHub Issue提醒（需提前配置GH_TOKEN）
-            if [ -n "$GITHUB_TOKEN" ]; then
+            # 自动创建GitHub Issue提醒（需仓库启用Issues）
+            if [ -n "$GITHUB_TOKEN" ] && gh issue list > /dev/null 2>&1; then
               gh issue create --title "新芯片候选待确认（$(date +%Y%m%d)）" \
-                --body "检测到未添加的疑似芯片型号，请更新PLATFORM_CHIPS映射表：\n$(cat chip-candidates.txt)"
+                --body "检测到未添加的疑似芯片型号，请更新scripts/sync-devices.sh中的PLATFORM_CHIPS：\n$(cat chip-candidates.txt)"
+              echo "✅ 已创建Issue提醒"
+            else
+              echo "⚠️ 未创建Issue（可能缺少权限或未启用Issues）"
             fi
           else
             echo "✅ 无新芯片候选，现有映射表已覆盖所有已知芯片"
@@ -243,13 +139,13 @@ EOF
             echo "⚠️ 无设备信息更新"
           else
             git add device-drivers.json
-            git commit -m "动态同步设备信息（$(date +%Y%m%d)）"
+            git commit -m "同步设备信息（$(date +%Y%m%d)）"
             git push
             echo "✅ 设备信息已更新并提交"
           fi
 
 
-  # 任务2：编译固件（依赖设备同步结果）
+  # 任务2：编译固件（依赖同步结果）
   build-firmware:
     name: 编译OpenWrt固件
     needs: sync-devices
@@ -263,11 +159,12 @@ EOF
       - name: 拉取仓库代码（含最新设备信息）
         uses: actions/checkout@v4
 
-      - name: 环境准备与依赖安装
+      - name: 安装编译依赖
         run: |
           sudo apt update
           sudo apt install -y build-essential libncurses5-dev libncursesw5-dev \
-            zlib1g-dev gawk git gettext libssl-dev xsltproc wget unzip python3 jq
+            zlib1g-dev gawk git gettext libssl-dev xsltproc wget unzip python3 jq \
+            time curl ca-certificates
 
       - name: 编译前关键自检
         run: |
@@ -296,6 +193,12 @@ EOF
           # 检查分区大小合理性
           if [ ${{ github.event.inputs.rootfs_size }} -lt 32 ] || [ ${{ github.event.inputs.rootfs_size }} -gt 2048 ]; then
             echo "❌ 错误：根分区大小必须在32-2048MB之间"
+            exit 1
+          fi
+
+          # 检查软件包格式（禁止空格）
+          if echo "${{ github.event.inputs.packages }}" | grep -q " "; then
+            echo "❌ 错误：软件包格式错误，禁止包含空格（使用逗号分隔）"
             exit 1
           fi
 
@@ -400,6 +303,7 @@ EOF
             echo 'src-git openclash https://github.com/vernesong/OpenClash.git' >> feeds.conf.default
           fi
 
+          # 再次更新 feeds 确保主题和插件可用
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
@@ -413,8 +317,11 @@ EOF
           fi
           chmod +x ../scripts/custom-init.sh
           echo "🔧 执行自定义脚本..."
-          if ! ../scripts/custom-init.sh; then
-            echo "❌ 自定义脚本执行失败（检查语法）"
+          # 记录脚本执行时间和输出
+          time ../scripts/custom-init.sh > custom-init.log 2>&1
+          if [ $? -ne 0 ]; then
+            echo "❌ 自定义脚本执行失败，日志如下："
+            cat custom-init.log
             exit 1
           fi
           echo "✅ 自定义脚本执行完成"
@@ -429,6 +336,7 @@ EOF
           # 检查配置是否存在
           if [ -z "$info" ]; then
             echo "❌ 错误：未找到 ${{ github.event.inputs.device || github.event.inputs.chip }} 的配置信息"
+            echo "请确认设备/芯片名称是否正确，或执行同步任务更新配置"
             exit 1
           fi
           echo "KERNEL_TARGET=$(echo "$info" | jq -r '.kernel_target')" >> $GITHUB_ENV
@@ -494,14 +402,22 @@ EOF
           echo "CONFIG_PACKAGE_luci=y" >> .config
           echo "CONFIG_PACKAGE_luci-ssl=y" >> .config
 
+          # 生成最终配置
           make defconfig
 
-      - name: 开始编译固件
+      - name: 开始编译固件（带时间记录）
         run: |
           cd "${{ env.SRC_DIR }}"
-          # 显示编译线程数和优化等级
-          echo "📌 编译配置：线程数=${{ env.THREADS }}，优化等级=${{ env.CFLAGS }}"
-          make -j${{ env.THREADS }} V=s 2>&1 | tee compile.log
+          # 显示编译配置摘要
+          echo "📌 编译配置摘要："
+          echo "  - 目标平台：${{ env.KERNEL_TARGET }}"
+          echo "  - 编译线程：${{ env.THREADS }}"
+          echo "  - 优化等级：${{ env.CFLAGS }}"
+          echo "  - 软件包：${{ env.PACKAGES }}"
+          
+          # 开始编译并记录时间
+          echo "🚀 开始编译（预计1-3小时）..."
+          time make -j${{ env.THREADS }} V=s 2>&1 | tee compile.log
 
       - name: 编译错误分析与处理
         if: failure()
@@ -544,7 +460,7 @@ EOF
           echo "📌 固件类型说明："
           echo "  - 含'sysupgrade'：用于设备升级（保留现有配置）"
           echo "  - 含'factory'：用于首次刷写（清空所有配置）"
-          # 列出所有生成的固件
+          # 列出所有生成的固件及大小
           find "${{ env.SRC_DIR }}/bin/targets/" -name "*.bin" | grep -E "sysupgrade|factory" | while read -r file; do
             echo "  - $file（大小：$(du -h "$file" | awk '{print $1}')）"
           done
@@ -557,84 +473,66 @@ EOF
           path: |
             ${{ env.SRC_DIR }}/bin/targets/**/*.bin
             ${{ env.SRC_DIR }}/compile.log
+            ${{ env.SRC_DIR }}/custom-init.log  # 仅当执行了自定义脚本时存在
           retention-days: 30
           if-no-files-found: error
+
+      - name: 拉取源码（带重试）
+        run: |
+          # 定义拉取函数（最多重试3次）
+          fetch_source() {
+            local repo=$1
+            local branch=$2
+            local retries=3
+            local count=0
+            while [ $count -lt $retries ]; do
+              if git clone --depth 1 --branch "$branch" "$repo" openwrt-src; then
+                return 0
+              fi
+              echo "⚠️ 拉取源码失败，重试第 $((count+1)) 次..."
+              count=$((count+1))
+              rm -rf openwrt-src  # 清理失败的目录
+              sleep 5  # 等待5秒再重试
+            done
+            echo "❌ 拉取源码失败（已重试3次）"
+            exit 1
+          }
+
+          # 选择仓库并调用拉取函数
+          case "${{ github.event.inputs.source_branch }}" in
+            openwrt-23.05)
+              fetch_source "https://git.openwrt.org/openwrt/openwrt.git" "openwrt-23.05"
+              ;;
+            openwrt-master)
+              fetch_source "https://git.openwrt.org/openwrt/openwrt.git" "master"
+              ;;
+            immortalwrt-23.05)
+              fetch_source "https://github.com/immortalwrt/immortalwrt.git" "openwrt-23.05"
+              ;;
+            immortalwrt-master)
+              fetch_source "https://github.com/immortalwrt/immortalwrt.git" "master"
+              ;;
+          esac
+          echo "SRC_DIR=$(pwd)/openwrt-src" >> $GITHUB_ENV
       
-      - name: 拉取源码（带重试）
+      - name: 执行自定义初始化脚本
+        if: ${{ github.event.inputs.run_custom_script == 'true' }}
         run: |
-          # 定义拉取函数（最多重试3次）
-          fetch_source() {
-            local repo=$1
-            local branch=$2
-            local retries=3
-            local count=0
-            while [ $count -lt $retries ]; do
-              if git clone --depth 1 --branch "$branch" "$repo" openwrt-src; then
-                return 0
-              fi
-              echo "⚠️ 拉取源码失败，重试第 $((count+1)) 次..."
-              count=$((count+1))
-              rm -rf openwrt-src  # 清理失败的目录
-              sleep 5  # 等待5秒再重试
-            done
-            echo "❌ 拉取源码失败（已重试3次）"
+          cd "${{ env.SRC_DIR }}"
+          if [ ! -f "../scripts/custom-init.sh" ]; then
+            echo "❌ 错误：自定义脚本 scripts/custom-init.sh 不存在"
             exit 1
-          }
-
-          # 选择仓库并调用拉取函数
-          case "${{ github.event.inputs.source_branch }}" in
-            openwrt-23.05)
-              fetch_source "https://git.openwrt.org/openwrt/openwrt.git" "openwrt-23.05"
-              ;;
-            openwrt-master)
-              fetch_source "https://git.openwrt.org/openwrt/openwrt.git" "master"
-              ;;
-            immortalwrt-23.05)
-              fetch_source "https://github.com/immortalwrt/immortalwrt.git" "openwrt-23.05"
-              ;;
-            immortalwrt-master)
-              fetch_source "https://github.com/immortalwrt/immortalwrt.git" "master"
-              ;;
-          esac
-          echo "SRC_DIR=$(pwd)/openwrt-src" >> $GITHUB_ENV
-        
-      - name: 拉取源码（带重试）
-        run: |
-          # 定义拉取函数（最多重试3次）
-          fetch_source() {
-            local repo=$1
-            local branch=$2
-            local retries=3
-            local count=0
-            while [ $count -lt $retries ]; do
-              if git clone --depth 1 --branch "$branch" "$repo" openwrt-src; then
-                return 0
-              fi
-              echo "⚠️ 拉取源码失败，重试第 $((count+1)) 次..."
-              count=$((count+1))
-              rm -rf openwrt-src  # 清理失败的目录
-              sleep 5  # 等待5秒再重试
-            done
-            echo "❌ 拉取源码失败（已重试3次）"
+          fi
+          if ! chmod +x ../scripts/custom-init.sh; then
+            echo "❌ 错误：无法为自定义脚本添加执行权限"
             exit 1
-          }
-
-          # 选择仓库并调用拉取函数
-          case "${{ github.event.inputs.source_branch }}" in
-            openwrt-23.05)
-              fetch_source "https://git.openwrt.org/openwrt/openwrt.git" "openwrt-23.05"
-              ;;
-            openwrt-master)
-              fetch_source "https://git.openwrt.org/openwrt/openwrt.git" "master"
-              ;;
-            immortalwrt-23.05)
-              fetch_source "https://github.com/immortalwrt/immortalwrt.git" "openwrt-23.05"
-              ;;
-            immortalwrt-master)
-              fetch_source "https://github.com/immortalwrt/immortalwrt.git" "master"
-              ;;
-          esac
-          echo "SRC_DIR=$(pwd)/openwrt-src" >> $GITHUB_ENV
+          fi
+          echo "🔧 开始执行自定义脚本..."
+          if ! ../scripts/custom-init.sh; then
+            echo "❌ 错误：自定义脚本执行失败（请检查脚本语法）"
+            exit 1
+          fi
+          echo "✅ 自定义脚本执行完成"
      
       - name: 输出固件类型说明
         run: |
