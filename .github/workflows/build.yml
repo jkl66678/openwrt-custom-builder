@@ -1,87 +1,144 @@
-name: OpenWrt编译系统（设备/芯片双模式+主题选择）
+name: OpenWrt编译系统（设备自动同步+定时更新）
 
+# 触发条件：手动触发 + 每周日凌晨同步设备
 on:
-  workflow_dispatch:
-    inputs:
-      # 1. 编译模式选择
-      select_mode:
-        type: choice
-        description: 编译模式（设备/芯片）
-        required: true
-        options: [device, chip]
-
-      # 2. 设备选择（仅设备模式）
-      device:
-        type: choice
-        description: 设备型号（仅设备模式）
-        required: false
-        options: [cuby-tr3000-256mb, redmi-ac2100, x86_64-generic]
-
-      # 3. 芯片选择（仅芯片模式）
-      chip:
-        type: choice
-        description: 芯片型号（仅芯片模式）
-        required: false
-        options: [mt7981, mt7621, ipq8065, x86_64]
-
-      # 4. 源码版本
-      source_branch:
-        type: choice
-        description: 源码分支（含内核）
-        required: true
-        options: [openwrt-23.05, openwrt-master, immortalwrt-23.05, immortalwrt-master]
-
-      # 5. 主题+编译优化组合（核心合并参数）
-      theme_and_optimization:
-        type: choice
-        description: 主题+编译优化组合
-        required: true
-        options:
-          - argon-O2-generic     # Argon主题 + O2优化 + 通用架构
-          - argon-O3-armv8       # Argon主题 + O3优化 + ARMv8
-          - argon-O3-x86         # Argon主题 + O3优化 + x86_64
-          - bootstrap-O2-generic # 官方主题 + O2优化 + 通用架构
-          - material-Os-generic  # Material主题 + 最小体积 + 通用架构
-
-      # 6. 核心功能配置
-      core_features:
-        type: choice
-        description: 核心功能（IPv6+硬件加速）
-        required: true
-        options: [ipv6+accel, ipv6-only, accel-only, none]
-
-      # 7. 软件包管理
-      packages:
-        type: string
-        description: 软件包（格式：包1,包2，如"openclash,samba"）
-        required: false
-        default: "openclash,samba"
-
-      # 8. 根分区大小
-      rootfs_size:
-        type: number
-        description: 根分区大小(MB，32-2048)
-        required: true
-        default: 192
-
-      # 9. 固件标识
-      firmware_suffix:
-        type: string
-        description: 固件后缀（如版本号）
-        required: false
-        default: "custom"
-
-      # 10. 高级选项
-      run_custom_script:
-        type: boolean
-        description: 执行自定义初始化脚本
-        required: true
-        default: true
-
+  workflow_dispatch:  # 手动编译入口
+  schedule:
+    - cron: "0 0 * * 0"  # 每周日0点自动同步设备库（UTC时间，北京时间为早上8点）
 
 jobs:
+  # 任务1：自动同步设备与驱动信息（生成device-drivers.json）
+  sync-devices:
+    name: 自动同步设备与驱动信息
+    runs-on: ubuntu-latest
+    steps:
+      - name: 拉取仓库代码
+        uses: actions/checkout@v4
+
+      - name: 安装依赖工具
+        run: |
+          sudo apt update
+          sudo apt install -y git jq  # 同步脚本依赖jq解析JSON
+
+      - name: 运行设备同步脚本
+        run: |
+          # 创建同步脚本（若不存在）
+          if [ ! -f "scripts/sync-devices.sh" ]; then
+            mkdir -p scripts
+            cat > scripts/sync-devices.sh << 'EOF'
+#!/bin/bash
+# 自动从OpenWrt官方仓库同步设备信息
+OPENWRT_REPO="https://git.openwrt.org/openwrt/openwrt.git"
+BRANCH="openwrt-23.05"  # 同步的源码分支（可改为immortalwrt-master）
+TMP_DIR="./tmp-openwrt"
+OUTPUT_FILE="device-drivers.json"
+
+# 清理旧文件
+rm -rf $TMP_DIR $OUTPUT_FILE
+
+# 克隆OpenWrt设备配置（仅同步target/linux目录，体积小）
+echo "🔍 从 $OPENWRT_REPO 同步设备信息..."
+git clone --depth 1 --branch $BRANCH --single-branch $OPENWRT_REPO $TMP_DIR &> /dev/null || {
+  echo "❌ 拉取源码失败，使用本地缓存（若有）"
+  if [ ! -f "$OUTPUT_FILE" ]; then
+    echo "❌ 无本地缓存，同步失败"
+    exit 1
+  fi
+  exit 0
+}
+
+cd $TMP_DIR/target/linux || exit 1
+
+# 初始化JSON结构
+echo '{"devices": [], "chips": []}' > ../../$OUTPUT_FILE
+
+# 遍历平台（如mediatek、ramips、x86）
+for platform in $(ls -d */ | cut -d'/' -f1); do
+  echo "📦 处理平台：$platform"
+  
+  # 从平台目录提取芯片型号（预设映射表，提高准确性）
+  declare -A platform_chip_map=(
+    ["mediatek"]="mt7981 mt7621 mt7620"  # 联发科平台常见芯片
+    ["ramips"]="mt7621 mt7620"           # 瑞昱平台常见芯片
+    ["ipq806x"]="ipq8065 ipq8064"        # 高通IPQ806x系列
+    ["x86"]="x86_64"                     # x86平台
+  )
+  chips=${platform_chip_map[$platform]:-""}
+
+  # 提取设备信息（从.mk和.dts文件）
+  for device_file in $(find $platform -name "*.mk" -o -name "*.dts"); do
+    # 从.mk文件提取设备名称和驱动
+    if [[ $device_file == *.mk ]]; then
+      device_name=$(grep "DEVICE_NAME" "$device_file" | cut -d'=' -f2 | tr -d '"' | sed 's/ //g')
+      default_pkgs=$(grep "DEFAULT_PACKAGES" "$device_file" | cut -d'=' -f2)
+      drivers=$(echo "$default_pkgs" | grep -oE "kmod-[a-z0-9-]+" | tr '\n' ' ')
+      
+      # 从文件名或芯片映射表提取芯片型号
+      chip=$(echo "$device_file $chips" | grep -oE "mt7981|mt7621|ipq8065|x86_64" | head -n1)
+      
+      # 内核目标路径（平台+通用目录）
+      kernel_target="$platform/generic"
+      
+      # 仅添加信息完整的设备
+      if [[ -n "$device_name" && -n "$chip" && -n "$drivers" ]]; then
+        echo "  - 新增设备：$device_name（芯片：$chip）"
+        # 写入JSON
+        jq --arg name "$device_name" \
+           --arg chip "$chip" \
+           --arg target "$kernel_target" \
+           --arg drivers "$drivers" \
+           '.devices += [{"name": $name, "chip": $chip, "kernel_target": $target, "drivers": ($drivers | split(" ") | map(select(length > 0)))}]' \
+           ../../$OUTPUT_FILE > ../../$OUTPUT_FILE.tmp && mv ../../$OUTPUT_FILE.tmp ../../$OUTPUT_FILE
+      fi
+    fi
+  done
+  
+  # 提取芯片级通用驱动（同平台芯片共用驱动）
+  if [[ -n "$chips" ]]; then
+    for chip in $chips; do
+      # 从平台Makefile提取通用驱动
+      chip_drivers=$(grep "DEFAULT_PACKAGES" "$platform/Makefile" 2>/dev/null | grep -oE "kmod-[a-z0-9-]+" | tr '\n' ' ')
+      if [[ -n "$chip_drivers" ]]; then
+        echo "  - 新增芯片：$chip（通用驱动）"
+        jq --arg name "$chip" \
+           --arg target "$kernel_target" \
+           --arg drivers "$chip_drivers" \
+           '.chips += [{"name": $name, "kernel_target": $target, "drivers": ($drivers | split(" ") | map(select(length > 0)))}]' \
+           ../../$OUTPUT_FILE > ../../$OUTPUT_FILE.tmp && mv ../../$OUTPUT_FILE.tmp ../../$OUTPUT_FILE
+      fi
+    done
+  fi
+done
+
+# 清理临时文件
+cd ../../ && rm -rf $TMP_DIR
+echo "✅ 设备同步完成，生成device-drivers.json"
+EOF
+          fi
+          # 执行同步脚本
+          chmod +x scripts/sync-devices.sh
+          ./scripts/sync-devices.sh
+
+      - name: 自动提交设备更新
+        run: |
+          # 配置Git身份
+          git config --global user.name "Auto-Sync Bot"
+          git config --global user.email "bot@github.com"
+          # 检查是否有更新
+          if git diff --quiet device-drivers.json; then
+            echo "⚠️ 设备信息无更新，无需提交"
+          else
+            git add device-drivers.json
+            git commit -m "自动同步设备信息（$(date +%Y%m%d)）"
+            git push
+            echo "✅ 设备信息已更新并提交"
+          fi
+
+
+  # 任务2：编译固件（依赖设备同步完成）
   build-firmware:
-    name: 编译OpenWrt固件
+    name: 编译固件（基于最新设备信息）
+    needs: sync-devices  # 确保先同步设备再编译
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -89,7 +146,7 @@ jobs:
       packages: write
 
     steps:
-      - name: 拉取仓库代码
+      - name: 拉取仓库代码（含最新device-drivers.json）
         uses: actions/checkout@v4
 
       - name: 环境准备与依赖安装
@@ -100,7 +157,7 @@ jobs:
 
       - name: 编译前关键自检
         run: |
-          # 检查模式与选择匹配
+          # 检查设备模式与选择匹配
           if [ "${{ github.event.inputs.select_mode }}" = "device" ] && [ -z "${{ github.event.inputs.device }}" ]; then
             echo "❌ 错误：设备模式下必须选择设备型号"
             exit 1
@@ -110,15 +167,15 @@ jobs:
             exit 1
           fi
 
-          # 检查配置文件存在性
+          # 检查设备配置文件存在
           if [ ! -f "device-drivers.json" ]; then
-            echo "❌ 错误：未找到设备驱动配置文件 device-drivers.json"
+            echo "❌ 错误：未找到device-drivers.json（同步失败）"
             exit 1
           fi
 
           # 检查自定义脚本（若启用）
           if [ "${{ github.event.inputs.run_custom_script }}" = "true" ] && [ ! -f "scripts/custom-init.sh" ]; then
-            echo "❌ 错误：未找到自定义脚本 scripts/custom-init.sh"
+            echo "❌ 错误：未找到自定义脚本scripts/custom-init.sh"
             exit 1
           fi
 
@@ -173,27 +230,42 @@ jobs:
           custom_pkgs=$(echo "$packages" | tr ',' '\n' | grep 'luci-app-' | tr '\n' ' ')
           echo "PACKAGES=$common_pkgs $custom_pkgs" >> $GITHUB_ENV
 
-      - name: 拉取源码
+      - name: 拉取源码（带重试机制）
         run: |
+          # 定义拉取函数（最多重试3次）
+          fetch_source() {
+            local repo=$1
+            local branch=$2
+            local retries=3
+            local count=0
+            while [ $count -lt $retries ]; do
+              if git clone --depth 1 --branch "$branch" "$repo" openwrt-src; then
+                return 0
+              fi
+              echo "⚠️ 拉取源码失败，重试第 $((count+1)) 次..."
+              count=$((count+1))
+              rm -rf openwrt-src
+              sleep 5
+            done
+            echo "❌ 拉取源码失败（已重试3次）"
+            exit 1
+          }
+
+          # 选择源码分支
           case "${{ github.event.inputs.source_branch }}" in
             openwrt-23.05)
-              repo="https://git.openwrt.org/openwrt/openwrt.git"
-              branch="openwrt-23.05"
+              fetch_source "https://git.openwrt.org/openwrt/openwrt.git" "openwrt-23.05"
               ;;
             openwrt-master)
-              repo="https://git.openwrt.org/openwrt/openwrt.git"
-              branch="master"
+              fetch_source "https://git.openwrt.org/openwrt/openwrt.git" "master"
               ;;
             immortalwrt-23.05)
-              repo="https://github.com/immortalwrt/immortalwrt.git"
-              branch="openwrt-23.05"
+              fetch_source "https://github.com/immortalwrt/immortalwrt.git" "openwrt-23.05"
               ;;
             immortalwrt-master)
-              repo="https://github.com/immortalwrt/immortalwrt.git"
-              branch="master"
+              fetch_source "https://github.com/immortalwrt/immortalwrt.git" "master"
               ;;
           esac
-          git clone --depth 1 --branch "$branch" "$repo" openwrt-src
           echo "SRC_DIR=$(pwd)/openwrt-src" >> $GITHUB_ENV
 
       - name: 初始化源码与主题源
@@ -202,7 +274,7 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-          # 添加主题源（根据选择的主题）
+          # 添加主题源
           if [ "${{ env.THEME }}" = "argon" ]; then
             echo 'src-git argon https://github.com/jerrykuku/luci-theme-argon.git' >> feeds.conf.default
           elif [ "${{ env.THEME }}" = "material" ]; then
@@ -218,15 +290,23 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-      - name: 执行自定义初始化脚本
+      - name: 执行自定义初始化脚本（带错误捕获）
         if: ${{ github.event.inputs.run_custom_script == 'true' }}
         run: |
           cd "${{ env.SRC_DIR }}"
+          if [ ! -f "../scripts/custom-init.sh" ]; then
+            echo "❌ 错误：自定义脚本不存在"
+            exit 1
+          fi
           chmod +x ../scripts/custom-init.sh
-          ../scripts/custom-init.sh
+          echo "🔧 执行自定义脚本..."
+          if ! ../scripts/custom-init.sh; then
+            echo "❌ 自定义脚本执行失败（检查语法）"
+            exit 1
+          fi
           echo "✅ 自定义脚本执行完成"
 
-      - name: 解析设备/芯片配置
+      - name: 解析设备/芯片配置（使用最新device-drivers.json）
         run: |
           if [ "${{ github.event.inputs.select_mode }}" = "device" ]; then
             info=$(jq --arg dev "${{ github.event.inputs.device }}" '.devices[] | select(.name == $dev)' device-drivers.json)
@@ -236,22 +316,22 @@ jobs:
           echo "KERNEL_TARGET=$(echo "$info" | jq -r '.kernel_target')" >> $GITHUB_ENV
           echo "DRIVERS=$(echo "$info" | jq -r '.drivers[]' | tr '\n' ' ')" >> $GITHUB_ENV
 
-      - name: 生成编译配置（含主题设置）
+      - name: 生成编译配置（含主题与优化）
         run: |
           cd "${{ env.SRC_DIR }}"
           target=$(echo "${{ env.KERNEL_TARGET }}" | tr '/' '_')
 
-          # 1. 基础设备配置
+          # 基础配置
           echo "CONFIG_TARGET_$target=y" >> .config
           echo "CONFIG_TARGET_${target}_DEVICE_generic=y" >> .config
           echo "CONFIG_TARGET_ROOTFS_PARTSIZE=${{ github.event.inputs.rootfs_size }}" >> .config
 
-          # 2. 设备驱动
+          # 设备驱动
           for driver in ${{ env.DRIVERS }}; do
             echo "CONFIG_PACKAGE_$driver=y" >> .config
           done
 
-          # 3. 核心功能（IPv6+硬件加速）
+          # 核心功能（IPv6+硬件加速）
           if [ "${{ env.ENABLE_IPV6 }}" = "true" ]; then
             echo "CONFIG_IPV6=y" >> .config
             echo "CONFIG_PACKAGE_ipv6helper=y" >> .config
@@ -265,12 +345,12 @@ jobs:
             fi
           fi
 
-          # 4. 软件包配置
+          # 软件包配置
           for pkg in ${{ env.PACKAGES }}; do
             echo "CONFIG_PACKAGE_$pkg=y" >> .config
           done
 
-          # 5. 编译优化
+          # 编译优化
           echo "CONFIG_CFLAGS=${{ env.CFLAGS }}" >> .config
           echo "CONFIG_CXXFLAGS=${{ env.CFLAGS }}" >> .config
           if [ "${{ env.ARCH_OPTIMIZATION }}" = "armv8-a" ]; then
@@ -279,10 +359,9 @@ jobs:
             echo "CONFIG_TARGET_OPTIMIZATION=-march=x86-64 -mtune=generic" >> .config
           fi
 
-          # 6. 主题配置（启用所选主题，禁用其他主题）
+          # 主题配置
           echo "CONFIG_PACKAGE_luci-theme-${{ env.THEME }}=y" >> .config
-          
-          # 禁用未选择的主题
+          # 禁用其他主题
           if [ "${{ env.THEME }}" != "bootstrap" ]; then
             echo "# CONFIG_PACKAGE_luci-theme-bootstrap is not set" >> .config
           fi
@@ -293,7 +372,7 @@ jobs:
             echo "# CONFIG_PACKAGE_luci-theme-material is not set" >> .config
           fi
 
-          # 7. 基础Web界面
+          # 基础Web界面
           echo "CONFIG_PACKAGE_luci=y" >> .config
           echo "CONFIG_PACKAGE_luci-ssl=y" >> .config
 
@@ -311,22 +390,19 @@ jobs:
           echo "❌ 编译失败，错误分析："
           
           if grep -q "Killed signal terminated program cc1" compile.log; then
-            echo "→ 原因：内存不足（Out of memory）"
-            echo "→ 解决方案：选择O2优化或减少软件包数量"
+            echo "→ 内存不足：选择O2优化或减少软件包"
           elif grep -q "Package kmod-.* is missing" compile.log; then
             missing_pkg=$(grep "Package kmod-.* is missing" compile.log | head -n1 | awk '{print $2}')
-            echo "→ 原因：驱动包 $missing_pkg 不存在"
-            echo "→ 解决方案：1. 检查device-drivers.json；2. 切换到immortalwrt-master分支"
+            echo "→ 驱动缺失 $missing_pkg：1. 检查device-drivers.json；2. 切换到immortalwrt分支"
           elif grep -q "configuration error: recursive dependency" compile.log; then
-            echo "→ 原因：软件包依赖冲突"
-            echo "→ 解决方案：减少勾选的软件包（如同时选多个VPN工具可能冲突）"
+            echo "→ 软件包冲突：减少勾选的软件包（如多个VPN工具）"
           else
             echo "→ 未知错误，最后50行日志："
             tail -n 50 compile.log
           fi
           exit 1
 
-      - name: 重命名固件
+      - name: 固件信息与重命名
         run: |
           base_name="${{ github.event.inputs.device || github.event.inputs.chip }}-${{ github.event.inputs.source_branch }}-${{ env.THEME }}"
           firmware_name="${base_name}-$(date +%Y%m%d)-${{ github.event.inputs.firmware_suffix }}"
@@ -335,7 +411,14 @@ jobs:
               mv "$file" "${file%.bin}-$1.bin"
             done
           ' _ "$firmware_name" \;
-          echo "✅ 固件已重命名为: $firmware_name"
+          
+          # 输出固件类型说明
+          echo "📌 固件类型说明："
+          echo "  - 含'sysupgrade'：用于设备升级（保留配置）"
+          echo "  - 含'factory'：用于首次刷写（清空配置）"
+          find "${{ env.SRC_DIR }}/bin/targets/" -name "*.bin" | grep -E "sysupgrade|factory" | while read -r file; do
+            echo "  - $file"
+          done
 
       - name: 上传编译成果
         uses: actions/upload-artifact@v4
