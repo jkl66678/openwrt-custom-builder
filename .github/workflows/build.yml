@@ -23,19 +23,16 @@ jobs:
           # 创建同步脚本（若不存在）
           if [ ! -f "scripts/sync-devices.sh" ]; then
             mkdir -p scripts
-            # 注意：此处使用正确的 heredoc格式，确保缩进一致且EOF单独成行
+            # 关键修复：确保heredoc内容缩进一致，EOF单独成行且无前置空格
             cat > scripts/sync-devices.sh << 'EOF'
 #!/bin/bash
-# 自动从OpenWrt官方仓库同步设备信息
 OPENWRT_REPO="https://git.openwrt.org/openwrt/openwrt.git"
 BRANCH="openwrt-23.05"
 TMP_DIR="./tmp-openwrt"
 OUTPUT_FILE="device-drivers.json"
 
-# 清理旧文件
 rm -rf $TMP_DIR $OUTPUT_FILE
 
-# 克隆OpenWrt设备配置
 echo "🔍 从 $OPENWRT_REPO 同步设备信息..."
 if ! git clone --depth 1 --branch $BRANCH --single-branch $OPENWRT_REPO $TMP_DIR &> /dev/null; then
   echo "❌ 拉取源码失败，使用本地缓存（若有）"
@@ -45,10 +42,8 @@ fi
 
 cd $TMP_DIR/target/linux || exit 1
 
-# 初始化JSON结构
 echo '{"devices": [], "chips": []}' > ../../$OUTPUT_FILE
 
-# 平台-芯片映射表（提高识别准确性）
 declare -A platform_chip_map=(
   ["mediatek"]="mt7981 mt7621 mt7620"
   ["ramips"]="mt7621 mt7620"
@@ -56,12 +51,10 @@ declare -A platform_chip_map=(
   ["x86"]="x86_64"
 )
 
-# 遍历平台提取设备信息
 for platform in $(ls -d */ | cut -d'/' -f1); do
   echo "📦 处理平台：$platform"
   chips=${platform_chip_map[$platform]:-""}
 
-  # 提取设备信息
   for device_file in $(find $platform -name "*.mk" -o -name "*.dts"); do
     if [[ $device_file == *.mk ]]; then
       device_name=$(grep "DEVICE_NAME" "$device_file" | cut -d'=' -f2 | tr -d '"' | sed 's/ //g')
@@ -82,7 +75,6 @@ for platform in $(ls -d */ | cut -d'/' -f1); do
     fi
   done
 
-  # 提取芯片通用驱动
   if [[ -n "$chips" ]]; then
     for chip in $chips; do
       chip_drivers=$(grep "DEFAULT_PACKAGES" "$platform/Makefile" 2>/dev/null | grep -oE "kmod-[a-z0-9-]+" | tr '\n' ' ')
@@ -98,7 +90,6 @@ for platform in $(ls -d */ | cut -d'/' -f1); do
   fi
 done
 
-# 清理临时文件
 cd ../../ && rm -rf $TMP_DIR
 echo "✅ 设备同步完成，生成device-drivers.json"
 EOF
