@@ -20,10 +20,9 @@ jobs:
 
       - name: 运行设备同步脚本
         run: |
-          # 创建同步脚本（若不存在）
           if [ ! -f "scripts/sync-devices.sh" ]; then
             mkdir -p scripts
-            # 关键修复：确保heredoc内容缩进一致，EOF单独成行且无前置空格
+            # 关键修复：heredoc内容与EOF严格对齐，无多余缩进
             cat > scripts/sync-devices.sh << 'EOF'
 #!/bin/bash
 OPENWRT_REPO="https://git.openwrt.org/openwrt/openwrt.git"
@@ -381,109 +380,3 @@ EOF
             ${{ env.SRC_DIR }}/compile.log
           retention-days: 30
           if-no-files-found: error
-
-      - name: 拉取源码（带重试）
-        run: |
-          # 定义拉取函数（最多重试3次）
-          fetch_source() {
-            local repo=$1
-            local branch=$2
-            local retries=3
-            local count=0
-            while [ $count -lt $retries ]; do
-              if git clone --depth 1 --branch "$branch" "$repo" openwrt-src; then
-                return 0
-              fi
-              echo "⚠️ 拉取源码失败，重试第 $((count+1)) 次..."
-              count=$((count+1))
-              rm -rf openwrt-src  # 清理失败的目录
-              sleep 5  # 等待5秒再重试
-            done
-            echo "❌ 拉取源码失败（已重试3次）"
-            exit 1
-          }
-
-          # 选择仓库并调用拉取函数
-          case "${{ github.event.inputs.source_branch }}" in
-            openwrt-23.05)
-              fetch_source "https://git.openwrt.org/openwrt/openwrt.git" "openwrt-23.05"
-              ;;
-            openwrt-master)
-              fetch_source "https://git.openwrt.org/openwrt/openwrt.git" "master"
-              ;;
-            immortalwrt-23.05)
-              fetch_source "https://github.com/immortalwrt/immortalwrt.git" "openwrt-23.05"
-              ;;
-            immortalwrt-master)
-              fetch_source "https://github.com/immortalwrt/immortalwrt.git" "master"
-              ;;
-          esac
-          echo "SRC_DIR=$(pwd)/openwrt-src" >> $GITHUB_ENV
-        
-      - name: 拉取源码（带重试）
-        run: |
-          # 定义拉取函数（最多重试3次）
-          fetch_source() {
-            local repo=$1
-            local branch=$2
-            local retries=3
-            local count=0
-            while [ $count -lt $retries ]; do
-              if git clone --depth 1 --branch "$branch" "$repo" openwrt-src; then
-                return 0
-              fi
-              echo "⚠️ 拉取源码失败，重试第 $((count+1)) 次..."
-              count=$((count+1))
-              rm -rf openwrt-src  # 清理失败的目录
-              sleep 5  # 等待5秒再重试
-            done
-            echo "❌ 拉取源码失败（已重试3次）"
-            exit 1
-          }
-
-          # 选择仓库并调用拉取函数
-          case "${{ github.event.inputs.source_branch }}" in
-            openwrt-23.05)
-              fetch_source "https://git.openwrt.org/openwrt/openwrt.git" "openwrt-23.05"
-              ;;
-            openwrt-master)
-              fetch_source "https://git.openwrt.org/openwrt/openwrt.git" "master"
-              ;;
-            immortalwrt-23.05)
-              fetch_source "https://github.com/immortalwrt/immortalwrt.git" "openwrt-23.05"
-              ;;
-            immortalwrt-master)
-              fetch_source "https://github.com/immortalwrt/immortalwrt.git" "master"
-              ;;
-          esac
-          echo "SRC_DIR=$(pwd)/openwrt-src" >> $GITHUB_ENV
-     
-      - name: 输出固件类型说明
-        run: |
-          echo "📌 固件类型说明："
-          echo "  - 含 'sysupgrade' 的文件：用于设备升级（保留配置）"
-          echo "  - 含 'factory' 的文件：用于首次刷写（清空配置）"
-          find "${{ env.SRC_DIR }}/bin/targets/" -name "*.bin" | grep -E "sysupgrade|factory" | while read -r file; do
-            echo "  - $file"
-          done
-      
-      - name: 清理编译缓存（首次运行或版本切换时）
-        run: |
-          if [ -d "openwrt-src" ]; then
-            echo "🧹 清理旧编译目录..."
-            rm -rf openwrt-src
-          fi
-        if: ${{ github.event.inputs.source_branch != github.event.repository.default_branch }}  # 版本切换时触发
-      
-      - name: 固件信息摘要
-        run: |
-          firmware_path=$(find "${{ env.SRC_DIR }}/bin/targets/" -name "*.bin" | head -n1)
-          if [ -n "$firmware_path" ]; then
-            echo "📊 固件信息："
-            echo "  - 路径：$firmware_path"
-            echo "  - 大小：$(du -h "$firmware_path" | awk '{print $1}')"
-            echo "  - 适用设备：${{ github.event.inputs.device || github.event.inputs.chip }}"
-            echo "  - 源码版本：${{ github.event.inputs.source_branch }}"
-            echo "  - 主题：${{ env.THEME }}"
-          fi
-          
