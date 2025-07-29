@@ -2,20 +2,20 @@
 set -eu pipefail
 
 # ==============================================
-# 基础配置（强制生成日志和输出文件）
+# 基础配置
 # ==============================================
 WORK_DIR=$(pwd)
 LOG_DIR="$WORK_DIR/sync-logs"
 OUTPUT_JSON="$WORK_DIR/device-drivers.json"
-SKIP_PLATFORMS=("siflower")  # 跳过已知问题平台
+SKIP_PLATFORMS=("siflower")
 
-# 强制创建日志目录和文件（即使后续步骤失败也保留）
+# 强制创建日志目录
 mkdir -p "$LOG_DIR" || {
-    echo "❌ 无法创建日志目录 $LOG_DIR（权限不足）" >&2
+    echo "❌ 无法创建日志目录 $LOG_DIR" >&2
     exit 1
 }
 SYNC_LOG="$LOG_DIR/sync-detail.log"
-touch "$SYNC_LOG"  # 确保日志文件存在
+touch "$SYNC_LOG"
 
 # 日志函数
 log() {
@@ -29,7 +29,6 @@ log() {
 log "===== 开始设备与芯片同步 ====="
 log "工作目录: $WORK_DIR"
 log "输出文件: $OUTPUT_JSON"
-log "跳过平台: ${SKIP_PLATFORMS[*]}"
 
 # ==============================================
 # 1. 检查依赖
@@ -45,7 +44,7 @@ done
 log "✅ 依赖齐全"
 
 # ==============================================
-# 2. 初始化输出文件（确保非空）
+# 2. 初始化输出文件
 # ==============================================
 log "🔧 初始化配置文件..."
 echo '{"devices": [], "chips": []}' > "$OUTPUT_JSON" || {
@@ -74,20 +73,18 @@ if [ $retries -eq 0 ]; then
 fi
 
 # ==============================================
-# 4. 解析设备与芯片（优化版：支持子目录和多格式）
+# 4. 解析设备与芯片（增强版）
 # ==============================================
 TARGET_BASE="$TMP_SRC/target/linux"
 device_count=0
 chip_count=0
 
-log "🔍 开始解析设备（支持子目录搜索）..."
+log "🔍 开始解析设备（支持多格式提取）..."
 
-# 遍历所有平台（包含子平台目录，如mediatek/filogic）
-find "$TARGET_BASE" -type d \( -name "generic" -o -name "filogic" -o -name "mt7621" -o -name "ipq806x" -o -name "ath79" -o -name "ramips" -o -name "x86" \) | while read -r plat_dir; do
-    # 提取完整平台名（如"mediatek/filogic"）
+# 遍历主流平台（包含子目录）
+find "$TARGET_BASE" -type d \( -name "ath79" -o -name "ramips" -o -name "mediatek" -o -name "ipq806x" -o -name "x86" \) | while read -r plat_dir; do
     plat_name=$(echo "$plat_dir" | sed "s|$TARGET_BASE/||")
     
-    # 跳过问题平台
     if [[ " ${SKIP_PLATFORMS[@]} " =~ " $plat_name " ]]; then
         log "⚠️ 跳过平台: $plat_name"
         continue
@@ -95,39 +92,47 @@ find "$TARGET_BASE" -type d \( -name "generic" -o -name "filogic" -o -name "mt76
 
     log "ℹ️ 处理平台: $plat_name（路径: $plat_dir）"
     {
-        # 递归查找所有.dts文件（包含所有子目录）
+        # 递归查找所有.dts文件
         log "  查找.dts文件路径: $plat_dir/dts"
         dts_files=$(find "$plat_dir/dts" -type f -name "*.dts" 2>/dev/null)
         
-        # 检查是否找到.dts文件
         if [ -z "$dts_files" ]; then
             log "⚠️ 未找到.dts文件，跳过平台: $plat_name"
             continue
         else
             dts_count=$(echo "$dts_files" | wc -l)
             log "  找到.dts文件数量: $dts_count"
-            # 打印前3个文件路径（调试用）
             echo "$dts_files" | head -n3 | while read -r f; do log "  示例文件: $f"; done
         fi
 
         # 解析每个.dts文件
         echo "$dts_files" | while read -r dts_file; do
-            # 提取设备名称（从文件名简化，支持多级目录）
-            dev_name=$(basename "$dts_file" .dts | sed -E 's/^(qcom|mediatek|realtek|mtk|ath)-//; s/_/-/g')
+            # 提取设备名称（从文件名简化）
+            dev_name=$(basename "$dts_file" .dts | sed -E 's/^(qcom|mediatek|realtek|ath|mtk)-//; s/_/-/g')
             if [ -z "$dev_name" ]; then
-                log "⚠️ 从文件 $dts_file 提取设备名称失败（名称为空）"
+                log "⚠️ 从文件 $dts_file 提取设备名称失败"
                 continue
             fi
 
-            # 提取芯片型号（兼容更多格式：支持大写、下划线、点号）
-            # 匹配格式：compatible = "厂商,芯片型号"（如"qcom,ipq8074"、"MediaTek,MT7981"）
-            chip_line=$(grep -E 'compatible\s*=\s*"[A-Za-z0-9_]+,[A-Za-z0-9_\.-]+"' "$dts_file" 2>/dev/null | head -n1)
+            # 提取芯片型号（增强版：支持更多格式）
+            chip=""
+            # 尝试从compatible字段提取（支持带空格、多值格式）
+            chip_line=$(grep -E 'compatible\s*=\s*["]+[A-Za-z0-9_]+,[A-Za-z0-9_\.-]+["]+' "$dts_file" 2>/dev/null | head -n1)
             if [ -n "$chip_line" ]; then
                 chip=$(echo "$chip_line" | sed -E 's/.*"[A-Za-z0-9_]+,([A-Za-z0-9_\.-]+)"/\1/' | tr '[:upper:]' '[:lower:]')
-            else
-                # 未找到时从平台名推断
-                chip=$(echo "$plat_name" | sed -E 's/.*\/([a-z0-9-]+)/\1/')  # 取最后一级目录名
-                log "⚠️ 文件 $dts_file 未找到芯片信息，从平台名推断: $chip"
+            fi
+
+            # 若失败，从文件名提取（如"ar9344_netgear_r6100.dts" → "ar9344"）
+            if [ -z "$chip" ]; then
+                chip_from_filename=$(basename "$dts_file" .dts | grep -Eo '^[a-z0-9]+' | head -n1)
+                if [ -n "$chip_from_filename" ]; then
+                    chip="$chip_from_filename"
+                    log "ℹ️ 从文件名提取芯片: $chip（文件: $dts_file）"
+                else
+                    # 最后从平台名推断
+                    chip=$(echo "$plat_name" | sed -E 's/.*\/([a-z0-9-]+)/\1/')
+                    log "⚠️ 从平台名推断芯片: $chip（文件: $dts_file）"
+                fi
             fi
 
             # 写入设备到JSON（去重）
@@ -139,7 +144,7 @@ find "$TARGET_BASE" -type d \( -name "generic" -o -name "filogic" -o -name "mt76
                    "$OUTPUT_JSON" > "$OUTPUT_JSON.tmp" && mv "$OUTPUT_JSON.tmp" "$OUTPUT_JSON"
                 
                 device_count=$((device_count + 1))
-                log "✅ 提取设备: $dev_name（芯片: $chip，平台: $plat_name）"
+                log "✅ 提取设备: $dev_name（芯片: $chip）"
             fi
 
             # 写入芯片到JSON（去重）
@@ -150,7 +155,7 @@ find "$TARGET_BASE" -type d \( -name "generic" -o -name "filogic" -o -name "mt76
                    "$OUTPUT_JSON" > "$OUTPUT_JSON.tmp" && mv "$OUTPUT_JSON.tmp" "$OUTPUT_JSON"
                 
                 chip_count=$((chip_count + 1))
-                log "✅ 提取芯片: $chip（平台: $plat_name）"
+                log "✅ 提取芯片: $chip"
             fi
         done
     } || log "⚠️ 平台 $plat_name 处理失败（继续下一个）"
@@ -164,10 +169,8 @@ current_chip_count=$(jq '.chips | length' "$OUTPUT_JSON" 2>/dev/null || echo 0)
 
 if [ "$current_dev_count" -eq 0 ] || [ "$current_chip_count" -eq 0 ]; then
     log "⚠️ 未提取到足够数据，添加测试数据"
-    # 添加默认设备
     jq '.devices += [{"name": "test-device", "chip": "test-chip", "kernel_target": "test-platform"}]' \
        "$OUTPUT_JSON" > "$OUTPUT_JSON.tmp" && mv "$OUTPUT_JSON.tmp" "$OUTPUT_JSON"
-    # 添加默认芯片
     jq '.chips += [{"name": "test-chip", "platform": "test-platform"}]' \
        "$OUTPUT_JSON" > "$OUTPUT_JSON.tmp" && mv "$OUTPUT_JSON.tmp" "$OUTPUT_JSON"
     current_dev_count=$((current_dev_count + 1))
@@ -181,4 +184,3 @@ rm -rf "$TMP_SRC"
 log "===== 同步完成 ====="
 log "最终设备总数: $current_dev_count，芯片总数: $current_chip_count"
 log "日志路径: $SYNC_LOG"
-log "配置文件路径: $OUTPUT_JSON"
