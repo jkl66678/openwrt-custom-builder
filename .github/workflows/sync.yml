@@ -49,7 +49,7 @@ jobs:
             echo "⚠️ 跳过生成工作流步骤"
           fi
 
-      - name: 生成GitHub App访问令牌（修复YAML语法）
+      - name: 生成GitHub App访问令牌（修复第88行语法）
         run: |
           APP_ID=${{ secrets.GH_APP_ID }}
           PRIVATE_KEY="${{ secrets.GH_APP_PRIVATE_KEY }}"
@@ -69,17 +69,17 @@ jobs:
           echo "✅ 私钥格式验证通过"
           
           echo "🔑 生成JWT令牌..."
-          # 关键修复：Python代码块严格使用YAML允许的缩进，END顶格
-          python3 - <<'END'
-# 读取私钥
+          # 核心修复：使用标准格式的Here Document，避免YAML解析歧义
+          python3 << END
+# 读取私钥（基础缩进）
 with open('/tmp/private-key.pem', 'r') as f:
     private_key = f.read()
 
-          # 右移10个空格的import（Python内部缩进，不影响YAML）
+          # 右移10个空格的import语句
           import jwt
           import time
 
-          # 后续代码保持相同缩进
+          # 后续代码保持相同缩进（10个空格）
           iat = int(time.time())
           exp = iat + 600
 
@@ -96,7 +96,7 @@ with open('/tmp/private-key.pem', 'r') as f:
           print(f"JWT={token}")
 END
           # 提取JWT令牌
-          JWT=$(grep "JWT=" <(cat) 2>/dev/null | cut -d'=' -f2)
+          JWT=$(python3 -c "import sys,re; print(re.search(r'JWT=(.*)', sys.stdin.read()).group(1))" 2>/dev/null)
           if [ -z "$JWT" ]; then
             echo "❌ 提取JWT令牌失败"
             exit 1
