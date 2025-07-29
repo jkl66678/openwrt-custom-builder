@@ -1,7 +1,7 @@
 {
   "devices": [
     {
-      "name": "cuby-tr3000-256mb",
+      "name": "cuby-tr3000",
       "chip": "mt7981",
       "kernel_target": "mediatek/filogic",
       "drivers": [
