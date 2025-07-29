@@ -40,14 +40,13 @@ echo '[]' > "$DEVICE_TMP_JSON"
 echo '[]' > "$CHIP_TMP_JSON"
 > "$DEDUP_FILE"
 
-# 日志函数（彻底移除$2引用）
+# 日志函数（仅在函数内使用local）
 LOG_LEVEL="${1:-INFO}"
 log() {
     local level="$1"
     local message="$2"
     local level_order=("DEBUG" "INFO" "WARN" "ERROR")
     
-    # 日志级别过滤（无$2引用）
     local current_idx=$(printf "%s\n" "${level_order[@]}" | grep -n "^$LOG_LEVEL$" | cut -d: -f1)
     current_idx=${current_idx:-0}
     local msg_idx=$(printf "%s\n" "${level_order[@]}" | grep -n "^$level$" | cut -d: -f1)
@@ -70,7 +69,7 @@ log() {
     echo "[$timestamp] $level_tag $message" | tee -a "$SYNC_LOG"
 }
 
-# 资源监控
+# 资源监控函数（仅在函数内使用local）
 check_resources() {
     local mem_used
     if command -v free &>/dev/null; then
@@ -164,16 +163,13 @@ if [ "$clone_success" -eq 0 ]; then
     exit 1
 fi
 
-# ==============================================
-# 4. 提取设备信息（修复local关键字错误）
-# ==============================================
+# 提取设备信息（修复local关键字错误：函数外不使用local）
 log "INFO" "开始提取设备信息（过滤异常文件）..."
 
-# 注意：全局变量声明不能用local！
 find "$TMP_SRC/target/linux" -name "*.dts" | while read -r dts_file; do
     [ ! -f "$dts_file" ] && continue
 
-    # 函数外部变量声明不能加local
+    # 函数外部变量不使用local
     file_size=$(stat -c%s "$dts_file" 2>/dev/null || echo $((MAX_DTS_SIZE + 1)))
     if [ "$file_size" -gt "$MAX_DTS_SIZE" ]; then
         log "WARN" "跳过超大dts文件：$dts_file（大小：$((file_size/1024))KB）"
@@ -188,11 +184,11 @@ find "$TMP_SRC/target/linux" -name "*.dts" | while read -r dts_file; do
     echo "$dts_file" >> "$DTS_LIST_TMP"
 done
 
-# 全局变量，去掉local
+# 全局变量不使用local
 total_dts=$(wc -l < "$DTS_LIST_TMP")
 log "INFO" "共发现有效dts文件：$total_dts 个，开始解析..."
 
-# 全局变量，去掉local
+# 全局变量不使用local
 processed_count=0
 while IFS= read -r dts_file; do
     if ! check_resources; then
@@ -200,7 +196,7 @@ while IFS= read -r dts_file; do
         continue
     fi
 
-    # 函数外部变量声明不加local
+    # 函数外部变量不使用local
     filename=$(basename "$dts_file" .dts)
     device_name=$(echo "$filename" | sed -E \
         -e 's/^[a-z0-9]+[-_]//' \
@@ -248,7 +244,7 @@ done < "$DTS_LIST_TMP"
 jq --argfile tmp "$DEVICE_TMP_JSON" '.devices = $tmp' "$OUTPUT_JSON" > "$OUTPUT_JSON.tmp" && mv "$OUTPUT_JSON.tmp" "$OUTPUT_JSON"
 log "SUCCESS" "设备信息提取完成，共处理文件：$processed_count 个"
 
-# 提取芯片信息
+# 提取芯片信息（函数外变量不使用local）
 log "INFO" "开始提取芯片信息..."
 
 jq -r '.devices[].chip' "$OUTPUT_JSON" | sort | uniq | while read -r chip; do
@@ -259,10 +255,10 @@ jq -r '.devices[].chip' "$OUTPUT_JSON" | sort | uniq | while read -r chip; do
 
     grep -qxF "^$chip$" "$CHIP_TMP_FILE" && continue
 
-    local platform=$(jq --arg c "$chip" '.devices[] | select(.chip == $c) | .kernel_target' "$OUTPUT_JSON" | head -n1 | sed 's/"//g')
+    platform=$(jq --arg c "$chip" '.devices[] | select(.chip == $c) | .kernel_target' "$OUTPUT_JSON" | head -n1 | sed 's/"//g')
     [ -z "$platform" ] || [ "$platform" = "null" ] && platform="unknown-platform"
 
-    local drivers
+    drivers=""
     case "$chip" in
         mt7621)      drivers='["kmod-mt7603e", "kmod-mt7615e", "kmod-switch-rtl8367s"]' ;;
         mt7981)      drivers='["kmod-mt7981-firmware", "kmod-gmac", "kmod-usb3"]' ;;
@@ -284,8 +280,8 @@ log "SUCCESS" "芯片信息提取完成"
 
 # 最终校验
 log "INFO" "验证输出文件完整性..."
-local device_count=$(jq '.devices | length' "$OUTPUT_JSON" 2>/dev/null || echo 0)
-local chip_count=$(jq '.chips | length' "$OUTPUT_JSON" 2>/dev/null || echo 0)
+device_count=$(jq '.devices | length' "$OUTPUT_JSON" 2>/dev/null || echo 0)
+chip_count=$(jq '.chips | length' "$OUTPUT_JSON" 2>/dev/null || echo 0)
 
 if [ "$device_count" -eq 0 ] || [ "$chip_count" -eq 0 ]; then
     log "WARN" "数据提取不足，添加测试数据"
@@ -296,8 +292,8 @@ if [ "$device_count" -eq 0 ] || [ "$chip_count" -eq 0 ]; then
 fi
 
 # 完成同步
-local end_time=$(date +%s)
-local elapsed=$((end_time - start_time))
+end_time=$(date +%s)
+elapsed=$((end_time - start_time))
 log "========================================="
 log "SUCCESS" "同步完成！总耗时：$((elapsed/60))分$((elapsed%60))秒"
 log "SUCCESS" "输出文件：$OUTPUT_JSON"
