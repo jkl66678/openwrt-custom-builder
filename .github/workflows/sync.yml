@@ -1,9 +1,9 @@
 name: 设备列表自动同步
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # 手动触发
   schedule:
-    - cron: "0 0 * * 0"  # 每周日执行
+    - cron: "0 0 * * 0"  # 每周日自动执行
 
 jobs:
   sync-devices:
@@ -18,15 +18,17 @@ jobs:
 
       - name: 安装依赖工具
         run: |
-          sudo apt update && sudo apt install -y git jq dos2unix python3 python3-pip
-          pip3 install PyJWT cryptography
-          # 验证依赖是否安装成功
-          [ -x "$(command -v jq)" ] || { echo "❌ jq安装失败"; exit 1; }
-          [ -x "$(command -v python3)" ] || { echo "❌ Python3安装失败"; exit 1; }
+          sudo apt update -qq && sudo apt install -y -qq git jq dos2unix python3 python3-pip
+          pip3 install -q PyJWT cryptography
+          
+          # 验证核心工具是否安装
+          command -v jq >/dev/null || { echo "❌ jq安装失败"; exit 1; }
+          command -v python3 >/dev/null || { echo "❌ Python3安装失败"; exit 1; }
+          echo "✅ 依赖安装完成"
 
       - name: 检查并准备脚本
         run: |
-          # 验证核心脚本存在性
+          # 验证必要脚本存在性
           required_scripts=("sync-devices.sh" "generate_jwt.py")
           for script in "${required_scripts[@]}"; do
             if [ ! -f "scripts/$script" ]; then
@@ -34,9 +36,11 @@ jobs:
               exit 1
             fi
           done
+          
           # 转换格式并添加执行权限
           dos2unix scripts/*.sh
           chmod +x scripts/*.sh scripts/generate_jwt.py
+          echo "✅ 脚本准备完成"
 
       - name: 执行设备同步脚本
         run: |
@@ -49,18 +53,18 @@ jobs:
           }
           echo "✅ 设备同步完成"
 
-      - name: 生成GitHub App访问令牌
+      - name: 生成GitHub App访问令牌（完整认证流程）
         run: |
           # 从secrets获取配置
           APP_ID="${{ secrets.GH_APP_ID }}"
           PRIVATE_KEY="${{ secrets.GH_APP_PRIVATE_KEY }}"
           TMP_KEY="/tmp/github-app-key.pem"
-
-          # 写入私钥到临时文件
+          TARGET_REPO="openwrt-custom-builder"  # 目标仓库名称
+          
+          # 1. 写入并验证私钥
           echo "$PRIVATE_KEY" > "$TMP_KEY"
           chmod 600 "$TMP_KEY"
-
-          # 验证私钥格式（关键修复：使用--避免grep误判选项）
+          
           if ! grep -q -- "-----BEGIN RSA PRIVATE KEY-----" "$TMP_KEY"; then
             echo "❌ 私钥缺少开头标记"
             exit 1
@@ -71,35 +75,114 @@ jobs:
           fi
           echo "✅ 私钥格式验证通过"
 
-          # 生成JWT
-          JWT=$(python3 scripts/generate_jwt.py "$APP_ID" "$TMP_KEY" | grep "JWT=" | cut -d'=' -f2)
+          # 2. 生成JWT并验证有效性
+          JWT_OUTPUT=$(python3 scripts/generate_jwt.py "$APP_ID" "$TMP_KEY")
+          JWT=$(echo "$JWT_OUTPUT" | grep "JWT=" | cut -d'=' -f2)
+          
           if [ -z "$JWT" ]; then
-            echo "❌ JWT生成失败"
+            echo "❌ JWT生成失败，脚本输出：$JWT_OUTPUT"
             exit 1
           fi
-          echo "✅ JWT生成成功（前20字符）：${JWT:0:20}..."
-
-          # 获取安装ID
-          INSTALLATION_RESPONSE=$(curl -s -H "Authorization: Bearer $JWT" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/app/installations")
-          INSTALLATION_ID=$(echo "$INSTALLATION_RESPONSE" | jq -r '.[] | select(.repositories[0].name == "openwrt-custom-builder") | .id')
-          if [ "$INSTALLATION_ID" = "null" ] || [ -z "$INSTALLATION_ID" ]; then
-            echo "❌ 未找到仓库安装记录，响应：$INSTALLATION_RESPONSE"
+          
+          # 解码JWT验证payload（调试关键）
+          echo "🔍 解析JWT内容..."
+          JWT_PAYLOAD=$(echo "$JWT" | cut -d'.' -f2 | base64 -d 2>/dev/null | jq .)
+          if [ -z "$JWT_PAYLOAD" ]; then
+            echo "❌ JWT格式无效（无法解码）"
             exit 1
           fi
-          echo "✅ 安装ID：$INSTALLATION_ID"
+          
+          # 验证JWT关键字段
+          if [ "$(echo "$JWT_PAYLOAD" | jq -r '.iss')" != "$APP_ID" ]; then
+            echo "❌ JWT签发者(iss)与APP_ID不匹配"
+            echo "实际iss: $(echo "$JWT_PAYLOAD" | jq -r '.iss')，预期: $APP_ID"
+            exit 1
+          fi
+          
+          EXPIRY=$(echo "$JWT_PAYLOAD" | jq -r '.exp')
+          CURRENT_TIME=$(date +%s)
+          if [ $((EXPIRY - CURRENT_TIME)) -le 0 ]; then
+            echo "❌ JWT已过期（exp: $EXPIRY，当前时间: $CURRENT_TIME）"
+            exit 1
+          fi
+          echo "✅ JWT验证通过（有效期剩余: $((EXPIRY - CURRENT_TIME))秒）"
 
-          # 获取访问令牌
-          ACCESS_TOKEN_RESPONSE=$(curl -s -X POST \
+          # 3. 获取安装ID（使用JWT认证）
+          echo "🔍 获取App安装列表..."
+          INSTALLATION_RESPONSE=$(curl -s -w "%{http_code}" \
             -H "Authorization: Bearer $JWT" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/app/installations/$INSTALLATION_ID/access_tokens")
-          ACCESS_TOKEN=$(echo "$ACCESS_TOKEN_RESPONSE" | jq -r '.token')
-          if [ "$ACCESS_TOKEN" = "null" ] || [ -z "$ACCESS_TOKEN" ]; then
-            echo "❌ 访问令牌生成失败，响应：$ACCESS_TOKEN_RESPONSE"
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/app/installations")
+          
+          HTTP_CODE=${INSTALLATION_RESPONSE: -3}
+          INSTALLATION_BODY=${INSTALLATION_RESPONSE%???}
+          
+          if [ "$HTTP_CODE" -ne 200 ]; then
+            echo "❌ 获取安装列表失败（HTTP $HTTP_CODE）"
+            echo "响应内容: $INSTALLATION_BODY"
             exit 1
           fi
+          
+          # 从安装列表中匹配当前用户的安装记录
+          INSTALLATION_ID=$(echo "$INSTALLATION_BODY" | jq -r '.[] | select(.account.login == "jkl66678") | .id')
+          if [ "$INSTALLATION_ID" = "null" ] || [ -z "$INSTALLATION_ID" ]; then
+            echo "❌ 未找到用户jkl66678的App安装记录"
+            echo "所有安装记录: $INSTALLATION_BODY"
+            exit 1
+          fi
+          echo "✅ 获取安装ID成功: $INSTALLATION_ID"
+
+          # 4. 生成安装访问令牌（使用JWT）
+          echo "🔍 生成访问令牌..."
+          ACCESS_TOKEN_RESPONSE=$(curl -s -w "%{http_code}" -X POST \
+            -H "Authorization: Bearer $JWT" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/app/installations/$INSTALLATION_ID/access_tokens")
+          
+          HTTP_CODE=${ACCESS_TOKEN_RESPONSE: -3}
+          TOKEN_BODY=${ACCESS_TOKEN_RESPONSE%???}
+          
+          if [ "$HTTP_CODE" -ne 201 ]; then
+            echo "❌ 生成访问令牌失败（HTTP $HTTP_CODE）"
+            echo "响应内容: $TOKEN_BODY"
+            exit 1
+          fi
+          
+          ACCESS_TOKEN=$(echo "$TOKEN_BODY" | jq -r '.token')
+          if [ "$ACCESS_TOKEN" = "null" ] || [ -z "$ACCESS_TOKEN" ]; then
+            echo "❌ 访问令牌提取失败"
+            exit 1
+          fi
+          echo "✅ 访问令牌生成成功（前20字符）: ${ACCESS_TOKEN:0:20}..."
+
+          # 5. 验证目标仓库访问权限（关键步骤）
+          echo "🔍 验证仓库访问权限..."
+          REPO_RESPONSE=$(curl -s -w "%{http_code}" \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/installation/repositories")
+          
+          HTTP_CODE=${REPO_RESPONSE: -3}
+          REPO_BODY=${REPO_RESPONSE%???}
+          
+          if [ "$HTTP_CODE" -ne 200 ]; then
+            echo "❌ 验证仓库权限失败（HTTP $HTTP_CODE）"
+            echo "响应内容: $REPO_BODY"
+            exit 1
+          fi
+          
+          # 检查目标仓库是否在授权列表中
+          if ! echo "$REPO_BODY" | jq -r '.repositories[].name' | grep -q "$TARGET_REPO"; then
+            echo "❌ 目标仓库$TARGET_REPO未添加到App授权列表"
+            echo "请在GitHub设置中添加仓库：https://github.com/settings/installations/$INSTALLATION_ID"
+            exit 1
+          fi
+          echo "✅ 目标仓库访问权限验证通过"
+
+          # 输出令牌到环境变量
           echo "ACCESS_TOKEN=$ACCESS_TOKEN" >> "$GITHUB_ENV"
           rm -f "$TMP_KEY"
 
@@ -113,16 +196,16 @@ jobs:
           git add device-drivers.json .github/workflows/build.yml sync-logs/
           if ! git diff --cached --quiet; then
             git commit -m "自动同步设备列表（$(date +%Y-%m-%d)）"
-            git push origin main
+            git push origin main --force-with-lease  # 安全强制推送（避免覆盖）
             echo "✅ 提交更新成功"
           else
             echo "ℹ️ 无变更，无需提交"
           fi
 
       - name: 上传同步日志
-        if: always()
+        if: always()  # 无论成功失败都上传日志
         uses: actions/upload-artifact@v4
         with:
           name: sync-logs-${{ github.run_id }}
           path: sync-logs/
-          retention-days: 14
+          retention-days: 14  # 日志保留14天
