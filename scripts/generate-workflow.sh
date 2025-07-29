@@ -1,28 +1,31 @@
 #!/bin/bash
-# 从device-drivers.json生成build.yml
+# 从device-drivers.json动态生成build.yml的选项（修复版）
 
 # 检查依赖
 if ! command -v jq &> /dev/null; then
-  echo "❌ 需要安装jq工具"
+  echo "❌ 需要安装jq工具（sudo apt install jq）"
   exit 1
 fi
 
 # 检查配置文件
 if [ ! -f "device-drivers.json" ]; then
-  echo "❌ 未找到device-drivers.json"
+  echo "❌ 未找到device-drivers.json，请先运行同步工作流"
   exit 1
 fi
 
-# 提取设备和芯片列表
-DEVICE_LIST=$(jq -r '.devices[].name' device-drivers.json | sort | uniq | tr '\n' ' ')
-CHIP_LIST=$(jq -r '.chips[].name' device-drivers.json | sort | uniq | tr '\n' ' ')
+# 提取设备和芯片列表（用逗号分隔，适配YAML格式）
+DEVICE_LIST=$(jq -r '.devices[].name' device-drivers.json | sort | uniq | tr '\n' ',' | sed 's/,$//')
+CHIP_LIST=$(jq -r '.chips[].name' device-drivers.json | sort | uniq | tr '\n' ',' | sed 's/,$//')
 
-# 兜底默认值
-[ -z "$DEVICE_LIST" ] && DEVICE_LIST="cudy-tr3000 redmi-ac2100 x86-64-generic"
-[ -z "$CHIP_LIST" ] && CHIP_LIST="mt7981 mt7621 x86_64"
+# 兜底默认值（用逗号分隔）
+[ -z "$DEVICE_LIST" ] && DEVICE_LIST="cudy-tr3000,redmi-ac2100,x86-64-generic,phicomm-k2p"
+[ -z "$CHIP_LIST" ] && CHIP_LIST="mt7981,mt7621,x86_64,ipq8065,bcm53573"
 
-# 生成工作流
-cat > .github/workflows/build.yml << EOF
+# 临时文件存储生成的工作流
+TMP_BUILD_YML=$(mktemp)
+
+# 生成工作流头部（保留原文件结构，仅替换options）
+cat > "$TMP_BUILD_YML" << EOF
 name: OpenWrt全功能动态编译系统（自动生成）
 
 on:
@@ -103,19 +106,15 @@ jobs:
       packages: write
 
     steps:
-      - name: 拉取代码
-        uses: actions/checkout@v4
-
-      - name: 安装依赖
-        run: |
-          sudo apt update
-          sudo apt install -y build-essential libncurses5-dev libncursesw5-dev \
-            zlib1g-dev gawk git gettext libssl-dev xsltproc wget unzip python3 jq
-
-      # 以下步骤与完整编译逻辑一致（省略，保持与build.yml相同）
 EOF
 
-# 追加编译步骤（复用现有逻辑）
-tail -n +$(grep -n "steps:" .github/workflows/build.yml | cut -d':' -f1) .github/workflows/build.yml >> .github/workflows/build.yml
+# 追加原build.yml中的steps内容（排除已生成的头部）
+# 原理：从原文件中提取"steps:"之后的所有行（保留编译逻辑）
+sed -n '/^    steps:/,$p' .github/workflows/build.yml | tail -n +2 >> "$TMP_BUILD_YML"
 
-echo "✅ 工作流生成完成，设备选项：$DEVICE_LIST"
+# 替换原工作流文件
+mv "$TMP_BUILD_YML" .github/workflows/build.yml
+
+echo "✅ 工作流生成完成"
+echo "→ 设备选项：$DEVICE_LIST"
+echo "→ 芯片选项：$CHIP_LIST"
