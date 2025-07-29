@@ -1,65 +1,15 @@
-{"devices": [
-        {
-            "name": "cudy-tr3000",
-            "chip": "mt7981",
-            "kernel_target": "mediatek/filogic",
-            "drivers": [
-                "kmod-mt7981-firmware",
-                "kmod-gmac",
-                "kmod-usb3",
-                "kmod-mtd-rw"
-            ]
-        },
-        {
-            "name": "redmi-ac2100",
-            "chip": "mt7621",
-            "kernel_target": "ramips/mt7621",
-            "drivers": [
-                "kmod-mt7603e",
-                "kmod-mt7615e",
-                "kmod-switch-rtl8367s"
-            ]
-        },
-        {
-            "name": "x86-64-generic",
-            "chip": "x86_64",
-            "kernel_target": "x86/64",
-            "drivers": [
-                "kmod-e1000e",
-                "kmod-igb",
-                "kmod-rtc-pc"
-            ]
-        },
-        {
-            "name": "phicomm-k2p",
-            "chip": "mt7621",
-            "kernel_target": "ramips/mt7621",
-            "drivers": [
-                "kmod-mt7603",
-                "kmod-mt7615d"
-            ]
-        }
-    ],
-    "chips": [
-        {
-            "name": "mt7981",
-            "platform": "mediatek/filogic"
-        },
-        {
-            "name": "mt7621",
-            "platform": "ramips/mt7621"
-        },
-        {
-            "name": "x86_64",
-            "platform": "x86/64"
-        },
-        {
-            "name": "ipq8065",
-            "platform": "ipq806x/generic"
-        },
-        {
-            "name": "bcm53573",
-            "platform": "bcm53xx/generic"
-        }
-    ]
+{
+  "devices": [
+    {
+      "name": "test-device",
+      "chip": "test-chip",
+      "kernel_target": "test-platform"
+    }
+  ],
+  "chips": [
+    {
+      "name": "test-chip",
+      "platform": "test-platform"
+    }
+  ]
 }

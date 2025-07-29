@@ -1,0 +1,51 @@
+[2025-07-29 10:00:10] ===== 开始设备与芯片同步 =====
+[2025-07-29 10:00:10] 工作目录: /home/runner/work/openwrt-custom-builder/openwrt-custom-builder
+[2025-07-29 10:00:10] 输出文件: /home/runner/work/openwrt-custom-builder/openwrt-custom-builder/device-drivers.json
+[2025-07-29 10:00:10] 🔍 检查依赖工具...
+[2025-07-29 10:00:10] ✅ 依赖齐全
+[2025-07-29 10:00:10] 🔧 初始化配置文件...
+[2025-07-29 10:00:10] 📥 克隆源码到: /tmp/tmp.0Bre8t6PPv
+Cloning into '/tmp/tmp.0Bre8t6PPv'...
+[2025-07-29 10:00:13] ✅ 源码克隆成功
+[2025-07-29 10:00:13] 🔍 开始解析设备（支持多格式提取）...
+[2025-07-29 10:00:13] ℹ️ 处理平台: ipq806x（路径: /tmp/tmp.0Bre8t6PPv/target/linux/ipq806x）
+[2025-07-29 10:00:13]   查找.dts文件路径: /tmp/tmp.0Bre8t6PPv/target/linux/ipq806x/dts
+[2025-07-29 10:00:13] ⚠️ 未找到.dts文件，跳过平台: ipq806x
+[2025-07-29 10:00:13] ℹ️ 处理平台: mediatek（路径: /tmp/tmp.0Bre8t6PPv/target/linux/mediatek）
+[2025-07-29 10:00:13]   查找.dts文件路径: /tmp/tmp.0Bre8t6PPv/target/linux/mediatek/dts
+[2025-07-29 10:00:13]   找到.dts文件数量: 128
+[2025-07-29 10:00:13]   示例文件: /tmp/tmp.0Bre8t6PPv/target/linux/mediatek/dts/mt7988d-smartrg-SDG-8733A.dts
+[2025-07-29 10:00:13]   示例文件: /tmp/tmp.0Bre8t6PPv/target/linux/mediatek/dts/mt7981b-keenetic-kn-3811.dts
+[2025-07-29 10:00:13]   示例文件: /tmp/tmp.0Bre8t6PPv/target/linux/mediatek/dts/mt7981b-gatonetworks-gdsp.dts
+[2025-07-29 10:00:13] ℹ️ 从文件名提取芯片: mt7981b（文件: /tmp/tmp.0Bre8t6PPv/target/linux/mediatek/dts/mt7981b-glinet-gl-mt2500-v2.dts）
+[2025-07-29 10:00:14] ℹ️ 从文件名提取芯片: mt7981b（文件: /tmp/tmp.0Bre8t6PPv/target/linux/mediatek/dts/mt7981b-glinet-gl-mt2500-v1.dts）
+[2025-07-29 10:00:14] ℹ️ 处理平台: mediatek/files-6.12/arch/arm64/boot/dts/mediatek（路径: /tmp/tmp.0Bre8t6PPv/target/linux/mediatek/files-6.12/arch/arm64/boot/dts/mediatek）
+[2025-07-29 10:00:14]   查找.dts文件路径: /tmp/tmp.0Bre8t6PPv/target/linux/mediatek/files-6.12/arch/arm64/boot/dts/mediatek/dts
+[2025-07-29 10:00:14] ⚠️ 未找到.dts文件，跳过平台: mediatek/files-6.12/arch/arm64/boot/dts/mediatek
+[2025-07-29 10:00:14] ℹ️ 处理平台: ramips（路径: /tmp/tmp.0Bre8t6PPv/target/linux/ramips）
+[2025-07-29 10:00:14]   查找.dts文件路径: /tmp/tmp.0Bre8t6PPv/target/linux/ramips/dts
+[2025-07-29 10:00:14]   找到.dts文件数量: 665
+[2025-07-29 10:00:14]   示例文件: /tmp/tmp.0Bre8t6PPv/target/linux/ramips/dts/mt7628an_tplink_tl-wr902ac-v3.dts
+[2025-07-29 10:00:14]   示例文件: /tmp/tmp.0Bre8t6PPv/target/linux/ramips/dts/mt7628an_comfast_cf-wr758ac-v1.dts
+[2025-07-29 10:00:14]   示例文件: /tmp/tmp.0Bre8t6PPv/target/linux/ramips/dts/mt7621_mtc_wr1201.dts
+[2025-07-29 10:00:22] ℹ️ 处理平台: ramips/files/drivers/dma/mediatek（路径: /tmp/tmp.0Bre8t6PPv/target/linux/ramips/files/drivers/dma/mediatek）
+[2025-07-29 10:00:22]   查找.dts文件路径: /tmp/tmp.0Bre8t6PPv/target/linux/ramips/files/drivers/dma/mediatek/dts
+[2025-07-29 10:00:22] ⚠️ 未找到.dts文件，跳过平台: ramips/files/drivers/dma/mediatek
+[2025-07-29 10:00:22] ℹ️ 处理平台: x86（路径: /tmp/tmp.0Bre8t6PPv/target/linux/x86）
+[2025-07-29 10:00:22]   查找.dts文件路径: /tmp/tmp.0Bre8t6PPv/target/linux/x86/dts
+[2025-07-29 10:00:22] ⚠️ 未找到.dts文件，跳过平台: x86
+[2025-07-29 10:00:22] ℹ️ 处理平台: ath79（路径: /tmp/tmp.0Bre8t6PPv/target/linux/ath79）
+[2025-07-29 10:00:22]   查找.dts文件路径: /tmp/tmp.0Bre8t6PPv/target/linux/ath79/dts
+[2025-07-29 10:00:22]   找到.dts文件数量: 517
+[2025-07-29 10:00:22]   示例文件: /tmp/tmp.0Bre8t6PPv/target/linux/ath79/dts/ar9342_ubnt_lap-120.dts
+[2025-07-29 10:00:22]   示例文件: /tmp/tmp.0Bre8t6PPv/target/linux/ath79/dts/ar9344_qihoo_c301.dts
+[2025-07-29 10:00:22]   示例文件: /tmp/tmp.0Bre8t6PPv/target/linux/ath79/dts/ar9344_netgear_r6100.dts
+[2025-07-29 10:00:22] ℹ️ 从文件名提取芯片: ar9331（文件: /tmp/tmp.0Bre8t6PPv/target/linux/ath79/dts/ar9331_alfa-network_ap121fe.dts）
+[2025-07-29 10:00:23] ℹ️ 从文件名提取芯片: qca9531（文件: /tmp/tmp.0Bre8t6PPv/target/linux/ath79/dts/qca9531_alfa-network_tube-2hq.dts）
+[2025-07-29 10:00:23] ℹ️ 从文件名提取芯片: qca9531（文件: /tmp/tmp.0Bre8t6PPv/target/linux/ath79/dts/qca9531_alfa-network_wifi-camppro-nano-duo.dts）
+[2025-07-29 10:00:24] ℹ️ 从文件名提取芯片: ar9331（文件: /tmp/tmp.0Bre8t6PPv/target/linux/ath79/dts/ar9331_alfa-network_ap121f.dts）
+[2025-07-29 10:00:26] ℹ️ 从文件名提取芯片: qca9531（文件: /tmp/tmp.0Bre8t6PPv/target/linux/ath79/dts/qca9531_alfa-network_pi-wifi4.dts）
+[2025-07-29 10:00:27] ⚠️ 未提取到足够数据，添加测试数据
+[2025-07-29 10:00:28] ===== 同步完成 =====
+[2025-07-29 10:00:28] 最终设备总数: 1，芯片总数: 1
+[2025-07-29 10:00:28] 日志路径: /home/runner/work/openwrt-custom-builder/openwrt-custom-builder/sync-logs/sync-detail.log
