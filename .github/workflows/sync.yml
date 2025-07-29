@@ -9,13 +9,13 @@ jobs:
   sync-devices:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # 必要权限：修改仓库内容（包括工作流文件）
+      contents: write  # 仅需此权限，GITHUB_TOKEN默认包含工作流修改权限
 
     steps:
       - name: 拉取仓库最新代码
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 1  # 仅拉取最新版本
 
       - name: 安装依赖工具
         run: |
@@ -23,6 +23,7 @@ jobs:
           sudo apt install -y -qq git jq dos2unix build-essential libncurses5-dev \
             zlib1g-dev gawk gettext libssl-dev xsltproc wget unzip python3 python3-pip
           
+          # 验证关键工具
           for tool in git jq awk python3; do
             if ! command -v "$tool" &> /dev/null; then
               echo "❌ 缺失必要工具: $tool"
@@ -40,13 +41,14 @@ jobs:
           chmod +x scripts/sync-devices.sh
           echo "✅ 同步脚本权限配置完成"
 
-      - name: 执行设备列表同步
+      - name: 执行设备列表同步（核心步骤）
         run: |
           echo "📝 开始从OpenWrt源码同步设备列表..."
           ./scripts/sync-devices.sh || {
             echo "❌ 同步脚本执行失败，查看sync-logs获取详情"
             exit 1
           }
+          # 验证生成结果
           if [ ! -f "device-drivers.json" ] || [ $(jq '.devices | length' "device-drivers.json") -eq 0 ]; then
             echo "❌ 设备列表生成失败或为空"
             exit 1
@@ -67,18 +69,22 @@ jobs:
           }
           echo "✅ build.yml已更新为最新设备选项"
 
-      - name: 提交更新到仓库（彻底解决权限和格式问题）
+      - name: 提交更新到仓库（彻底解决认证问题）
         run: |
-          # 配置Git身份
-          git config --global user.name "设备同步Bot"
-          git config --global user.email "bot@example.com"
+          # 配置Git身份（确保为GitHub Actions机器人）
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
-          # 强制使用GITHUB_TOKEN（关键：彻底避免使用GitHub App令牌）
-          git remote remove origin  # 先移除旧远程
+          # 【关键】彻底清除旧远程配置，强制使用GITHUB_TOKEN
+          git remote remove origin
           git remote add origin "https://x-access-token:${{ github.token }}@github.com/jkl66678/openwrt-custom-builder.git"
           
-          # 添加所有变更文件（包括日志和脚本）
-          git add device-drivers.json .github/workflows/build.yml sync-logs/ scripts/
+          # 【调试】确认远程地址配置（确保令牌已嵌入）
+          echo "当前远程仓库配置："
+          git remote -v
+          
+          # 添加所有变更文件（覆盖工作流、设备列表、日志、脚本）
+          git add .github/workflows/build.yml device-drivers.json sync-logs/ scripts/
           
           # 检查是否有变更
           if git diff --cached --quiet; then
@@ -86,10 +92,10 @@ jobs:
             exit 0
           fi
           
-          # 暂存未提交的更改
+          # 暂存未提交的更改（确保拉取时工作区干净）
           git stash push -u -m "temp stash before pull" || echo "ℹ️ 没有需要暂存的内容"
           
-          # 拉取远程最新代码
+          # 拉取远程最新代码（优先rebase保持历史整洁）
           if ! git pull --rebase origin main; then
             echo "⚠️ rebase失败，尝试普通拉取"
             git pull origin main || {
@@ -98,31 +104,36 @@ jobs:
             }
           fi
           
-          # 恢复暂存的更改
+          # 恢复暂存的更改（如有）
           if git stash list | grep -q "temp stash before pull"; then
             git stash pop || {
               echo "⚠️ 恢复暂存内容冲突，已保留文件"
             }
           fi
           
-          # 再次暂存所有变更
-          git add device-drivers.json .github/workflows/build.yml sync-logs/ scripts/
+          # 再次暂存所有变更（确保无遗漏）
+          git add .github/workflows/build.yml device-drivers.json sync-logs/ scripts/
           
-          # 修复日期格式（用引号包裹避免空格问题）
+          # 提交（修复日期格式）
           commit_msg="自动同步设备列表（$(date +"%Y-%m-%d %H:%M")）"
           git commit -m "$commit_msg" || {
             echo "ℹ️ 无新变更可提交"
             exit 0
           }
           
-          # 推送（使用GITHUB_TOKEN确保权限）
+          # 【调试】确认当前认证信息
+          echo "当前提交用户：$(git config user.name) <$(git config user.email)>"
+          
+          # 推送（强制使用GITHUB_TOKEN）
           git push origin main || {
-            echo "❌ 推送失败，手动检查：1. 是否禁用了GitHub App；2. 分支保护规则"
+            echo "❌ 推送失败，可能原因："
+            echo "1. 仓库仍关联GitHub App（请移除）"
+            echo "2. 分支保护规则限制（请检查Settings → Branches）"
             exit 1
           }
           echo "✅ 成功推送更新到远程仓库"
 
-      - name: 上传同步日志
+      - name: 上传同步日志（调试用）
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -130,4 +141,5 @@ jobs:
           path: |
             sync-logs/
             device-drivers.json
-          retention-days: 14
+            .github/workflows/build.yml
+          retention-days: 14  # 日志保留14天
