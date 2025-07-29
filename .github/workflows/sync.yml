@@ -42,28 +42,23 @@ jobs:
           APP_ID=${{ secrets.GH_APP_ID }}
           PRIVATE_KEY="${{ secrets.GH_APP_PRIVATE_KEY }}"
           
-          # 写入私钥（第55行附近：缩进严格为2空格，无多余字符）
+          # 第55行核心修复：严格2空格缩进，无多余空格
           echo "$PRIVATE_KEY" > /tmp/key.pem
           chmod 600 /tmp/key.pem
           
-          # 验证私钥格式
           grep -q "-----BEGIN RSA PRIVATE KEY-----" /tmp/key.pem || { echo "❌ 私钥格式错误"; exit 1; }
           grep -q "-----END RSA PRIVATE KEY-----" /tmp/key.pem || { echo "❌ 私钥格式错误"; exit 1; }
           
-          # 生成JWT（极简格式，避免缩进冲突）
+          # 极简Python代码块，消除缩进冲突
           python3 <<END
 with open('/tmp/key.pem','r') as f:private_key=f.read()
 import jwt,time
-iat=int(time.time())
-exp=iat+600
-token=jwt.encode({'iat':iat,'exp':exp,'iss':'$APP_ID'},private_key,algorithm='RS256')
+token=jwt.encode({'iat':int(time.time()),'exp':int(time.time())+600,'iss':'$APP_ID'},private_key,algorithm='RS256')
 print(f"JWT={token}")
 END
-          # 提取JWT
           JWT=$(grep "JWT=" <(cat) | cut -d'=' -f2)
           [ -n "$JWT" ] || { echo "❌ JWT生成失败"; exit 1; }
           
-          # 获取安装ID和访问令牌
           INSTALLATION_ID=$(curl -s -H "Authorization: Bearer $JWT" "https://api.github.com/app/installations" | jq -r '.[] | select(.repositories[0].name == "openwrt-custom-builder") | .id')
           [ "$INSTALLATION_ID" != "null" ] || { echo "❌ 未找到安装记录"; exit 1; }
           
