@@ -1,7 +1,7 @@
 name: 设备列表自动同步
 
 on:
-  workflow_dispatch:  # 允许手动触发
+  workflow_dispatch:
   schedule:
     - cron: "0 0 * * 0"  # 每周日自动同步
 
@@ -9,20 +9,18 @@ jobs:
   sync-devices:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # 基础代码推送权限（配合App权限）
-      actions: write   # 允许修改工作流文件（若需要）
+      contents: write
+      actions: write
 
     steps:
       - name: 拉取仓库代码
         uses: actions/checkout@v4
 
-      - name: 显示工作目录
-        run: |
-          echo "当前工作目录：$(pwd)"
-          ls -la
-
       - name: 安装依赖
-        run: sudo apt install -y git jq dos2unix
+        run: |
+          sudo apt install -y git jq dos2unix
+          # 安装jwt-cli替代openssl生成JWT（解决openssl不支持jwt命令的问题）
+          sudo npm install -g jwt-cli
 
       - name: 准备同步脚本
         run: |
@@ -30,9 +28,8 @@ jobs:
             echo "❌ 未找到脚本：scripts/sync-devices.sh"
             exit 1
           fi
-          dos2unix scripts/sync-devices.sh  # 处理换行符问题
+          dos2unix scripts/sync-devices.sh
           chmod +x scripts/sync-devices.sh
-          head -n 5 scripts/sync-devices.sh  # 验证脚本存在
 
       - name: 执行同步脚本
         run: |
@@ -41,16 +38,6 @@ jobs:
             cat sync-logs/sync-detail.log
             exit 1
           }
-
-      - name: 验证文件生成
-        if: always()  # 即使前面失败也执行
-        run: |
-          echo "工作目录内容："
-          ls -la
-          echo "日志目录内容："
-          ls -la sync-logs/ || echo "sync-logs 不存在"
-          echo "配置文件内容（前10行）："
-          head -n 10 device-drivers.json || echo "device-drivers.json 不存在"
 
       - name: 生成新工作流（含最新设备）
         run: |
@@ -61,50 +48,45 @@ jobs:
             echo "⚠️ 未找到生成工作流的脚本，跳过此步骤"
           fi
 
-      - name: 生成GitHub App访问令牌
+      - name: 生成GitHub App访问令牌（使用jwt-cli）
         run: |
           # 从Secrets获取App ID和私钥
           APP_ID=${{ secrets.GH_APP_ID }}
           PRIVATE_KEY="${{ secrets.GH_APP_PRIVATE_KEY }}"
           
           # 生成JWT令牌（有效期10分钟）
-          JWT=$(echo "$PRIVATE_KEY" | openssl jwt -sign -keyform PEM -alg RS256 -outform compact \
-            -payload '{"iat": '"$(date +%s)"',"exp": '"$(( $(date +%s) + 600 ))"',"iss": "'"$APP_ID"'"}')
+          IAT=$(date +%s)
+          EXP=$((IAT + 600))
+          # 使用jwt-cli生成令牌（替代openssl jwt）
+          JWT=$(echo "$PRIVATE_KEY" | jwt encode --alg RS256 --exp $EXP --iss $APP_ID)
           
           # 获取App在当前仓库的安装ID
           INSTALLATION_ID=$(curl -s -H "Authorization: Bearer $JWT" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/app/installations" | jq -r '.[] | select(.repository_selection == "selected" and .repositories[0].name == "openwrt-custom-builder") | .id')
           
-          # 获取访问令牌（含App配置的权限）
+          # 获取访问令牌
           ACCESS_TOKEN=$(curl -s -X POST -H "Authorization: Bearer $JWT" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/app/installations/$INSTALLATION_ID/access_tokens" | jq -r '.token')
           
-          # 保存令牌到环境变量，供后续步骤使用
           echo "ACCESS_TOKEN=$ACCESS_TOKEN" >> $GITHUB_ENV
 
       - name: 提交更新（使用GitHub App权限）
         run: |
-          # 配置Git身份
           git config --global user.name "Sync Bot"
           git config --global user.email "bot@example.com"
-          
-          # 使用App访问令牌配置远程仓库（避免默认令牌权限不足）
           git remote set-url origin "https://x-access-token:${{ env.ACCESS_TOKEN }}@github.com/jkl66678/openwrt-custom-builder.git"
           
-          # 添加需要提交的文件（根据实际修改的文件调整）
           git add device-drivers.json .github/workflows/build.yml
-          
-          # 检查是否有变更，无变更则不提交
           if git diff --cached --quiet; then
             echo "⚠️ 无更新可提交"
           else
             git commit -m "自动更新设备列表（$(date +%Y%m%d)）"
-            git push origin main  # 推送至主分支
+            git push origin main
           fi
 
-      - name: 上传日志和配置文件（用于调试）
+      - name: 上传日志和配置文件
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -112,4 +94,4 @@ jobs:
           path: |
             ${{ github.workspace }}/sync-logs/
             ${{ github.workspace }}/device-drivers.json
-          retention-days: 14  # 日志保留14天
+          retention-days: 14
