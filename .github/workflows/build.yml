@@ -12,18 +12,18 @@ on:
         options: [device, chip]
 
       # 2. 设备选择（仅设备模式，选项会被sync.yml自动更新）
-      device:
+      devices:
+        description: "选择设备"
+        required: true
         type: choice
-        description: 设备型号（仅设备模式）
-        required: false
-        options: [cudy-tr3000, redmi-ac2100, x86-64-generic]  # 自动更新标记
+        options: [test-device]  # AUTO-SYNC-DEVICES
 
       # 3. 芯片选择（仅芯片模式，选项会被sync.yml自动更新）
-      chip:
-        type: choice
-        description: 芯片型号（仅芯片模式）
-        required: false
-        options: [mt7981, mt7621, x86_64]  # 自动更新标记
+      chips:
+      description: "选择芯片"
+      required: true
+      type: choice
+      options: [test-chip]  # AUTO-SYNC-CHIPS
 
       # 4. 源码版本
       source_branch:
