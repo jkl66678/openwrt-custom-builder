@@ -1,35 +1,27 @@
 #!/bin/bash
-# 从device-drivers.json读取设备列表，动态生成build.yml工作流
+# 从device-drivers.json生成build.yml
 
 # 检查依赖
 if ! command -v jq &> /dev/null; then
-  echo "❌ 错误：需要安装jq工具（用于解析JSON）"
+  echo "❌ 需要安装jq工具"
   exit 1
 fi
 
-# 检查设备配置文件
+# 检查配置文件
 if [ ! -f "device-drivers.json" ]; then
-  echo "❌ 错误：未找到device-drivers.json，请先运行同步脚本"
+  echo "❌ 未找到device-drivers.json"
   exit 1
 fi
 
-# 从JSON中提取设备列表（按名称排序，去重）
+# 提取设备和芯片列表
 DEVICE_LIST=$(jq -r '.devices[].name' device-drivers.json | sort | uniq | tr '\n' ' ')
-# 提取芯片列表
 CHIP_LIST=$(jq -r '.chips[].name' device-drivers.json | sort | uniq | tr '\n' ' ')
 
-# 检查是否有设备
-if [ -z "$DEVICE_LIST" ]; then
-  echo "⚠️ 警告：未提取到任何设备，使用默认设备列表"
-  DEVICE_LIST="cudy-tr3000 redmi-ac2100 x86_64-generic"
-fi
+# 兜底默认值
+[ -z "$DEVICE_LIST" ] && DEVICE_LIST="cudy-tr3000 redmi-ac2100 x86-64-generic"
+[ -z "$CHIP_LIST" ] && CHIP_LIST="mt7981 mt7621 x86_64"
 
-if [ -z "$CHIP_LIST" ]; then
-  echo "⚠️ 警告：未提取到任何芯片，使用默认芯片列表"
-  CHIP_LIST="mt7981 mt7621 x86_64"
-fi
-
-# 生成工作流内容（替换设备和芯片选项）
+# 生成工作流
 cat > .github/workflows/build.yml << EOF
 name: OpenWrt全功能动态编译系统（自动生成）
 
@@ -56,7 +48,7 @@ on:
 
       source_branch:
         type: choice
-        description: 源码分支（含内核）
+        description: 源码分支
         required: true
         options: [openwrt-23.05, openwrt-master, immortalwrt-23.05, immortalwrt-master]
 
@@ -73,7 +65,7 @@ on:
 
       core_features:
         type: choice
-        description: 核心功能（IPv6+硬件加速）
+        description: 核心功能
         required: true
         options: [ipv6+accel, ipv6-only, accel-only, none]
 
@@ -101,52 +93,9 @@ on:
         required: true
         default: true
 
-  schedule:
-    - cron: "0 0 * * 0"
-
 jobs:
-  sync-devices:
-    name: 同步设备与芯片信息
-    runs-on: ubuntu-latest
-    steps:
-      - name: 拉取仓库代码
-        uses: actions/checkout@v4
-
-      - name: 检查同步脚本
-        run: |
-          if [ ! -f "scripts/sync-devices.sh" ]; then
-            echo "❌ 未找到同步脚本"
-            exit 1
-          fi
-
-      - name: 安装依赖
-        run: sudo apt install -y git jq gh
-
-      - name: 执行同步脚本
-        run: |
-          chmod +x scripts/sync-devices.sh
-          ./scripts/sync-devices.sh
-
-      - name: 生成新工作流（含最新设备）
-        run: |
-          chmod +x scripts/generate-workflow.sh
-          ./scripts/generate-workflow.sh
-
-      - name: 提交更新
-        run: |
-          git config --global user.name "Auto-Bot"
-          git config --global user.email "bot@github.com"
-          git add .github/workflows/build.yml device-drivers.json
-          if git diff --cached --quiet; then
-            echo "⚠️ 无更新"
-          else
-            git commit -m "自动更新设备列表（$(date +%Y%m%d)）"
-            git push
-          fi
-
   build-firmware:
     name: 动态编译固件
-    needs: sync-devices
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -163,8 +112,10 @@ jobs:
           sudo apt install -y build-essential libncurses5-dev libncursesw5-dev \
             zlib1g-dev gawk git gettext libssl-dev xsltproc wget unzip python3 jq
 
-      # 以下步骤与之前的编译逻辑相同（省略，保持原样）
-      # ...（包含硬件检测、动态线程计算、源码拉取、编译等步骤）
+      # 以下步骤与完整编译逻辑一致（省略，保持与build.yml相同）
 EOF
 
-echo "✅ 工作流已生成，设备选项：$DEVICE_LIST"
+# 追加编译步骤（复用现有逻辑）
+tail -n +$(grep -n "steps:" .github/workflows/build.yml | cut -d':' -f1) .github/workflows/build.yml >> .github/workflows/build.yml
+
+echo "✅ 工作流生成完成，设备选项：$DEVICE_LIST"
