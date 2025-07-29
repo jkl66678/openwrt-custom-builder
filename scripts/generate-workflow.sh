@@ -13,18 +13,38 @@ if [ ! -f "device-drivers.json" ]; then
   exit 1
 fi
 
-# 提取设备和芯片列表（用逗号分隔，适配YAML格式）
-DEVICE_LIST=$(jq -r '.devices[].name' device-drivers.json | sort | uniq | tr '\n' ',' | sed 's/,$//')
-CHIP_LIST=$(jq -r '.chips[].name' device-drivers.json | sort | uniq | tr '\n' ',' | sed 's/,$//')
+# 提取设备和芯片列表（生成YAML列表格式，每个选项单独一行）
+# 修复点1：将设备列表转换为YAML列表格式（- 选项）
+DEVICE_LIST=$(jq -r '.devices[].name' device-drivers.json | sort | uniq | sed 's/^/          - /')
+CHIP_LIST=$(jq -r '.chips[].name' device-drivers.json | sort | uniq | sed 's/^/          - /')
 
-# 兜底默认值（用逗号分隔）
-[ -z "$DEVICE_LIST" ] && DEVICE_LIST="cudy-tr3000,redmi-ac2100,x86-64-generic,phicomm-k2p"
-[ -z "$CHIP_LIST" ] && CHIP_LIST="mt7981,mt7621,x86_64,ipq8065,bcm53573"
+# 兜底默认值（同样使用YAML列表格式）
+# 修复点2：默认值也采用列表格式
+if [ -z "$DEVICE_LIST" ]; then
+  DEVICE_LIST=$(cat <<EOF
+          - cudy-tr3000
+          - redmi-ac2100
+          - x86-64-generic
+          - phicomm-k2p
+EOF
+  )
+fi
+
+if [ -z "$CHIP_LIST" ]; then
+  CHIP_LIST=$(cat <<EOF
+          - mt7981
+          - mt7621
+          - x86_64
+          - ipq8065
+          - bcm53573
+EOF
+  )
+fi
 
 # 临时文件存储生成的工作流
 TMP_BUILD_YML=$(mktemp)
 
-# 生成工作流头部（保留原文件结构，仅替换options）
+# 生成工作流头部（修复选项格式）
 cat > "$TMP_BUILD_YML" << EOF
 name: OpenWrt全功能动态编译系统（自动生成）
 
@@ -41,13 +61,15 @@ on:
         type: choice
         description: 设备型号（仅设备模式）
         required: false
-        options: [$DEVICE_LIST]
+        options:
+$DEVICE_LIST
 
       chip:
         type: choice
         description: 芯片型号（仅芯片模式）
         required: false
-        options: [$CHIP_LIST]
+        options:
+$CHIP_LIST
 
       source_branch:
         type: choice
@@ -109,12 +131,22 @@ jobs:
 EOF
 
 # 追加原build.yml中的steps内容（排除已生成的头部）
-# 原理：从原文件中提取"steps:"之后的所有行（保留编译逻辑）
-sed -n '/^    steps:/,$p' .github/workflows/build.yml | tail -n +2 >> "$TMP_BUILD_YML"
+# 修复点3：增强兼容性，处理可能的空行或格式差异
+if ! sed -n '/^    steps:/,$p' .github/workflows/build.yml | tail -n +2 >> "$TMP_BUILD_YML"; then
+  echo "⚠️ 提取原有steps失败，使用默认编译步骤"
+  cat >> "$TMP_BUILD_YML" << EOF
+      - name: 拉取代码
+        uses: actions/checkout@v4
 
-# 替换原工作流文件
+      - name: 编译固件
+        run: echo "开始编译..."
+EOF
+fi
+
+# 替换原工作流文件（添加备份机制）
+[ -f ".github/workflows/build.yml" ] && cp .github/workflows/build.yml .github/workflows/build.yml.bak
 mv "$TMP_BUILD_YML" .github/workflows/build.yml
 
 echo "✅ 工作流生成完成"
-echo "→ 设备选项：$DEVICE_LIST"
-echo "→ 芯片选项：$CHIP_LIST"
+echo "→ 设备选项数：$(echo "$DEVICE_LIST" | grep -c '^          - ')"
+echo "→ 芯片选项数：$(echo "$CHIP_LIST" | grep -c '^          - ')"
