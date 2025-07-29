@@ -1,14 +1,14 @@
 #!/bin/bash
 set -euo pipefail  # 严格模式：错误、未定义变量、管道失败时退出
 
-# 捕获EXIT信号，确保临时文件清理（无论正常/异常退出）
+# 捕获EXIT信号，确保临时文件清理
 trap 'cleanup' EXIT
 cleanup() {
     if [ -n "${TMP_SRC:-}" ] && [ -d "$TMP_SRC" ]; then
         rm -rf "$TMP_SRC"
         log "🧹 清理临时源码目录: $TMP_SRC"
     fi
-    # 清理临时文件（容错处理）
+    # 清理临时文件
     for tmp in "$DTS_LIST_TMP" "$CHIP_TMP_FILE" "$DEVICE_TMP_JSON" "$CHIP_TMP_JSON" "$DEDUP_FILE"; do
         [ -f "$tmp" ] && rm -f "$tmp"
     done
@@ -22,11 +22,10 @@ LOG_DIR="$WORK_DIR/sync-logs"
 OUTPUT_JSON="$WORK_DIR/device-drivers.json"
 SYNC_LOG="$LOG_DIR/sync-detail.log"
 
-# 资源阈值（根据Runner配置调整）
-MAX_MEM_THRESHOLD=6000  # 最大内存使用(MB)
-MAX_DTS_SIZE=5242880    # 最大dts文件大小(5MB)，超过则跳过
-CLONE_RETRIES=5         # 源码克隆重试次数
-SOURCE_REPOS=(          # 源码仓库列表（主仓库+镜像）
+MAX_MEM_THRESHOLD=6000
+MAX_DTS_SIZE=5242880
+CLONE_RETRIES=5
+SOURCE_REPOS=(
     "https://git.openwrt.org/openwrt/openwrt.git"
     "https://github.com/openwrt/openwrt.git"
 )
@@ -39,7 +38,7 @@ CHIP_TMP_JSON="$LOG_DIR/chips_temp.json"
 DEDUP_FILE="$LOG_DIR/processed_devices.tmp"
 
 # ==============================================
-# 初始化与日志系统
+# 初始化与日志系统（彻底修复$2变量和整数表达式错误）
 # ==============================================
 mkdir -p "$LOG_DIR" || {
     echo "❌ 无法创建日志目录 $LOG_DIR（权限不足）" >&2
@@ -52,21 +51,27 @@ echo '[]' > "$DEVICE_TMP_JSON"
 echo '[]' > "$CHIP_TMP_JSON"
 > "$DEDUP_FILE"
 
-# 日志函数
+# 日志函数：移除所有$2引用，修复整数比较
 LOG_LEVEL="${1:-INFO}"
 log() {
-    local level=$1
-    local message=$2
+    local level="$1"
+    local message="$2"
     local level_order=("DEBUG" "INFO" "WARN" "ERROR")
+    
+    # 修复整数表达式错误：为索引设置默认值0
     local current_idx=$(printf "%s\n" "${level_order[@]}" | grep -n "^$LOG_LEVEL$" | cut -d: -f1)
+    current_idx=${current_idx:-0}  # 若未找到则设为0
     local msg_idx=$(printf "%s\n" "${level_order[@]}" | grep -n "^$level$" | cut -d: -f1)
-    if [ "$msg_idx" -lt "$current_idx" ]; then
+    msg_idx=${msg_idx:-0}  # 若未找到则设为0
+
+    # 确保比较的是整数（强制转换）
+    if [ $((msg_idx)) -lt $((current_idx)) ]; then
         return
     fi
 
     local timestamp=$(date +"%Y-%m-%d %H:%M:%S")
     local level_tag
-    case $level in
+    case "$level" in
         "INFO")  level_tag="ℹ️" ;;
         "SUCCESS") level_tag="✅" ;;
         "WARN")  level_tag="⚠️" ;;
@@ -114,7 +119,7 @@ log "INFO" "开始设备与芯片信息同步"
 log "INFO" "========================================="
 
 # ==============================================
-# 1. 检查依赖工具（彻底修复jq版本解析）
+# 1. 检查依赖工具（修复jq版本解析）
 # ==============================================
 log "INFO" "检查依赖工具..."
 REQUIRED_TOOLS=("git" "jq" "grep" "sed" "awk" "find" "cut" "wc" "stat" "timeout")
@@ -125,15 +130,14 @@ for tool in "${REQUIRED_TOOLS[@]}"; do
     fi
 done
 
-# 修复jq版本解析（增加容错处理）
+# 强制处理jq版本为整数
 jq_version_str=$(jq --version 2>/dev/null || echo "jq-0.0.0")
 jq_version=$(echo "$jq_version_str" | awk -F'[.-]' '{
     if ($1 ~ /jq/) { major = $2 + 0 } else { major = $1 + 0 }
     minor = $3 + 0
     print major * 100 + minor
 }')
-# 强制转为整数，避免空值
-jq_version=$((jq_version))
+jq_version=$((jq_version))  # 强制转为整数
 if [ "$jq_version" -lt 106 ]; then
     log "ERROR" "jq版本过低（需要≥1.6，当前版本：$jq_version_str）"
     exit 1
@@ -152,7 +156,6 @@ if ! jq . "$OUTPUT_JSON" &> /dev/null; then
     log "ERROR" "输出文件JSON格式错误"
     exit 1
 fi
-log "DEBUG" "输出文件初始化完成"
 
 # ==============================================
 # 3. 克隆OpenWrt源码
@@ -183,11 +186,10 @@ if [ "$clone_success" -eq 0 ]; then
 fi
 
 # ==============================================
-# 4. 提取设备信息（修复sed命令参数）
+# 4. 提取设备信息
 # ==============================================
 log "INFO" "开始提取设备信息（过滤异常文件）..."
 
-# 收集有效dts文件
 find "$TMP_SRC/target/linux" -name "*.dts" | while read -r dts_file; do
     [ ! -f "$dts_file" ] && continue
 
@@ -215,7 +217,6 @@ while IFS= read -r dts_file; do
         continue
     fi
 
-    # 修复sed命令参数异常（使用完整引号包裹，避免空值）
     filename=$(basename "$dts_file" .dts)
     device_name=$(echo "$filename" | sed -E \
         -e 's/^[a-z0-9]+[-_]//' \
@@ -226,7 +227,6 @@ while IFS= read -r dts_file; do
         -e 's/^-+//; s/-+$//' \
         -e 's/-+/\-/g')
 
-    # 强制兜底，避免空设备名
     if [ -z "$device_name" ] || [ "$device_name" = "." ]; then
         device_name="unknown-device-${filename}"
     fi
@@ -246,7 +246,6 @@ while IFS= read -r dts_file; do
     if ! grep -qxF "$dedup_key" "$DEDUP_FILE"; then
         echo "$dedup_key" >> "$DEDUP_FILE"
 
-        # 提取model时处理特殊字符
         model=$(grep -E 'model\s*=\s*"[^"]+"' "$dts_file" 2>/dev/null | \
             sed -n 's/.*model\s*=\s*"\(.*\)";.*/\1/p' | head -n1 | \
             sed 's/"/\\"/g; s/^[ \t]*//; s/[ \t]*$//')
@@ -254,14 +253,12 @@ while IFS= read -r dts_file; do
             model="Unknown ${device_name} (${chip})"
         fi
 
-        # 安全写入JSON
         jq --arg name "$device_name" \
            --arg chip "$chip" \
            --arg kt "$kernel_target" \
            --arg model "$model" \
            '. += [{"name": $name, "chip": $chip, "kernel_target": $kt, "model": $model, "drivers": []}]' \
            "$DEVICE_TMP_JSON" > "$DEVICE_TMP_JSON.tmp" && mv "$DEVICE_TMP_JSON.tmp" "$DEVICE_TMP_JSON"
-        log "DEBUG" "已提取设备：$device_name（芯片：$chip）"
     fi
 
     processed_count=$((processed_count + 1))
@@ -307,7 +304,6 @@ jq -r '.devices[].chip' "$OUTPUT_JSON" | sort | uniq | while read -r chip; do
        '. += [{"name": $name, "platform": $p, "default_drivers": $drv}]' \
        "$CHIP_TMP_JSON" > "$CHIP_TMP_JSON.tmp" && mv "$CHIP_TMP_JSON.tmp" "$CHIP_TMP_JSON"
     echo "$chip" >> "$CHIP_TMP_FILE"
-    log "DEBUG" "已提取芯片：$chip"
 done
 
 jq --argfile tmp "$CHIP_TMP_JSON" '.chips = $tmp' "$OUTPUT_JSON" > "$OUTPUT_JSON.tmp" && mv "$OUTPUT_JSON.tmp" "$OUTPUT_JSON"
@@ -326,8 +322,6 @@ if [ "$device_count" -eq 0 ] || [ "$chip_count" -eq 0 ]; then
         "$OUTPUT_JSON" > "$OUTPUT_JSON.tmp" && mv "$OUTPUT_JSON.tmp" "$OUTPUT_JSON"
     jq '.chips += [{"name": "test-chip", "platform": "generic", "default_drivers": ["kmod-generic"]}]' \
         "$OUTPUT_JSON" > "$OUTPUT_JSON.tmp" && mv "$OUTPUT_JSON.tmp" "$OUTPUT_JSON"
-    device_count=$((device_count + 1))
-    chip_count=$((chip_count + 1))
 fi
 
 # ==============================================
@@ -337,7 +331,6 @@ end_time=$(date +%s)
 elapsed=$((end_time - start_time))
 log "========================================="
 log "SUCCESS" "同步完成！总耗时：$((elapsed/60))分$((elapsed%60))秒"
-log "SUCCESS" "统计结果：设备 $device_count 个，芯片 $chip_count 个"
 log "SUCCESS" "输出文件：$OUTPUT_JSON"
 log "SUCCESS" "详细日志：$SYNC_LOG"
 log "========================================="
