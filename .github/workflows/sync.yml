@@ -44,36 +44,47 @@ jobs:
           chmod +x scripts/sync-devices.sh
           head -n1 scripts/sync-devices.sh  # 验证shebang
 
-      # 5. 执行同步脚本
+      # 5. 执行同步脚本（打印详细日志）
       - name: 运行同步
         run: |
           ./scripts/sync-devices.sh || {
-            echo "❌ 脚本执行失败，日志:"
+            echo "❌ 脚本执行失败，完整日志:"
             cat sync-logs/sync-detail.log
             exit 1
           }
 
-      # 6. 验证输出文件
+      # 6. 验证输出文件（详细调试）
       - name: 检查生成结果
         if: always()
         run: |
-          echo "设备文件内容:"
+          echo "===== 设备配置文件内容 ====="
           cat device-drivers.json || echo "文件不存在"
-          echo "设备数量:"
+          
+          echo "===== 设备数量 ====="
           jq '.devices | length' device-drivers.json || echo "0"
-          echo "日志目录:"
+          
+          echo "===== 芯片数量 ====="
+          jq '.chips | length' device-drivers.json || echo "0"
+          
+          echo "===== 日志目录内容 ====="
           ls -la sync-logs/ || echo "日志目录不存在"
+          
+          echo "===== 日志最后20行 ====="
+          tail -n 20 sync-logs/sync-detail.log || echo "日志文件不存在"
 
       # 7. 更新build.yml
       - name: 更新编译选项
         run: |
+          # 提取设备和芯片列表（去重、排序）
           DEVICES=$(jq -r '.devices[].name | sort | uniq' device-drivers.json | tr '\n' ',' | sed 's/,$//')
           CHIPS=$(jq -r '.chips[].name | sort | uniq' device-drivers.json | tr '\n' ',' | sed 's/,$//')
+          
+          # 处理空列表（使用默认值）
           [ -z "$DEVICES" ] && DEVICES="test-device"
           [ -z "$CHIPS" ] && CHIPS="test-chip"
           
-          echo "更新设备: $DEVICES"
-          echo "更新芯片: $CHIPS"
+          echo "更新设备列表: $DEVICES"
+          echo "更新芯片列表: $CHIPS"
           
           # 替换build.yml中的标记
           sed -i "s/options: \[.*\]  # AUTO-SYNC-DEVICES/options: [$DEVICES]  # AUTO-SYNC-DEVICES/" .github/workflows/build.yml
