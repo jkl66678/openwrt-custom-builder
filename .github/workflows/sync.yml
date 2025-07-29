@@ -1,86 +1,128 @@
-name: 设备列表自动同步on:
-workflow_dispatch:
-schedule:cron: "0 0 * * 0"jobs:
-sync-devices:
-runs-on: ubuntu-latest
-permissions:
-contents: write
-actions: writesteps:name: 拉取仓库代码
-uses: actions/checkout@v4name: 安装依赖
-run: |
-sudo apt update && sudo apt install -y git jq dos2unix python3 python3-pip
-pip3 install PyJWT cryptography验证关键工具是否安装command -v jq >/dev/null || {echo "❌ jq 未安装"; exit 1;}
-command -v python3 >/dev/null || { echo "❌ Python3 未安装"; exit 1; }name: 准备脚本文件
-run: |验证脚本存在性for script in sync-devices.sh generate_jwt.py; do
-[ -f "scripts/$script" ] || { echo "❌ 缺少脚本: $script"; exit 1; }
-done转换脚本格式并添加执行权限dos2unix scripts/.sh && chmod +x scripts/.sh
-chmod +x scripts/generate_jwt.pyname: 执行同步脚本
-run: |
-mkdir -p sync-logs执行脚本并捕获完整输出./scripts/sync-devices.sh > sync-logs/sync-detail.log 2>&1 || {
-echo "❌ 同步脚本执行失败"
-cat sync-logs/sync-detail.log
-exit 1
-}name: 生成 GitHub App 访问令牌（带完整调试）
-run: |初始化变量APP_ID=\({{ secrets.GH_APP_ID }}
-  PRIVATE_KEY="\){{ secrets.GH_APP_PRIVATE_KEY }}"
-TMP_KEY_FILE="/tmp/key.pem"写入私钥到临时文件echo "\(PRIVATE_KEY" > "\)TMP_KEY_FILE"
-chmod 600 "$TMP_KEY_FILE"
-echo "✅ 私钥文件已写入: $TMP_KEY_FILE"验证私钥格式（增强版）for marker in "-----BEGIN RSA PRIVATE KEY-----" "-----END RSA PRIVATE KEY-----"; do
-if ! grep -q -- "\(marker" "\)TMP_KEY_FILE"; then
-echo "❌ 私钥缺少标记: \(marker"
-  cat "\)TMP_KEY_FILE" # 打印私钥内容（脱敏处理）
-exit 1
-fi
-done
-echo "✅ 私钥格式验证通过"生成 JWT 并验证echo "🔍 生成 JWT，APP_ID: \(APP_ID"
-  JWT_OUTPUT=\)(python3 scripts/generate_jwt.py "\(APP_ID" "\)TMP_KEY_FILE")
-JWT=\((echo "\)JWT_OUTPUT" | grep "JWT=" | cut -d'=' -f2)
-if [ -z "\(JWT" ]; then
-echo "❌ JWT生成失败，脚本输出:"
-echo "\)JWT_OUTPUT"
-exit 1
-fi
-echo "✅ JWT 生成成功（前 30 字符）: ${JWT:0:30}..."验证 JWT 有效性（通过解码检查）echo "🔍 验证 JWT 有效性"
-JWT_PAYLOAD=\((echo "\)JWT" | cut -d'.' -f2 | base64 -d | jq '.' || true)
-if echo "$JWT_PAYLOAD" | grep -q '"exp":'; then
-echo "📌 JWT有效期: \((date -d @\)(echo "$JWT_PAYLOAD"| jq -r '.exp') +% Y-% m-% dT% H:% M:% SZ)"
-else
-echo "⚠️ JWT 缺少 exp 字段，可能存在安全风险"
-fi获取安装 ID（带完整 API 响应记录）echo "🔍 获取安装 ID"
-INSTALLATION_RESPONSE=$(curl -s -H "Authorization: Bearer $JWT"
--H "Accept: application/vnd.github+json"
-"https://api.github.com/app/installations")
-echo "📌 安装列表响应（前 500 字符）: ${INSTALLATION_RESPONSE:0:500}..."INSTALLATION_ID=\((echo "\)INSTALLATION_RESPONSE" | jq -r '.[] | select(.repositories[0].name == "openwrt-custom-builder") | .id')
-if [ "\(INSTALLATION_ID" = "null" ] || [ -z "\)INSTALLATION_ID" ]; then
-echo "❌ 未找到目标仓库安装记录，完整响应:"
-echo "$INSTALLATION_RESPONSE" | jq '.'
-exit 1
-fi
-echo "✅ 安装ID获取成功: $INSTALLATION_ID"获取访问令牌（带错误处理）echo "🔍 获取访问令牌"
-ACCESS_TOKEN_RESPONSE=$(curl -s -X POST
--H "Authorization: Bearer \(JWT" \
--H "Accept: application/vnd.github+json" \
-"[https://api.github.com/app/installations/](https://api.github.com/app/installations/ "autolink")\)INSTALLATION_ID/access_tokens")
-echo "📌 令牌响应（前500字符）: ${ACCESS_TOKEN_RESPONSE:0:500}..."ACCESS_TOKEN=\((echo "\)ACCESS_TOKEN_RESPONSE" | jq -r '.token')
-if [ "\(ACCESS_TOKEN" = "null" ] || [ -z "\)ACCESS_TOKEN" ]; then
-echo "❌ 令牌生成失败，完整响应:"
-echo "$ACCESS_TOKEN_RESPONSE" | jq '.'
-exit 1
-fi
-echo "✅ 访问令牌生成成功（前30字符）: ${ACCESS_TOKEN:0:30}..."输出令牌到环境变量echo "ACCESS_TOKEN=$ACCESS_TOKEN" >> $GITHUB_ENV
-rm -f "$TMP_KEY_FILE"name: 提交更新
-run: |
-git config --global user.name "Sync Bot"
-git config --global user.email "bot@example.com"
-git remote set-url origin "https://x-access-token:${{env.ACCESS_TOKEN}}@github.com/jkl66678/openwrt-custom-builder.git"git add device-drivers.json .github/workflows/build.yml sync-logs/
-if ! git diff --cached --quiet; then
-git commit -m "自动更新设备列表（$(date +% Y% m% d)）" && git push origin main
-else
-echo "ℹ️ 无文件变更，跳过提交"
-finame: 上传结果
-if: always ()
-uses: actions/upload-artifact@v4
-with:
-name: sync-results-${{github.run_id}}
-path: sync-logs/device-drivers.json
-retention-days: 14
+name: 设备列表自动同步
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * 0"  # 每周日执行
+
+jobs:
+  sync-devices:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+
+    steps:
+      - name: 拉取仓库代码
+        uses: actions/checkout@v4
+
+      - name: 安装依赖工具
+        run: |
+          sudo apt update && sudo apt install -y git jq dos2unix python3 python3-pip
+          pip3 install PyJWT cryptography
+          # 验证依赖是否安装成功
+          [ -x "$(command -v jq)" ] || { echo "❌ jq安装失败"; exit 1; }
+          [ -x "$(command -v python3)" ] || { echo "❌ Python3安装失败"; exit 1; }
+
+      - name: 检查并准备脚本
+        run: |
+          # 验证核心脚本存在性
+          required_scripts=("sync-devices.sh" "generate_jwt.py")
+          for script in "${required_scripts[@]}"; do
+            if [ ! -f "scripts/$script" ]; then
+              echo "❌ 缺少必要脚本：scripts/$script"
+              exit 1
+            fi
+          done
+          # 转换格式并添加执行权限
+          dos2unix scripts/*.sh
+          chmod +x scripts/*.sh scripts/generate_jwt.py
+
+      - name: 执行设备同步脚本
+        run: |
+          mkdir -p sync-logs
+          # 执行同步并捕获日志
+          ./scripts/sync-devices.sh > sync-logs/sync-output.log 2>&1 || {
+            echo "❌ 同步脚本执行失败，日志如下："
+            cat sync-logs/sync-output.log
+            exit 1
+          }
+          echo "✅ 设备同步完成"
+
+      - name: 生成GitHub App访问令牌
+        run: |
+          # 从secrets获取配置
+          APP_ID="${{ secrets.GH_APP_ID }}"
+          PRIVATE_KEY="${{ secrets.GH_APP_PRIVATE_KEY }}"
+          TMP_KEY="/tmp/github-app-key.pem"
+
+          # 写入私钥到临时文件
+          echo "$PRIVATE_KEY" > "$TMP_KEY"
+          chmod 600 "$TMP_KEY"
+
+          # 验证私钥格式（关键修复：使用--避免grep误判选项）
+          if ! grep -q -- "-----BEGIN RSA PRIVATE KEY-----" "$TMP_KEY"; then
+            echo "❌ 私钥缺少开头标记"
+            exit 1
+          fi
+          if ! grep -q -- "-----END RSA PRIVATE KEY-----" "$TMP_KEY"; then
+            echo "❌ 私钥缺少结尾标记"
+            exit 1
+          fi
+          echo "✅ 私钥格式验证通过"
+
+          # 生成JWT
+          JWT=$(python3 scripts/generate_jwt.py "$APP_ID" "$TMP_KEY" | grep "JWT=" | cut -d'=' -f2)
+          if [ -z "$JWT" ]; then
+            echo "❌ JWT生成失败"
+            exit 1
+          fi
+          echo "✅ JWT生成成功（前20字符）：${JWT:0:20}..."
+
+          # 获取安装ID
+          INSTALLATION_RESPONSE=$(curl -s -H "Authorization: Bearer $JWT" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/app/installations")
+          INSTALLATION_ID=$(echo "$INSTALLATION_RESPONSE" | jq -r '.[] | select(.repositories[0].name == "openwrt-custom-builder") | .id')
+          if [ "$INSTALLATION_ID" = "null" ] || [ -z "$INSTALLATION_ID" ]; then
+            echo "❌ 未找到仓库安装记录，响应：$INSTALLATION_RESPONSE"
+            exit 1
+          fi
+          echo "✅ 安装ID：$INSTALLATION_ID"
+
+          # 获取访问令牌
+          ACCESS_TOKEN_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer $JWT" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/app/installations/$INSTALLATION_ID/access_tokens")
+          ACCESS_TOKEN=$(echo "$ACCESS_TOKEN_RESPONSE" | jq -r '.token')
+          if [ "$ACCESS_TOKEN" = "null" ] || [ -z "$ACCESS_TOKEN" ]; then
+            echo "❌ 访问令牌生成失败，响应：$ACCESS_TOKEN_RESPONSE"
+            exit 1
+          fi
+          echo "ACCESS_TOKEN=$ACCESS_TOKEN" >> "$GITHUB_ENV"
+          rm -f "$TMP_KEY"
+
+      - name: 提交同步结果
+        run: |
+          git config --global user.name "Sync Bot"
+          git config --global user.email "bot@example.com"
+          git remote set-url origin "https://x-access-token:${{ env.ACCESS_TOKEN }}@github.com/jkl66678/openwrt-custom-builder.git"
+          
+          # 仅在有变更时提交
+          git add device-drivers.json .github/workflows/build.yml sync-logs/
+          if ! git diff --cached --quiet; then
+            git commit -m "自动同步设备列表（$(date +%Y-%m-%d)）"
+            git push origin main
+            echo "✅ 提交更新成功"
+          else
+            echo "ℹ️ 无变更，无需提交"
+          fi
+
+      - name: 上传同步日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sync-logs-${{ github.run_id }}
+          path: sync-logs/
+          retention-days: 14
