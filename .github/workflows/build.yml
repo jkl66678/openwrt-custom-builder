@@ -1,138 +1,127 @@
-name: OpenWrt全功能动态编译系统
+name: OpenWrt全自动化编译系统
 
 on:
   workflow_dispatch:
     inputs:
-      # 1. 编译模式选择
       select_mode:
         type: choice
         description: 编译模式（设备/芯片）
         required: true
         options: [device, chip]
 
-      # 2. 设备选择（仅设备模式）
       device:
         type: choice
         description: 设备型号（仅设备模式）
         required: false
-        options: [cudy-tr3000-256mb, redmi-ac2100, x86_64-generic, newifi-d2, mi-router-4a, phicomm-k2p]
+        options: [cudy-tr3000, redmi-ac2100, x86-64-generic, phicomm-k2p]  # 会被自动更新
 
-      # 3. 芯片选择（仅芯片模式）
       chip:
         type: choice
         description: 芯片型号（仅芯片模式）
         required: false
-        options: [mt7981, mt7621, ipq8065, x86_64, rt3050, mt7986, bcm53573]
+        options: [mt7981, mt7621, x86_64, ipq8065, bcm53573]  # 会被自动更新
 
-      # 4. 源码版本
       source_branch:
         type: choice
-        description: 源码分支（含内核）
+        description: 源码分支
         required: true
         options: [openwrt-23.05, openwrt-master, immortalwrt-23.05, immortalwrt-master]
 
-      # 5. 主题+编译优化组合
       theme_and_optimization:
         type: choice
-        description: 主题+编译优化组合
+        description: 主题+优化组合
         required: true
         options:
-          - argon-O2-generic     # Argon主题 + O2优化 + 通用架构
-          - argon-O3-armv8       # Argon主题 + O3优化 + ARMv8
-          - argon-O3-x86         # Argon主题 + O3优化 + x86_64
-          - bootstrap-O2-generic # 官方主题 + O2优化 + 通用架构
-          - material-Os-generic  # Material主题 + 最小体积 + 通用架构
+          - argon-O2-generic
+          - argon-O3-armv8
+          - argon-O3-x86
+          - bootstrap-O2-generic
+          - material-Os-generic
 
-      # 6. 核心功能配置
       core_features:
         type: choice
-        description: 核心功能（IPv6+硬件加速）
+        description: 核心功能
         required: true
         options: [ipv6+accel, ipv6-only, accel-only, none]
 
-      # 7. 软件包管理
       packages:
         type: string
-        description: 软件包（格式：包1,包2，如"openclash,samba"）
+        description: 软件包（逗号分隔）
         required: false
         default: "openclash,samba,ddns-scripts,luci-app-upnp"
 
-      # 8. 根分区大小
       rootfs_size:
         type: number
-        description: 根分区大小(MB，32-2048)
+        description: 根分区大小(MB)
         required: true
         default: 192
 
-      # 9. 固件标识
       firmware_suffix:
         type: string
-        description: 固件后缀（如版本号）
+        description: 固件后缀
         required: false
         default: "custom"
 
-      # 10. 高级选项
       run_custom_script:
         type: boolean
-        description: 执行自定义初始化脚本
+        description: 执行自定义脚本
         required: true
         default: true
 
-  # 定时同步设备信息（每周日0点UTC）
   schedule:
-    - cron: "0 0 * * 0"
+    - cron: "0 0 * * 0"  # 每周日同步设备
 
 
 jobs:
-  # 任务1：使用独立脚本同步设备与芯片信息
-  sync-devices:
-    name: 同步设备与芯片信息
+  sync-and-generate:
+    name: 同步设备并生成工作流
     runs-on: ubuntu-latest
     steps:
-      - name: 拉取仓库代码（含独立同步脚本）
+      - name: 拉取仓库代码
         uses: actions/checkout@v4
 
-      - name: 检查同步脚本是否存在
+      - name: 安装依赖
+        run: |
+          sudo apt update
+          sudo apt install -y git jq gh
+
+      - name: 检查同步脚本
         run: |
           if [ ! -f "scripts/sync-devices.sh" ]; then
-            echo "❌ 错误：未找到独立同步脚本 scripts/sync-devices.sh"
+            echo "❌ 未找到 scripts/sync-devices.sh"
             exit 1
           fi
-
-      - name: 安装同步所需依赖
-        run: |
-          sudo apt update && sudo apt install -y git jq gh
-
-      - name: 执行独立同步脚本（带权限设置）
-        run: |
           chmod +x scripts/sync-devices.sh
-          if ! ./scripts/sync-devices.sh; then
-            echo "❌ 同步脚本执行失败"
-            exit 1
-          fi
 
-      - name: 新芯片候选提醒（自动创建Issue）
+      - name: 执行设备同步
+        run: ./scripts/sync-devices.sh
+
+      - name: 生成动态工作流（更新设备选项）
         run: |
-          if [ -s "chip-candidates.txt" ] && [ -n "$GITHUB_TOKEN" ]; then
-            gh issue create --title "新芯片候选待确认（$(date +%Y%m%d)）" \
-              --body "检测到未添加的疑似芯片型号，请更新scripts/sync-devices.sh中的PLATFORM_CHIPS：\n$(cat chip-candidates.txt)"
-          fi
+          # 提取设备和芯片列表
+          DEVICES=$(jq -r '.devices[].name' device-drivers.json | sort | uniq | tr '\n' ' ')
+          CHIPS=$(jq -r '.chips[].name' device-drivers.json | sort | uniq | tr '\n' ' ')
+          
+          # 替换工作流中的选项
+          sed -i "s/options: \[.*\]  # 会被自动更新/options: [$DEVICES]  # 会被自动更新/" .github/workflows/build.yml
+          sed -i "s/options: \[.*\]  # 会被自动更新/options: [$CHIPS]  # 会被自动更新/" .github/workflows/build.yml
 
-      - name: 自动提交设备配置更新
+      - name: 提交更新
         run: |
           git config --global user.name "Auto-Sync Bot"
           git config --global user.email "bot@github.com"
-          if ! git diff --quiet device-drivers.json; then
-            git add device-drivers.json
-            git commit -m "同步设备信息（$(date +%Y%m%d)）"
+          git add device-drivers.json .github/workflows/build.yml
+          if git diff --cached --quiet; then
+            echo "⚠️ 无设备更新"
+          else
+            git commit -m "自动更新设备列表（$(date +%Y%m%d)）"
             git push
           fi
 
 
-  # 任务2：编译固件（动态资源调控）
   build-firmware:
-    name: 动态资源调控编译
-    needs: sync-devices
+    name: 编译固件
+    needs: sync-and-generate
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -140,7 +129,7 @@ jobs:
       packages: write
 
     steps:
-      - name: 拉取仓库代码（含最新设备信息）
+      - name: 拉取最新代码
         uses: actions/checkout@v4
 
       - name: 安装编译依赖
@@ -150,321 +139,152 @@ jobs:
             zlib1g-dev gawk git gettext libssl-dev xsltproc wget unzip python3 jq \
             time curl ca-certificates
 
-      - name: 编译前关键自检
+      - name: 硬件资源检测
         run: |
-          # 模式匹配检查
-          if [ "${{ github.event.inputs.select_mode }}" = "device" ] && [ -z "${{ github.event.inputs.device }}" ]; then
-            echo "❌ 错误：设备模式下必须选择设备型号"
-            exit 1
-          fi
-          if [ "${{ github.event.inputs.select_mode }}" = "chip" ] && [ -z "${{ github.event.inputs.chip }}" ]; then
-            echo "❌ 错误：芯片模式下必须选择芯片型号"
-            exit 1
-          fi
-
-          # 配置文件检查
-          if [ ! -f "device-drivers.json" ]; then
-            echo "❌ 错误：未找到device-drivers.json（同步失败）"
-            exit 1
-          fi
-
-          # 自定义脚本检查
-          if [ "${{ github.event.inputs.run_custom_script }}" = "true" ] && [ ! -f "scripts/custom-init.sh" ]; then
-            echo "❌ 错误：未找到自定义脚本 scripts/custom-init.sh"
-            exit 1
-          fi
-
-          # 分区大小检查
-          if [ ${{ github.event.inputs.rootfs_size }} -lt 32 ] || [ ${{ github.event.inputs.rootfs_size }} -gt 2048 ]; then
-            echo "❌ 错误：根分区大小必须在32-2048MB之间"
-            exit 1
-          fi
-
-          # 软件包格式检查
-          if echo "${{ github.event.inputs.packages }}" | grep -q " "; then
-            echo "❌ 错误：软件包格式错误，禁止包含空格（使用逗号分隔）"
-            exit 1
-          fi
-
-      - name: 检测硬件资源（CPU/内存）
-        run: |
-          # 获取CPU核心数
           CPU_CORES=$(grep -c ^processor /proc/cpuinfo)
-          # 获取可用内存（MB）
           AVAIL_MEM=$(free -m | awk '/^Mem:/ {print $7}')
-          
-          echo "🔍 检测到硬件资源："
-          echo "  - CPU核心数：$CPU_CORES"
-          echo "  - 可用内存：$AVAIL_MEM MB"
-          
           echo "CPU_CORES=$CPU_CORES" >> $GITHUB_ENV
           echo "AVAIL_MEM=$AVAIL_MEM" >> $GITHUB_ENV
 
-      - name: 动态计算编译线程数
+      - name: 动态计算线程数
         run: |
-          # 提取优化级别和架构
           OPT_LEVEL=$(echo "${{ github.event.inputs.theme_and_optimization }}" | cut -d'-' -f2)
           ARCH=$(echo "${{ github.event.inputs.theme_and_optimization }}" | cut -d'-' -f3)
           
-          # 1. 基于优化级别设置内存阈值（O3需要更多内存）
-          if [ "$OPT_LEVEL" = "O3" ]; then
-            MIN_MEM_PER_THREAD=2048  # O3优化：每线程至少2GB
-          else
-            MIN_MEM_PER_THREAD=1024  # O2/Os优化：每线程至少1GB
-          fi
+          MIN_MEM_PER_THREAD=$([ "$OPT_LEVEL" = "O3" ] && echo 2048 || echo 1024)
+          [ "$ARCH" = "armv8" ] && MIN_MEM_PER_THREAD=$((MIN_MEM_PER_THREAD * 12 / 10))
           
-          # 2. 基于架构调整阈值（ARM架构内存效率较低）
-          if [ "$ARCH" = "armv8" ]; then
-            MIN_MEM_PER_THREAD=$((MIN_MEM_PER_THREAD * 12 / 10))  # 增加20%
-          fi
-          
-          # 3. 计算最大可能线程数（受内存和CPU核心限制）
           MAX_THREADS_BY_MEM=$((AVAIL_MEM / MIN_MEM_PER_THREAD))
           MAX_THREADS_BY_CPU=${{ env.CPU_CORES }}
-          POTENTIAL_THREADS=$((MAX_THREADS_BY_MEM < MAX_THREADS_BY_CPU ? MAX_THREADS_BY_MEM : MAX_THREADS_BY_CPU))
+          FINAL_THREADS=$((MAX_THREADS_BY_MEM < MAX_THREADS_BY_CPU ? MAX_THREADS_BY_MEM : MAX_THREADS_BY_CPU))
+          FINAL_THREADS=$((FINAL_THREADS < 1 ? 1 : FINAL_THREADS))
           
-          # 4. 兜底逻辑（至少1线程）
-          FINAL_THREADS=$((POTENTIAL_THREADS < 1 ? 1 : POTENTIAL_THREADS))
-          
-          # 5. 特殊限制（O3+ARMv8组合最多2线程）
-          if [ "$OPT_LEVEL" = "O3" ] && [ "$ARCH" = "armv8" ] && [ $FINAL_THREADS -gt 2 ]; then
-            FINAL_THREADS=2
-          fi
-          
-          echo "📊 线程计算结果：$FINAL_THREADS 线程"
+          [ "$OPT_LEVEL" = "O3" ] && [ "$ARCH" = "armv8" ] && [ $FINAL_THREADS -gt 2 ] && FINAL_THREADS=2
           echo "THREADS=$FINAL_THREADS" >> $GITHUB_ENV
 
-      - name: 解析参数（主题+功能+软件包）
+      - name: 解析编译参数
         run: |
           # 解析主题和优化
           theme_opt="${{ github.event.inputs.theme_and_optimization }}"
-          THEME=$(echo "$theme_opt" | cut -d'-' -f1)
-          COMPILER_OPT=$(echo "$theme_opt" | cut -d'-' -f2)
-          ARCH=$(echo "$theme_opt" | cut -d'-' -f3)
+          echo "THEME=$(echo "$theme_opt" | cut -d'-' -f1)" >> $GITHUB_ENV
+          echo "CFLAGS=-$(echo "$theme_opt" | cut -d'-' -f2)" >> $GITHUB_ENV
           
-          echo "THEME=$THEME" >> $GITHUB_ENV
-          echo "CFLAGS=-$COMPILER_OPT" >> $GITHUB_ENV
-          echo "ARCH_OPTIMIZATION=$ARCH" >> $GITHUB_ENV
-
           # 解析核心功能
           case "${{ github.event.inputs.core_features }}" in
-            "ipv6+accel")
-              echo "ENABLE_IPV6=true" >> $GITHUB_ENV
-              echo "ENABLE_ACCEL=true" >> $GITHUB_ENV
-              ;;
-            "ipv6-only")
-              echo "ENABLE_IPV6=true" >> $GITHUB_ENV
-              echo "ENABLE_ACCEL=false" >> $GITHUB_ENV
-              ;;
-            "accel-only")
-              echo "ENABLE_IPV6=false" >> $GITHUB_ENV
-              echo "ENABLE_ACCEL=true" >> $GITHUB_ENV
-              ;;
-            "none")
-              echo "ENABLE_IPV6=false" >> $GITHUB_ENV
-              echo "ENABLE_ACCEL=false" >> $GITHUB_ENV
-              ;;
-          esac
-
-          # 解析软件包（自动补全luci-app-前缀）
+            "ipv6+accel") echo "ENABLE_IPV6=true"; echo "ENABLE_ACCEL=true" ;;
+            "ipv6-only") echo "ENABLE_IPV6=true"; echo "ENABLE_ACCEL=false" ;;
+            "accel-only") echo "ENABLE_IPV6=false"; echo "ENABLE_ACCEL=true" ;;
+            "none") echo "ENABLE_IPV6=false"; echo "ENABLE_ACCEL=false" ;;
+          esac | tee -a $GITHUB_ENV
+          
+          # 解析软件包
           packages="${{ github.event.inputs.packages }}"
-          common_pkgs=$(echo "$packages" | tr ',' '\n' | grep -v 'luci-app-' | sed 's/^/luci-app-/g' | tr '\n' ' ')
-          custom_pkgs=$(echo "$packages" | tr ',' '\n' | grep 'luci-app-' | tr '\n' ' ')
-          echo "PACKAGES=$common_pkgs $custom_pkgs" >> $GITHUB_ENV
+          echo "PACKAGES=$(echo "$packages" | tr ',' '\n' | grep -v 'luci-app-' | sed 's/^/luci-app-/g' | tr '\n' ' ')$(echo "$packages" | tr ',' '\n' | grep 'luci-app-' | tr '\n' ' ')" >> $GITHUB_ENV
 
-      - name: 拉取源码（带重试机制）
+      - name: 拉取源码（带重试）
         run: |
           fetch_source() {
-            local repo=$1
-            local branch=$2
-            local retries=3
-            local count=0
-            while [ $count -lt $retries ]; do
+            local repo=$1 branch=$2 retries=3
+            while [ $retries -gt 0 ]; do
               if git clone --depth 1 --branch "$branch" "$repo" openwrt-src; then
-                return 0
+                [ -n "$(ls -A openwrt-src)" ] && return 0
               fi
-              echo "⚠️ 拉取源码失败，重试第 $((count+1)) 次..."
-              count=$((count+1))
+              retries=$((retries - 1))
               rm -rf openwrt-src
               sleep 5
             done
-            echo "❌ 拉取源码失败（已重试3次）"
             exit 1
           }
-
-          # 选择源码分支
+          
           case "${{ github.event.inputs.source_branch }}" in
-            openwrt-23.05)
-              fetch_source "https://git.openwrt.org/openwrt/openwrt.git" "openwrt-23.05"
-              ;;
-            openwrt-master)
-              fetch_source "https://git.openwrt.org/openwrt/openwrt.git" "master"
-              ;;
-            immortalwrt-23.05)
-              fetch_source "https://github.com/immortalwrt/immortalwrt.git" "openwrt-23.05"
-              ;;
-            immortalwrt-master)
-              fetch_source "https://github.com/immortalwrt/immortalwrt.git" "master"
-              ;;
+            openwrt-23.05) fetch_source "https://git.openwrt.org/openwrt/openwrt.git" "openwrt-23.05" ;;
+            openwrt-master) fetch_source "https://git.openwrt.org/openwrt/openwrt.git" "master" ;;
+            immortalwrt-23.05) fetch_source "https://github.com/immortalwrt/immortalwrt.git" "openwrt-23.05" ;;
+            immortalwrt-master) fetch_source "https://github.com/immortalwrt/immortalwrt.git" "master" ;;
           esac
           echo "SRC_DIR=$(pwd)/openwrt-src" >> $GITHUB_ENV
 
-      - name: 初始化源码与主题源
+      - name: 初始化源码与主题
         run: |
           cd "${{ env.SRC_DIR }}"
-          ./scripts/feeds update -a
-          ./scripts/feeds install -a
-
+          ./scripts/feeds update -a && ./scripts/feeds install -a
+          
           # 添加主题源
-          if [ "${{ env.THEME }}" = "argon" ]; then
-            echo 'src-git argon https://github.com/jerrykuku/luci-theme-argon.git' >> feeds.conf.default
-          elif [ "${{ env.THEME }}" = "material" ]; then
-            echo 'src-git material https://github.com/LuttyYang/luci-theme-material.git' >> feeds.conf.default
-          fi
-
-          # 添加OpenClash源（非ImmortalWrt分支）
-          if [[ "${{ env.PACKAGES }}" == *"luci-app-openclash"* && 
-                ! "${{ github.event.inputs.source_branch }}" == *"immortalwrt"* ]]; then
+          [ "${{ env.THEME }}" = "argon" ] && echo 'src-git argon https://github.com/jerrykuku/luci-theme-argon.git' >> feeds.conf.default
+          [ "${{ env.THEME }}" = "material" ] && echo 'src-git material https://github.com/LuttyYang/luci-theme-material.git' >> feeds.conf.default
+          
+          # 添加OpenClash源（非ImmortalWrt）
+          if [[ "${{ env.PACKAGES }}" == *"luci-app-openclash"* && ! "${{ github.event.inputs.source_branch }}" == *"immortalwrt"* ]]; then
             echo 'src-git openclash https://github.com/vernesong/OpenClash.git' >> feeds.conf.default
           fi
+          
+          ./scripts/feeds update -a && ./scripts/feeds install -a
 
-          ./scripts/feeds update -a
-          ./scripts/feeds install -a
-
-      - name: 执行自定义初始化脚本（带日志）
+      - name: 执行自定义脚本
         if: ${{ github.event.inputs.run_custom_script == 'true' }}
         run: |
           cd "${{ env.SRC_DIR }}"
-          chmod +x ../scripts/custom-init.sh
-          echo "🔧 执行自定义脚本..."
-          time ../scripts/custom-init.sh > custom-init.log 2>&1 || {
-            echo "❌ 自定义脚本执行失败，日志："
-            cat custom-init.log
-            exit 1
-          }
-
-      - name: 解析设备/芯片配置
-        run: |
-          if [ "${{ github.event.inputs.select_mode }}" = "device" ]; then
-            info=$(jq --arg dev "${{ github.event.inputs.device }}" '.devices[] | select(.name == $dev)' device-drivers.json)
-          else
-            info=$(jq --arg c "${{ github.event.inputs.chip }}" '.chips[] | select(.name == $c)' device-drivers.json)
-          fi
-          if [ -z "$info" ]; then
-            echo "❌ 未找到 ${{ github.event.inputs.device || github.event.inputs.chip }} 的配置"
-            exit 1
-          fi
-          echo "KERNEL_TARGET=$(echo "$info" | jq -r '.kernel_target')" >> $GITHUB_ENV
-          echo "DRIVERS=$(echo "$info" | jq -r '.drivers[]' | tr '\n' ' ')" >> $GITHUB_ENV
+          [ -f "../scripts/custom-init.sh" ] && chmod +x ../scripts/custom-init.sh && ../scripts/custom-init.sh || echo "⚠️ 未找到自定义脚本"
 
       - name: 生成编译配置
         run: |
           cd "${{ env.SRC_DIR }}"
-          target=$(echo "${{ env.KERNEL_TARGET }}" | tr '/' '_')
-
-          # 基础配置
+          # 获取设备/芯片配置
+          if [ "${{ github.event.inputs.select_mode }}" = "device" ]; then
+            info=$(jq --arg dev "${{ github.event.inputs.device }}" '.devices[] | select(.name == $dev)' ../device-drivers.json)
+          else
+            info=$(jq --arg c "${{ github.event.inputs.chip }}" '.chips[] | select(.name == $c)' ../device-drivers.json)
+            kernel_target=$(echo "$info" | jq -r '.platform')
+            info=$(jq --arg p "$kernel_target" '.devices[] | select(.kernel_target == $p)' ../device-drivers.json | head -n1)
+          fi
+          
+          kernel_target=$(echo "$info" | jq -r '.kernel_target')
+          target=$(echo "$kernel_target" | tr '/' '_')
+          drivers=$(echo "$info" | jq -r '.drivers[]' | tr '\n' ' ')
+          
+          # 生成.config
           echo "CONFIG_TARGET_$target=y" >> .config
           echo "CONFIG_TARGET_${target}_DEVICE_generic=y" >> .config
           echo "CONFIG_TARGET_ROOTFS_PARTSIZE=${{ github.event.inputs.rootfs_size }}" >> .config
-
-          # 设备驱动
-          for driver in ${{ env.DRIVERS }}; do
-            echo "CONFIG_PACKAGE_$driver=y" >> .config
-          done
-
-          # 核心功能
-          if [ "${{ env.ENABLE_IPV6 }}" = "true" ]; then
-            echo "CONFIG_IPV6=y" >> .config
-            echo "CONFIG_PACKAGE_ipv6helper=y" >> .config
-          else
-            echo "# CONFIG_IPV6 is not set" >> .config
-          fi
-          if [ "${{ env.ENABLE_ACCEL }}" = "true" ]; then
-            echo "CONFIG_PACKAGE_kmod-nf-flow=y" >> .config
-            if [[ "${{ env.KERNEL_TARGET }}" == "mediatek/filogic" ]]; then
-              echo "CONFIG_PACKAGE_kmod-mt7981-firmware-5g=y" >> .config
-            fi
-          fi
-
-          # 软件包
-          for pkg in ${{ env.PACKAGES }}; do
-            echo "CONFIG_PACKAGE_$pkg=y" >> .config
-          done
-
+          
+          # 添加驱动和软件包
+          for driver in $drivers; do echo "CONFIG_PACKAGE_$driver=y" >> .config; done
+          for pkg in ${{ env.PACKAGES }}; do echo "CONFIG_PACKAGE_$pkg=y" >> .config; done
+          
+          # 功能配置
+          [ "${{ env.ENABLE_IPV6 }}" = "true" ] && echo "CONFIG_IPV6=y" >> .config || echo "# CONFIG_IPV6 is not set" >> .config
+          [ "${{ env.ENABLE_ACCEL }}" = "true" ] && echo "CONFIG_PACKAGE_kmod-nf-flow=y" >> .config
+          
           # 编译优化
           echo "CONFIG_CFLAGS=${{ env.CFLAGS }}" >> .config
           echo "CONFIG_CXXFLAGS=${{ env.CFLAGS }}" >> .config
-          if [ "${{ env.ARCH_OPTIMIZATION }}" = "armv8-a" ]; then
-            echo "CONFIG_TARGET_OPTIMIZATION=-march=armv8-a -mtune=cortex-a53" >> .config
-          elif [ "${{ env.ARCH_OPTIMIZATION }}" = "x86_64" ]; then
-            echo "CONFIG_TARGET_OPTIMIZATION=-march=x86-64 -mtune=generic" >> .config
-          fi
-
+          
           # 主题配置
           echo "CONFIG_PACKAGE_luci-theme-${{ env.THEME }}=y" >> .config
           [ "${{ env.THEME }}" != "bootstrap" ] && echo "# CONFIG_PACKAGE_luci-theme-bootstrap is not set" >> .config
-          [ "${{ env.THEME }}" != "argon" ] && echo "# CONFIG_PACKAGE_luci-theme-argon is not set" >> .config
-          [ "${{ env.THEME }}" != "material" ] && echo "# CONFIG_PACKAGE_luci-theme-material is not set" >> .config
-
-          # 基础Web界面
-          echo "CONFIG_PACKAGE_luci=y" >> .config
-          echo "CONFIG_PACKAGE_luci-ssl=y" >> .config
-
+          
           make defconfig
 
-      - name: 开始编译（动态线程）
+      - name: 开始编译
         run: |
           cd "${{ env.SRC_DIR }}"
-          echo "🚀 使用 ${{ env.THREADS }} 线程编译（优化级别：${{ env.CFLAGS }}）"
-          time make -j${{ env.THREADS }} V=s 2>&1 | tee compile.log
+          echo "使用 ${{ env.THREADS }} 线程编译"
+          make -j${{ env.THREADS }} V=s 2>&1 | tee compile.log
 
-      - name: 编译错误分析
-        if: failure()
-        run: |
-          cd "${{ env.SRC_DIR }}"
-          echo "❌ 编译失败，错误分析："
-          
-          if grep -q "Killed signal terminated program cc1" compile.log; then
-            echo "→ 原因：内存不足（尝试减少线程数或降低优化级别）"
-          elif grep -q "Package kmod-.* is missing" compile.log; then
-            missing_pkg=$(grep "Package kmod-.* is missing" compile.log | head -n1 | awk '{print $2}')
-            echo "→ 原因：驱动包 $missing_pkg 不兼容当前分支"
-          elif grep -q "configuration error: recursive dependency" compile.log; then
-            echo "→ 原因：软件包依赖冲突（如同时安装多个VPN工具）"
-          else
-            echo "→ 未知错误，最后50行日志："
-            tail -n 50 compile.log
-          fi
-          exit 1
-
-      - name: 固件信息与重命名
+      - name: 处理编译成果
         run: |
           base_name="${{ github.event.inputs.device || github.event.inputs.chip }}-${{ github.event.inputs.source_branch }}-${{ env.THEME }}"
           firmware_name="${base_name}-$(date +%Y%m%d)-${{ github.event.inputs.firmware_suffix }}"
-          # 重命名固件
           find "${{ env.SRC_DIR }}/bin/targets/" -name "*.bin" -exec sh -c '
-            for file do
-              mv "$file" "${file%.bin}-$1.bin"
-            done
+            for file do mv "$file" "${file%.bin}-$1.bin"; done
           ' _ "$firmware_name" \;
-          
-          # 显示固件信息
-          echo "📌 生成固件列表："
-          find "${{ env.SRC_DIR }}/bin/targets/" -name "*.bin" | grep -E "sysupgrade|factory" | while read -r file; do
-            echo "  - $file（大小：$(du -h "$file" | awk '{print $1}')）"
-          done
 
-      - name: 上传编译成果
+      - name: 上传固件
         uses: actions/upload-artifact@v4
-        if: always()
         with:
-          name: "${{ github.event.inputs.device || github.event.inputs.chip }}-firmware-${{ github.run_id }}"
-          path: |
-            ${{ env.SRC_DIR }}/bin/targets/**/*.bin
-            ${{ env.SRC_DIR }}/compile.log
-            ${{ env.SRC_DIR }}/custom-init.log
+          name: "${{ github.event.inputs.device || github.event.inputs.chip }}-firmware"
+          path: ${{ env.SRC_DIR }}/bin/targets/**/*.bin
           retention-days: 30
-          if-no-files-found: error
 
       - name: 拉取源码（带重试）
         run: |
