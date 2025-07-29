@@ -1,211 +1,108 @@
-name: 设备列表自动同步
+name: 设备列表同步与编译选项自动更新
 
 on:
-  workflow_dispatch:  # 手动触发
+  workflow_dispatch:  # 支持手动触发
   schedule:
-    - cron: "0 0 * * 0"  # 每周日自动执行
+    - cron: "0 0 * * 0"  # 每周日凌晨自动执行
 
 jobs:
-  sync-devices:
+  sync-devices-and-generate:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      actions: write
+      contents: write  # 允许提交代码
+      actions: read    # 读取工作流状态
 
     steps:
-      - name: 拉取仓库代码
+      - name: 拉取仓库最新代码
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1  # 只拉取最新版本，加快速度
 
-      - name: 安装依赖工具
+      - name: 安装必要工具（jq、dos2unix等）
         run: |
-          sudo apt update -qq && sudo apt install -y -qq git jq dos2unix python3 python3-pip
-          pip3 install -q PyJWT cryptography
+          sudo apt update -qq > /dev/null 2>&1  # 静默更新，减少输出
+          sudo apt install -y -qq jq dos2unix > /dev/null 2>&1
           
-          # 验证核心工具是否安装
-          command -v jq >/dev/null || { echo "❌ jq安装失败"; exit 1; }
-          command -v python3 >/dev/null || { echo "❌ Python3安装失败"; exit 1; }
-          echo "✅ 依赖安装完成"
+          # 验证工具安装成功
+          if ! command -v jq &> /dev/null; then
+            echo "❌ 关键工具jq安装失败，请检查环境"
+            exit 1
+          fi
+          echo "✅ 依赖工具安装完成"
 
-      - name: 检查并准备脚本
+      - name: 同步最新设备列表（替换为你的数据源）
         run: |
-          # 验证必要脚本存在性
-          required_scripts=("sync-devices.sh" "generate_jwt.py")
-          for script in "${required_scripts[@]}"; do
-            if [ ! -f "scripts/$script" ]; then
-              echo "❌ 缺少必要脚本：scripts/$script"
-              exit 1
-            fi
-          done
+          # ====================
+          # 替换为你的设备列表同步逻辑
+          # 示例：从远程API拉取/从其他仓库同步/数据库导出等
+          # ====================
+          echo "🔍 开始同步设备列表..."
           
-          # 转换格式并添加执行权限
-          dos2unix scripts/*.sh
-          chmod +x scripts/*.sh scripts/generate_jwt.py
-          echo "✅ 脚本准备完成"
+          # 示例：模拟从远程获取设备列表（实际场景请替换）
+          mkdir -p tmp
+          curl -s "https://raw.githubusercontent.com/你的用户名/你的仓库/main/device-drivers.json" \
+               -o tmp/device-drivers.json || {
+            echo "❌ 远程设备列表获取失败，使用本地备份"
+            cp device-drivers.json tmp/device-drivers.json  #  fallback到本地文件
+          }
+          
+          # 验证设备列表格式是否正确（必须是有效的JSON）
+          if ! jq empty tmp/device-drivers.json > /dev/null 2>&1; then
+            echo "❌ 设备列表JSON格式错误，同步终止"
+            exit 1
+          fi
+          
+          # 替换本地设备列表
+          mv tmp/device-drivers.json device-drivers.json
+          echo "✅ 设备列表同步完成（最新版本）"
 
-      - name: 执行设备同步脚本
+      - name: 准备生成脚本（设置权限+验证存在性）
         run: |
-          mkdir -p sync-logs
-          # 执行同步并捕获日志
-          ./scripts/sync-devices.sh > sync-logs/sync-output.log 2>&1 || {
-            echo "❌ 同步脚本执行失败，日志如下："
-            cat sync-logs/sync-output.log
+          # 检查脚本是否存在
+          if [ ! -f "scripts/generate-workflow.sh" ]; then
+            echo "❌ 生成脚本不存在：scripts/generate-workflow.sh"
+            exit 1
+          fi
+          
+          # 添加执行权限（关键步骤）
+          chmod +x scripts/generate-workflow.sh
+          echo "✅ 生成脚本权限设置完成"
+
+      - name: 动态生成build.yml（更新设备/芯片选项）
+        run: |
+          echo "🔍 开始生成编译工作流..."
+          ./scripts/generate-workflow.sh || {
+            echo "❌ 生成工作流失败，请检查脚本逻辑"
             exit 1
           }
-          echo "✅ 设备同步完成"
+          echo "✅ build.yml生成完成，已更新设备选项"
 
-      - name: 生成GitHub App访问令牌（完整认证流程）
+      - name: 提交更新到仓库
         run: |
-          # 从secrets获取配置
-          APP_ID="${{ secrets.GH_APP_ID }}"
-          PRIVATE_KEY="${{ secrets.GH_APP_PRIVATE_KEY }}"
-          TMP_KEY="/tmp/github-app-key.pem"
-          TARGET_REPO="openwrt-custom-builder"  # 目标仓库名称
-          
-          # 1. 写入并验证私钥
-          echo "$PRIVATE_KEY" > "$TMP_KEY"
-          chmod 600 "$TMP_KEY"
-          
-          if ! grep -q -- "-----BEGIN RSA PRIVATE KEY-----" "$TMP_KEY"; then
-            echo "❌ 私钥缺少开头标记"
-            exit 1
-          fi
-          if ! grep -q -- "-----END RSA PRIVATE KEY-----" "$TMP_KEY"; then
-            echo "❌ 私钥缺少结尾标记"
-            exit 1
-          fi
-          echo "✅ 私钥格式验证通过"
-
-          # 2. 生成JWT并验证有效性
-          JWT_OUTPUT=$(python3 scripts/generate_jwt.py "$APP_ID" "$TMP_KEY")
-          JWT=$(echo "$JWT_OUTPUT" | grep "JWT=" | cut -d'=' -f2)
-          
-          if [ -z "$JWT" ]; then
-            echo "❌ JWT生成失败，脚本输出：$JWT_OUTPUT"
-            exit 1
-          fi
-          
-          # 解码JWT验证payload（调试关键）
-          echo "🔍 解析JWT内容..."
-          JWT_PAYLOAD=$(echo "$JWT" | cut -d'.' -f2 | base64 -d 2>/dev/null | jq .)
-          if [ -z "$JWT_PAYLOAD" ]; then
-            echo "❌ JWT格式无效（无法解码）"
-            exit 1
-          fi
-          
-          # 验证JWT关键字段
-          if [ "$(echo "$JWT_PAYLOAD" | jq -r '.iss')" != "$APP_ID" ]; then
-            echo "❌ JWT签发者(iss)与APP_ID不匹配"
-            echo "实际iss: $(echo "$JWT_PAYLOAD" | jq -r '.iss')，预期: $APP_ID"
-            exit 1
-          fi
-          
-          EXPIRY=$(echo "$JWT_PAYLOAD" | jq -r '.exp')
-          CURRENT_TIME=$(date +%s)
-          if [ $((EXPIRY - CURRENT_TIME)) -le 0 ]; then
-            echo "❌ JWT已过期（exp: $EXPIRY，当前时间: $CURRENT_TIME）"
-            exit 1
-          fi
-          echo "✅ JWT验证通过（有效期剩余: $((EXPIRY - CURRENT_TIME))秒）"
-
-          # 3. 获取安装ID（使用JWT认证）
-          echo "🔍 获取App安装列表..."
-          INSTALLATION_RESPONSE=$(curl -s -w "%{http_code}" \
-            -H "Authorization: Bearer $JWT" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/app/installations")
-          
-          HTTP_CODE=${INSTALLATION_RESPONSE: -3}
-          INSTALLATION_BODY=${INSTALLATION_RESPONSE%???}
-          
-          if [ "$HTTP_CODE" -ne 200 ]; then
-            echo "❌ 获取安装列表失败（HTTP $HTTP_CODE）"
-            echo "响应内容: $INSTALLATION_BODY"
-            exit 1
-          fi
-          
-          # 从安装列表中匹配当前用户的安装记录
-          INSTALLATION_ID=$(echo "$INSTALLATION_BODY" | jq -r '.[] | select(.account.login == "jkl66678") | .id')
-          if [ "$INSTALLATION_ID" = "null" ] || [ -z "$INSTALLATION_ID" ]; then
-            echo "❌ 未找到用户jkl66678的App安装记录"
-            echo "所有安装记录: $INSTALLATION_BODY"
-            exit 1
-          fi
-          echo "✅ 获取安装ID成功: $INSTALLATION_ID"
-
-          # 4. 生成安装访问令牌（使用JWT）
-          echo "🔍 生成访问令牌..."
-          ACCESS_TOKEN_RESPONSE=$(curl -s -w "%{http_code}" -X POST \
-            -H "Authorization: Bearer $JWT" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/app/installations/$INSTALLATION_ID/access_tokens")
-          
-          HTTP_CODE=${ACCESS_TOKEN_RESPONSE: -3}
-          TOKEN_BODY=${ACCESS_TOKEN_RESPONSE%???}
-          
-          if [ "$HTTP_CODE" -ne 201 ]; then
-            echo "❌ 生成访问令牌失败（HTTP $HTTP_CODE）"
-            echo "响应内容: $TOKEN_BODY"
-            exit 1
-          fi
-          
-          ACCESS_TOKEN=$(echo "$TOKEN_BODY" | jq -r '.token')
-          if [ "$ACCESS_TOKEN" = "null" ] || [ -z "$ACCESS_TOKEN" ]; then
-            echo "❌ 访问令牌提取失败"
-            exit 1
-          fi
-          echo "✅ 访问令牌生成成功（前20字符）: ${ACCESS_TOKEN:0:20}..."
-
-          # 5. 验证目标仓库访问权限（关键步骤）
-          echo "🔍 验证仓库访问权限..."
-          REPO_RESPONSE=$(curl -s -w "%{http_code}" \
-            -H "Authorization: Bearer $ACCESS_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/installation/repositories")
-          
-          HTTP_CODE=${REPO_RESPONSE: -3}
-          REPO_BODY=${REPO_RESPONSE%???}
-          
-          if [ "$HTTP_CODE" -ne 200 ]; then
-            echo "❌ 验证仓库权限失败（HTTP $HTTP_CODE）"
-            echo "响应内容: $REPO_BODY"
-            exit 1
-          fi
-          
-          # 检查目标仓库是否在授权列表中
-          if ! echo "$REPO_BODY" | jq -r '.repositories[].name' | grep -q "$TARGET_REPO"; then
-            echo "❌ 目标仓库$TARGET_REPO未添加到App授权列表"
-            echo "请在GitHub设置中添加仓库：https://github.com/settings/installations/$INSTALLATION_ID"
-            exit 1
-          fi
-          echo "✅ 目标仓库访问权限验证通过"
-
-          # 输出令牌到环境变量
-          echo "ACCESS_TOKEN=$ACCESS_TOKEN" >> "$GITHUB_ENV"
-          rm -f "$TMP_KEY"
-
-      - name: 提交同步结果
-        run: |
-          git config --global user.name "Sync Bot"
+          # 配置Git提交信息
+          git config --global user.name "设备同步Bot"
           git config --global user.email "bot@example.com"
-          git remote set-url origin "https://x-access-token:${{ env.ACCESS_TOKEN }}@github.com/jkl66678/openwrt-custom-builder.git"
           
-          # 仅在有变更时提交
-          git add device-drivers.json .github/workflows/build.yml sync-logs/
-          if ! git diff --cached --quiet; then
-            git commit -m "自动同步设备列表（$(date +%Y-%m-%d)）"
-            git push origin main --force-with-lease  # 安全强制推送（避免覆盖）
-            echo "✅ 提交更新成功"
-          else
-            echo "ℹ️ 无变更，无需提交"
+          # 检查是否有变更（设备列表或工作流文件）
+          git add device-drivers.json .github/workflows/build.yml
+          if git diff --cached --quiet; then
+            echo "ℹ️ 无变更内容，无需提交"
+            exit 0
           fi
+          
+          # 提交并推送
+          git commit -m "自动更新设备列表及编译选项（$(date +%Y-%m-%d %H:%M)）"
+          git push origin main --force-with-lease  # 安全推送，避免冲突
+          echo "✅ 所有更新已提交到仓库"
 
-      - name: 上传同步日志
-        if: always()  # 无论成功失败都上传日志
+      - name: 上传同步结果（便于调试）
+        if: always()  # 无论成功失败都上传
         uses: actions/upload-artifact@v4
         with:
-          name: sync-logs-${{ github.run_id }}
-          path: sync-logs/
-          retention-days: 14  # 日志保留14天
+          name: sync-results-${{ github.run_id }}
+          path: |
+            device-drivers.json
+            .github/workflows/build.yml
+            scripts/generate-workflow.sh
+          retention-days: 10  # 保留10天用于调试
+    
