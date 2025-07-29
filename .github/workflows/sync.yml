@@ -80,7 +80,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sync-results-${{ github.run_id }}
-          path:  # 第91行修复：确保列表项缩进正确（与path字段保持2空格缩进）
-            - sync-logs/
-            - device-drivers.json
+          # 第84行修复：使用单行路径格式替代列表，彻底避免序列错误
+          path: sync-logs/ device-drivers.json
           retention-days: 14
