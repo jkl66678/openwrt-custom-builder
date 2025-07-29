@@ -1,15 +1,15 @@
 name: 设备列表同步与编译选项自动更新
 
 on:
-  workflow_dispatch:  # 支持手动触发
+  workflow_dispatch:  # 手动触发
   schedule:
-    - cron: "0 0 * * 0"  # 每周日凌晨自动执行
+    - cron: "0 0 * * 0"  # 每周日自动执行
 
 jobs:
   sync-devices:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # 仅需此权限即可修改工作流文件（属于仓库内容）
+      contents: write  # 仅需此权限即可修改仓库内容（包括工作流文件）
 
     steps:
       - name: 拉取仓库最新代码
@@ -34,19 +34,16 @@ jobs:
 
       - name: 配置同步脚本权限
         run: |
-          # 检查同步脚本是否存在
           if [ ! -f "scripts/sync-devices.sh" ]; then
             echo "❌ 同步脚本不存在: scripts/sync-devices.sh"
             exit 1
           fi
-          # 添加执行权限
           chmod +x scripts/sync-devices.sh
           echo "✅ 同步脚本权限配置完成"
 
       - name: 执行设备列表同步（核心步骤）
         run: |
           echo "📝 开始从OpenWrt源码同步设备列表..."
-          # 执行同步脚本，生成device-drivers.json
           ./scripts/sync-devices.sh || {
             echo "❌ 同步脚本执行失败，查看sync-logs获取详情"
             exit 1
@@ -60,30 +57,28 @@ jobs:
 
       - name: 生成更新build.yml
         run: |
-          # 检查生成脚本
           if [ ! -f "scripts/generate-workflow.sh" ]; then
             echo "❌ 生成脚本不存在: scripts/generate-workflow.sh"
             exit 1
           fi
           chmod +x scripts/generate-workflow.sh
           
-          # 执行生成脚本
           ./scripts/generate-workflow.sh || {
             echo "❌ 生成build.yml失败"
             exit 1
           }
           echo "✅ build.yml已更新为最新设备选项"
 
-      - name: 提交更新到仓库
+      - name: 提交更新到仓库（含冲突处理）
         run: |
           # 配置Git身份
           git config --global user.name "设备同步Bot"
           git config --global user.email "bot@example.com"
           
-          # 强制使用GITHUB_TOKEN认证（解决权限问题）
+          # 强制使用GITHUB_TOKEN认证
           git remote set-url origin "https://x-access-token:${{ github.token }}@github.com/jkl66678/openwrt-custom-builder.git"
           
-          # 添加变更文件
+          # 添加所有变更文件
           git add device-drivers.json .github/workflows/build.yml sync-logs/
           
           # 检查是否有变更
@@ -92,16 +87,38 @@ jobs:
             exit 0
           fi
           
-          # 拉取远程最新代码（避免冲突）
-          git pull --rebase origin main || {
-            echo "⚠️ 拉取远程代码冲突，尝试自动解决"
-            git rebase --abort
-            git pull origin main
-          }
+          # 关键修复：暂存所有未提交的更改（包括未add的文件）
+          git stash push -u -m "temp stash before pull" || echo "ℹ️ 没有需要暂存的内容"
+          
+          # 拉取远程最新代码（优先rebase，失败则普通拉取）
+          if ! git pull --rebase origin main; then
+            echo "⚠️ rebase失败，尝试普通拉取"
+            git pull origin main || {
+              echo "❌ 拉取远程代码失败，请检查网络或仓库权限"
+              exit 1
+            }
+          fi
+          
+          # 恢复暂存的更改（如有）
+          if git stash list | grep -q "temp stash before pull"; then
+            git stash pop || {
+              echo "⚠️ 恢复暂存内容时发生冲突，已保留冲突文件，手动解决后再推送"
+              # 冲突时仍继续执行，让后续步骤尝试提交
+            }
+          fi
+          
+          # 再次暂存确保所有变更被包含
+          git add device-drivers.json .github/workflows/build.yml sync-logs/
           
           # 提交并推送
-          git commit -m "自动同步设备列表（$(date +%Y-%m-%d %H:%M)）"
-          git push origin main
+          git commit -m "自动同步设备列表（$(date +%Y-%m-%d %H:%M)）" || {
+            echo "ℹ️ 无新变更可提交（可能是拉取后内容一致）"
+            exit 0
+          }
+          git push origin main || {
+            echo "❌ 推送失败，可能需要手动解决冲突"
+            exit 1
+          }
           echo "✅ 成功推送更新到远程仓库"
 
       - name: 上传同步日志（调试用）
@@ -113,4 +130,4 @@ jobs:
             sync-logs/
             device-drivers.json
             .github/workflows/build.yml
-          retention-days: 14  # 日志保留14天
+          retention-days: 14
