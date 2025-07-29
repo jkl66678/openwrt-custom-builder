@@ -9,8 +9,7 @@ jobs:
   sync-devices:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # 允许读写仓库内容
-      workflows: write  # 允许修改工作流文件
+      contents: write  # 仅需此权限即可修改工作流文件（属于仓库内容）
 
     steps:
       - name: 拉取仓库最新代码
