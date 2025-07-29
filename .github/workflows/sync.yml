@@ -1,92 +1,166 @@
 name: 设备列表自动同步
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # 允许手动触发
   schedule:
-    - cron: "0 0 * * 0"  # 每周日自动同步
+    - cron: "0 0 * * 0"  # 每周日0点自动同步
 
 jobs:
   sync-devices:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      actions: write
+      contents: write    # 允许读写代码内容
+      actions: write     # 允许修改工作流文件
 
     steps:
       - name: 拉取仓库代码
         uses: actions/checkout@v4
 
-      - name: 安装依赖
+      - name: 显示工作目录（调试用）
         run: |
-          sudo apt install -y git jq dos2unix
-          # 安装jwt-cli替代openssl生成JWT（解决openssl不支持jwt命令的问题）
+          echo "当前工作目录：$(pwd)"
+          ls -la
+
+      - name: 安装依赖工具
+        run: |
+          # 安装基础工具
+          sudo apt update && sudo apt install -y git jq dos2unix
+          # 安装Node.js（用于jwt-cli）
+          curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+          sudo apt install -y nodejs
+          # 安装jwt-cli（用于生成JWT令牌）
           sudo npm install -g jwt-cli
 
       - name: 准备同步脚本
         run: |
           if [ ! -f "scripts/sync-devices.sh" ]; then
-            echo "❌ 未找到脚本：scripts/sync-devices.sh"
+            echo "❌ 未找到同步脚本：scripts/sync-devices.sh"
             exit 1
           fi
+          # 处理Windows换行符问题
           dos2unix scripts/sync-devices.sh
+          # 添加执行权限
           chmod +x scripts/sync-devices.sh
+          # 打印脚本前5行验证
+          echo "同步脚本前5行内容："
+          head -n 5 scripts/sync-devices.sh
 
-      - name: 执行同步脚本
+      - name: 执行设备列表同步脚本
         run: |
-          ./scripts/sync-devices.sh || {
-            echo "❌ 脚本执行失败，日志："
+          # 创建日志目录（若不存在）
+          mkdir -p sync-logs
+          # 执行同步脚本，输出日志到文件
+          ./scripts/sync-devices.sh > sync-logs/sync-detail.log 2>&1 || {
+            echo "❌ 同步脚本执行失败，错误日志："
             cat sync-logs/sync-detail.log
             exit 1
           }
+          echo "✅ 同步脚本执行成功"
 
-      - name: 生成新工作流（含最新设备）
+      - name: 验证同步结果文件
+        if: always()
+        run: |
+          echo "工作目录文件列表："
+          ls -la
+          echo "日志文件内容（前20行）："
+          head -n 20 sync-logs/sync-detail.log || echo "⚠️ 日志文件不存在"
+          echo "设备配置文件（前10行）："
+          head -n 10 device-drivers.json || echo "⚠️ 设备配置文件不存在"
+
+      - name: 生成新工作流文件（若脚本存在）
         run: |
           if [ -f "scripts/generate-workflow.sh" ]; then
             chmod +x scripts/generate-workflow.sh
             ./scripts/generate-workflow.sh
+            echo "✅ 工作流文件生成完成"
+            head -n 5 .github/workflows/build.yml  # 验证生成结果
           else
             echo "⚠️ 未找到生成工作流的脚本，跳过此步骤"
           fi
 
-      - name: 生成GitHub App访问令牌（使用jwt-cli）
+      - name: 生成GitHub App访问令牌（修复私钥格式）
         run: |
           # 从Secrets获取App ID和私钥
           APP_ID=${{ secrets.GH_APP_ID }}
           PRIVATE_KEY="${{ secrets.GH_APP_PRIVATE_KEY }}"
           
+          # 关键修复：将私钥写入临时文件（保持原始格式）
+          echo "$PRIVATE_KEY" > /tmp/github-app-private-key.pem
+          # 限制文件权限（安全要求）
+          chmod 600 /tmp/github-app-private-key.pem
+          
+          # 验证私钥文件格式（调试用）
+          echo "私钥文件头部验证："
+          head -n 2 /tmp/github-app-private-key.pem
+          echo "私钥文件尾部验证："
+          tail -n 2 /tmp/github-app-private-key.pem
+          
           # 生成JWT令牌（有效期10分钟）
           IAT=$(date +%s)
           EXP=$((IAT + 600))
-          # 使用jwt-cli生成令牌（替代openssl jwt）
-          JWT=$(echo "$PRIVATE_KEY" | jwt encode --alg RS256 --exp $EXP --iss $APP_ID)
+          JWT=$(jwt encode \
+            --alg RS256 \
+            --exp $EXP \
+            --iss $APP_ID \
+            --key /tmp/github-app-private-key.pem)
+          
+          echo "✅ JWT令牌生成成功（前20字符）：${JWT:0:20}..."
           
           # 获取App在当前仓库的安装ID
-          INSTALLATION_ID=$(curl -s -H "Authorization: Bearer $JWT" \
+          INSTALLATION_RESPONSE=$(curl -s -H "Authorization: Bearer $JWT" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/app/installations" | jq -r '.[] | select(.repository_selection == "selected" and .repositories[0].name == "openwrt-custom-builder") | .id')
+            "https://api.github.com/app/installations")
+          echo "安装信息响应（简化）：$(echo "$INSTALLATION_RESPONSE" | jq '.[] | {id, account: .account.login, repos: .repositories[].name}')"
+          
+          INSTALLATION_ID=$(echo "$INSTALLATION_RESPONSE" | jq -r '.[] | select(.repository_selection == "selected" and .repositories[0].name == "openwrt-custom-builder") | .id')
+          if [ "$INSTALLATION_ID" = "null" ] || [ -z "$INSTALLATION_ID" ]; then
+            echo "❌ 未找到当前仓库的App安装记录"
+            exit 1
+          fi
+          echo "✅ 找到安装ID：$INSTALLATION_ID"
           
           # 获取访问令牌
-          ACCESS_TOKEN=$(curl -s -X POST -H "Authorization: Bearer $JWT" \
+          ACCESS_TOKEN_RESPONSE=$(curl -s -X POST -H "Authorization: Bearer $JWT" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/app/installations/$INSTALLATION_ID/access_tokens" | jq -r '.token')
+            "https://api.github.com/app/installations/$INSTALLATION_ID/access_tokens")
+          ACCESS_TOKEN=$(echo "$ACCESS_TOKEN_RESPONSE" | jq -r '.token')
           
+          if [ "$ACCESS_TOKEN" = "null" ] || [ -z "$ACCESS_TOKEN" ]; then
+            echo "❌ 访问令牌生成失败，响应：$ACCESS_TOKEN_RESPONSE"
+            exit 1
+          fi
+          echo "✅ 访问令牌生成成功（前20字符）：${ACCESS_TOKEN:0:20}..."
+          
+          # 保存令牌到环境变量
           echo "ACCESS_TOKEN=$ACCESS_TOKEN" >> $GITHUB_ENV
+          
+          # 清理临时文件
+          rm -f /tmp/github-app-private-key.pem
 
-      - name: 提交更新（使用GitHub App权限）
+      - name: 提交更新到仓库
         run: |
+          # 配置Git身份
           git config --global user.name "Sync Bot"
           git config --global user.email "bot@example.com"
+          
+          # 使用App访问令牌配置远程仓库
           git remote set-url origin "https://x-access-token:${{ env.ACCESS_TOKEN }}@github.com/jkl66678/openwrt-custom-builder.git"
           
-          git add device-drivers.json .github/workflows/build.yml
+          # 添加需要提交的文件
+          git add device-drivers.json .github/workflows/build.yml sync-logs/
+          
+          # 检查是否有变更
           if git diff --cached --quiet; then
-            echo "⚠️ 无更新可提交"
+            echo "⚠️ 没有检测到更新，无需提交"
           else
+            # 提交变更
             git commit -m "自动更新设备列表（$(date +%Y%m%d)）"
+            # 推送变更
             git push origin main
+            echo "✅ 成功推送更新到仓库"
           fi
 
-      - name: 上传日志和配置文件
+      - name: 上传同步结果（日志和配置文件）
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -94,4 +168,5 @@ jobs:
           path: |
             ${{ github.workspace }}/sync-logs/
             ${{ github.workspace }}/device-drivers.json
-          retention-days: 14
+            ${{ github.workspace }}/.github/workflows/build.yml
+          retention-days: 14  # 结果保留14天，便于调试
