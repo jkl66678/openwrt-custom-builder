@@ -1,7 +1,7 @@
 #!/bin/bash
-set -euo pipefail  # 严格模式，错误可追溯
+set -euo pipefail  # 严格模式
 
-# 清理临时文件（容错处理）
+# 清理临时文件
 trap 'cleanup' EXIT
 cleanup() {
     if [ -n "${TMP_SRC:-}" ] && [ -d "$TMP_SRC" ]; then
@@ -20,8 +20,8 @@ LOG_DIR="$WORK_DIR/sync-logs"
 OUTPUT_JSON="$WORK_DIR/device-drivers.json"
 SYNC_LOG="$LOG_DIR/sync-detail.log"
 
-MAX_MEM_THRESHOLD=4000  # 适配GitHub Actions内存
-MAX_DTS_SIZE=5242880    # 5MB
+MAX_MEM_THRESHOLD=4000
+MAX_DTS_SIZE=5242880
 CLONE_RETRIES=5
 SOURCE_REPOS=(
     "https://git.openwrt.org/openwrt/openwrt.git"
@@ -41,12 +41,12 @@ mkdir -p "$LOG_DIR" || { echo "❌ 无法创建日志目录" >&2; exit 1; }
 echo '[]' > "$DEVICE_TMP_JSON" && echo '[]' > "$CHIP_TMP_JSON" && > "$DEDUP_FILE"
 
 # ==============================================
-# 日志函数（彻底移除$2，用变量名message）
+# 日志函数（彻底移除$2）
 # ==============================================
 LOG_LEVEL="${1:-INFO}"
 log() {
     local level="$1"
-    local message="$2"  # 明确变量名，无$2引用
+    local message="$2"  # 仅用message变量，无$2
     local level_order=("DEBUG" "INFO" "WARN" "ERROR" "FATAL")
     
     local current_idx=$(printf "%s\n" "${level_order[@]}" | grep -n "^$LOG_LEVEL$" | cut -d: -f1)
@@ -87,7 +87,8 @@ check_resources() {
     if [ "$mem_used" -gt "$MAX_MEM_THRESHOLD" ]; then
         log "WARN" "内存过高，合并临时数据释放内存"
         if [ -s "$DEVICE_TMP_JSON" ]; then
-            jq --argfile tmp "$DEVICE_TMP_JSON" '.devices += $tmp' "$OUTPUT_JSON" > "$OUTPUT_JSON.tmp" && \
+            # 用--slurpfile替代--argfile（兼容新jq版本）
+            jq --slurpfile tmp "$DEVICE_TMP_JSON" '.devices += $tmp[0]' "$OUTPUT_JSON" > "$OUTPUT_JSON.tmp" && \
             mv "$OUTPUT_JSON.tmp" "$OUTPUT_JSON" && echo '[]' > "$DEVICE_TMP_JSON"
             log "DEBUG" "已合并设备临时数据"
         fi
@@ -125,7 +126,7 @@ for tool in "${REQUIRED_TOOLS[@]}"; do
     fi
 done
 
-# 检查jq版本
+# 检查jq版本（确保支持--slurpfile）
 jq_version_str=$(jq --version 2>/dev/null || echo "jq-0.0.0")
 jq_version=$(echo "$jq_version_str" | awk -F'[.-]' '{
     major = ($1 ~ /jq/) ? $2 + 0 : $1 + 0
@@ -176,7 +177,7 @@ if [ "$clone_success" -eq 0 ]; then
     exit 1
 fi
 
-# 4. 提取设备信息（修复语法错误：括号匹配）
+# 4. 提取设备信息
 log "INFO" "提取设备信息（同步核心步骤）..."
 
 # 收集有效dts文件
@@ -201,7 +202,7 @@ total_dts=$(wc -l < "$DTS_LIST_TMP")
 log "INFO" "发现有效dts文件：$total_dts 个，开始解析..."
 [ "$total_dts" -eq 0 ] && { log "FATAL" "无有效dts文件"; exit 1; }
 
-# 解析dts文件（修复第326行语法错误：确保代码块闭合）
+# 解析dts文件
 processed_count=0
 failed_count=0
 while IFS= read -r dts_file; do
@@ -266,7 +267,7 @@ while IFS= read -r dts_file; do
             continue
         }
 
-        # 提取设备型号
+        # 提取设备型号（失败时用默认值）
         model=$(grep -E 'model\s*=\s*"[^"]+"' "$dts_file" 2>/dev/null | \
             sed -n 's/.*model\s*=\s*"\(.*\)";.*/\1/p' | head -n1 | \
             sed -e 's/"/\\"/g' -e 's/\\/\\\\/g' -e 's/^[ \t]*//' -e 's/[ \t]*$//') || {
@@ -276,19 +277,14 @@ while IFS= read -r dts_file; do
         [ -z "$model" ] && model="Unknown ${device_name} (${chip})"
 
         # 写入设备数据
-        if ! jq --arg name "$device_name" \
-               --arg chip "$chip" \
-               --arg kt "$kernel_target" \
-               --arg model "$model" \
-               '. += [{"name": $name, "chip": $chip, "kernel_target": $kt, "model": $model, "drivers": []}]' \
-               "$DEVICE_TMP_JSON" > "$DEVICE_TMP_JSON.tmp"; then
-            log "ERROR" "jq写入失败：$device_name"
-            rm -f "$DEVICE_TMP_JSON.tmp"
-            failed_count=$((failed_count + 1))
-            continue
-        fi
+        jq --arg name "$device_name" \
+           --arg chip "$chip" \
+           --arg kt "$kernel_target" \
+           --arg model "$model" \
+           '. += [{"name": $name, "chip": $chip, "kernel_target": $kt, "model": $model, "drivers": []}]' \
+           "$DEVICE_TMP_JSON" > "$DEVICE_TMP_JSON.tmp" && \
         mv "$DEVICE_TMP_JSON.tmp" "$DEVICE_TMP_JSON" || {
-            log "ERROR" "替换临时文件失败：$device_name"
+            log "ERROR" "jq写入失败：$device_name"
             rm -f "$DEVICE_TMP_JSON.tmp"
             failed_count=$((failed_count + 1))
             continue
@@ -298,11 +294,11 @@ while IFS= read -r dts_file; do
 
     processed_count=$((processed_count + 1))
     [ $((processed_count % 50)) -eq 0 ] && log "INFO" "进度：$processed_count/$total_dts（失败：$failed_count）"
-done < "$DTS_LIST_TMP"  # 确保循环正确闭合
+done < "$DTS_LIST_TMP"
 
-# 合并设备数据
+# 合并设备数据（用--slurpfile替代--argfile）
 log "INFO" "合并设备数据..."
-jq --argfile tmp "$DEVICE_TMP_JSON" '.devices = $tmp' "$OUTPUT_JSON" > "$OUTPUT_JSON.tmp" && \
+jq --slurpfile tmp "$DEVICE_TMP_JSON" '.devices = $tmp[0]' "$OUTPUT_JSON" > "$OUTPUT_JSON.tmp" && \
 mv "$OUTPUT_JSON.tmp" "$OUTPUT_JSON" || { log "FATAL" "合并设备数据失败"; exit 1; }
 log "SUCCESS" "设备同步完成：$processed_count 个（失败：$failed_count）"
 
@@ -341,18 +337,13 @@ jq -r '.devices[].chip' "$OUTPUT_JSON" | sort | uniq | while read -r chip; do
     esac
 
     # 写入芯片数据
-    if ! jq --arg name "$chip" \
-           --arg p "$platform" \
-           --argjson drv "$drivers" \
-           '. += [{"name": $name, "platform": $p, "default_drivers": $drv}]' \
-           "$CHIP_TMP_JSON" > "$CHIP_TMP_JSON.tmp"; then
-        log "ERROR" "jq写入芯片失败：$chip"
-        rm -f "$CHIP_TMP_JSON.tmp"
-        chip_failed=$((chip_failed + 1))
-        continue
-    fi
+    jq --arg name "$chip" \
+       --arg p "$platform" \
+       --argjson drv "$drivers" \
+       '. += [{"name": $name, "platform": $p, "default_drivers": $drv}]' \
+       "$CHIP_TMP_JSON" > "$CHIP_TMP_JSON.tmp" && \
     mv "$CHIP_TMP_JSON.tmp" "$CHIP_TMP_JSON" || {
-        log "ERROR" "替换芯片临时文件失败：$chip"
+        log "ERROR" "jq写入芯片失败：$chip"
         rm -f "$CHIP_TMP_JSON.tmp"
         chip_failed=$((chip_failed + 1))
         continue
@@ -362,9 +353,9 @@ jq -r '.devices[].chip' "$OUTPUT_JSON" | sort | uniq | while read -r chip; do
     log "DEBUG" "同步芯片：$chip（$chip_processed/$chip_total）"
 done
 
-# 合并芯片数据
+# 合并芯片数据（用--slurpfile替代--argfile）
 log "INFO" "合并芯片数据..."
-jq --argfile tmp "$CHIP_TMP_JSON" '.chips = $tmp' "$OUTPUT_JSON" > "$OUTPUT_JSON.tmp" && \
+jq --slurpfile tmp "$CHIP_TMP_JSON" '.chips = $tmp[0]' "$OUTPUT_JSON" > "$OUTPUT_JSON.tmp" && \
 mv "$OUTPUT_JSON.tmp" "$OUTPUT_JSON" || { log "FATAL" "合并芯片数据失败"; exit 1; }
 log "SUCCESS" "芯片同步完成：$chip_processed 种（失败：$chip_failed）"
 
