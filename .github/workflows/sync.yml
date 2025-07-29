@@ -9,14 +9,14 @@ jobs:
   sync-devices:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # 仅需此权限即可操作仓库内容
+      contents: write  # 核心权限：读写仓库内容
 
     steps:
       - name: 拉取仓库代码（禁用默认凭据缓存）
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-          persist-credentials: false  # 禁用默认凭据缓存，避免干扰
+          persist-credentials: false  # 禁用默认凭据，避免干扰
 
       - name: 安装依赖工具
         run: |
@@ -24,7 +24,7 @@ jobs:
           sudo apt install -y -qq git jq dos2unix build-essential libncurses5-dev \
             zlib1g-dev gawk gettext libssl-dev xsltproc wget unzip python3 python3-pip
           
-          # 验证关键工具是否安装
+          # 验证工具是否安装
           for tool in git jq awk python3; do
             if ! command -v "$tool" &> /dev/null; then
               echo "❌ 缺失必要工具: $tool"
@@ -49,7 +49,7 @@ jobs:
             echo "❌ 同步脚本执行失败，查看sync-logs获取详情"
             exit 1
           }
-          # 验证生成的设备列表
+          # 验证设备列表有效性
           if [ ! -f "device-drivers.json" ] || [ $(jq '.devices | length' "device-drivers.json") -eq 0 ]; then
             echo "❌ 设备列表生成失败或为空"
             exit 1
@@ -70,9 +70,9 @@ jobs:
           }
           echo "✅ build.yml已更新为最新设备选项"
 
-      - name: 提交更新到仓库（完整修复版）
+      - name: 提交更新到仓库（完整凭据修复版）
         run: |
-          # 配置Git身份为GitHub官方机器人
+          # 配置GitHub官方机器人身份
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
@@ -86,16 +86,17 @@ jobs:
           git remote add origin "https://github.com/jkl66678/openwrt-custom-builder.git"
           echo "✅ 远程仓库已重新配置"
           
-          # 【核心修复】正确配置Git凭据（包含host字段）
+          # 【终极修复】完整Git凭据格式（包含所有必要字段）
           git credential approve <<EOF
+          protocol=https
           host=github.com
           username=github-actions[bot]
           password=${{ github.token }}
           EOF
-          echo "✅ Git凭据配置完成"
+          echo "✅ Git凭据配置完成（包含协议、主机、用户名和密码）"
           
           # 调试信息：确认当前配置
-          echo "当前Git用户："
+          echo "当前Git用户配置："
           git config user.name
           git config user.email
           echo "当前远程仓库配置："
@@ -132,19 +133,20 @@ jobs:
           # 再次暂存所有变更（确保无遗漏）
           git add .github/workflows/build.yml device-drivers.json sync-logs/ scripts/
           
-          # 提交变更（带时间戳）
+          # 提交变更（带完整时间戳）
           commit_msg="自动同步设备列表（$(date +"%Y-%m-%d %H:%M")）"
           git commit -m "$commit_msg" || {
             echo "ℹ️ 无新变更可提交"
             exit 0
           }
           
-          # 强制使用令牌URL推送（彻底避免认证问题）
+          # 强制使用令牌URL推送（彻底避免认证干扰）
           echo "开始推送更新..."
           git push "https://x-access-token:${{ github.token }}@github.com/jkl66678/openwrt-custom-builder.git" main || {
-            echo "❌ 推送失败，最后的可能原因："
-            echo "1. 仓库仍关联GitHub App（请检查Settings → Integrations）"
-            echo "2. 分支保护规则限制（请关闭main分支保护）"
+            echo "❌ 推送失败，最后的排查方向："
+            echo "1. 确认仓库已卸载所有GitHub App（Settings → Integrations）"
+            echo "2. 确认main分支无保护规则（Settings → Branches）"
+            echo "3. 确认Workflow权限为Read and write（Settings → Actions）"
             exit 1
           }
           echo "✅ 成功推送更新到远程仓库"
