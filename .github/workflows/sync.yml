@@ -19,9 +19,8 @@ jobs:
       - name: 安装依赖工具
         run: |
           sudo apt update && sudo apt install -y git jq dos2unix
-          # 安装Python及依赖（用于生成JWT）
           sudo apt install -y python3 python3-pip
-          pip3 install PyJWT cryptography  # 用于JWT生成的Python库
+          pip3 install PyJWT cryptography
 
       - name: 准备同步脚本
         run: |
@@ -50,86 +49,79 @@ jobs:
             echo "⚠️ 跳过生成工作流步骤"
           fi
 
-      - name: 生成GitHub App访问令牌（Python版，修复格式问题）
+      - name: 生成GitHub App访问令牌（缩进严格对齐）
         run: |
-          # 从Secrets获取参数
           APP_ID=${{ secrets.GH_APP_ID }}
           PRIVATE_KEY="${{ secrets.GH_APP_PRIVATE_KEY }}"
           
-          # 写入私钥到文件（保留原始格式）
           echo "$PRIVATE_KEY" > /tmp/private-key.pem
           chmod 600 /tmp/private-key.pem
           
-          # 验证私钥格式（关键检查）
           echo "🔍 验证私钥格式..."
           if ! grep -q "-----BEGIN RSA PRIVATE KEY-----" /tmp/private-key.pem; then
-            echo "❌ 私钥缺少开头标记：-----BEGIN RSA PRIVATE KEY-----"
-            cat /tmp/private-key.pem
+            echo "❌ 私钥缺少开头标记"
             exit 1
           fi
           if ! grep -q "-----END RSA PRIVATE KEY-----" /tmp/private-key.pem; then
-            echo "❌ 私钥缺少结尾标记：-----END RSA PRIVATE KEY-----"
-            cat /tmp/private-key.pem
+            echo "❌ 私钥缺少结尾标记"
             exit 1
           fi
           echo "✅ 私钥格式验证通过"
           
-          # 用Python生成JWT（比jwt-cli更可靠）
           echo "🔑 生成JWT令牌..."
           python3 - <<END
-import jwt
-import time
-from datetime import datetime, timedelta
-
-# 读取私钥
+# 读取私钥（基础缩进）
 with open('/tmp/private-key.pem', 'r') as f:
     private_key = f.read()
 
-# 设置过期时间（10分钟）
-iat = int(time.time())
-exp = iat + 600
+          # 以下代码均右移10个空格，且保持完全对齐
+          import jwt
+          import time
 
-# 生成JWT
-token = jwt.encode(
-    {
-        'iat': iat,
-        'exp': exp,
-        'iss': '$APP_ID'
-    },
-    private_key,
-    algorithm='RS256'
-)
+          iat = int(time.time())
+          exp = iat + 600
 
-print(f"JWT={token}")
-END > jwt.txt
-          JWT=$(grep "JWT=" jwt.txt | cut -d'=' -f2)
+          token = jwt.encode(
+              {
+                  'iat': iat,
+                  'exp': exp,
+                  'iss': '$APP_ID'
+              },
+              private_key,
+              algorithm='RS256'
+          )
+
+          print(f"JWT={token}")
+END
+          # 提取JWT令牌
+          JWT=$(grep "JWT=" <(python3 -c "import sys; print(sys.stdin.read())" < <(cat)) 2>/dev/null | cut -d'=' -f2)
+          if [ -z "$JWT" ]; then
+            echo "❌ 提取JWT令牌失败"
+            exit 1
+          fi
           echo "✅ JWT生成成功（前20字符）：${JWT:0:20}..."
           
-          # 获取安装ID
+          # 获取安装ID和访问令牌
           INSTALLATION_RESPONSE=$(curl -s -H "Authorization: Bearer $JWT" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/app/installations")
           INSTALLATION_ID=$(echo "$INSTALLATION_RESPONSE" | jq -r '.[] | select(.repository_selection == "selected" and .repositories[0].name == "openwrt-custom-builder") | .id')
           if [ "$INSTALLATION_ID" = "null" ] || [ -z "$INSTALLATION_ID" ]; then
-            echo "❌ 未找到仓库安装记录，响应：$INSTALLATION_RESPONSE"
+            echo "❌ 未找到仓库安装记录"
             exit 1
           fi
           echo "✅ 安装ID：$INSTALLATION_ID"
           
-          # 获取访问令牌
           ACCESS_TOKEN_RESPONSE=$(curl -s -X POST -H "Authorization: Bearer $JWT" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/app/installations/$INSTALLATION_ID/access_tokens")
           ACCESS_TOKEN=$(echo "$ACCESS_TOKEN_RESPONSE" | jq -r '.token')
           if [ "$ACCESS_TOKEN" = "null" ] || [ -z "$ACCESS_TOKEN" ]; then
-            echo "❌ 令牌生成失败，响应：$ACCESS_TOKEN_RESPONSE"
+            echo "❌ 令牌生成失败"
             exit 1
           fi
-          echo "✅ 访问令牌生成成功"
-          
-          # 保存令牌
           echo "ACCESS_TOKEN=$ACCESS_TOKEN" >> $GITHUB_ENV
-          rm -f /tmp/private-key.pem jwt.txt
+          rm -f /tmp/private-key.pem
 
       - name: 提交更新
         run: |
