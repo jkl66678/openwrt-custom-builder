@@ -1,100 +1,117 @@
 name: 设备列表同步与编译选项自动更新
 
 on:
-  workflow_dispatch:  # 手动触发
+  workflow_dispatch:  # 支持手动触发
   schedule:
-    - cron: "0 0 * * 0"  # 每周日自动执行
+    - cron: "0 0 * * 0"  # 每周日凌晨自动执行
 
 jobs:
-  sync-and-generate:
+  sync-devices:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # 允许提交代码
-      actions: read
+      contents: write  # 允许读写仓库内容
+      workflows: write  # 允许修改工作流文件
 
     steps:
       - name: 拉取仓库最新代码
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 1  # 仅拉取最新版本
 
-      - name: 安装必要工具（适配 sync-devices.sh 依赖）
+      - name: 安装依赖工具
         run: |
           sudo apt update -qq > /dev/null 2>&1
           sudo apt install -y -qq git jq dos2unix build-essential libncurses5-dev \
-            zlib1g-dev gawk gettext libssl-dev xsltproc wget unzip python3  # 包含脚本依赖的所有工具
+            zlib1g-dev gawk gettext libssl-dev xsltproc wget unzip python3 python3-pip
           
-          # 验证核心工具
-          for tool in git jq awk sed find stat timeout; do
+          # 验证关键工具
+          for tool in git jq awk python3; do
             if ! command -v "$tool" &> /dev/null; then
-              echo "❌ 缺失工具：$tool"
+              echo "❌ 缺失必要工具: $tool"
               exit 1
             fi
           done
           echo "✅ 依赖工具安装完成"
 
-      - name: 为同步脚本添加执行权限
+      - name: 配置同步脚本权限
         run: |
+          # 检查同步脚本是否存在
           if [ ! -f "scripts/sync-devices.sh" ]; then
-            echo "❌ 未找到同步脚本：scripts/sync-devices.sh"
+            echo "❌ 同步脚本不存在: scripts/sync-devices.sh"
             exit 1
           fi
+          # 添加执行权限
           chmod +x scripts/sync-devices.sh
-          echo "✅ 同步脚本权限设置完成"
+          echo "✅ 同步脚本权限配置完成"
 
-      - name: 执行同步脚本（生成 device-drivers.json）
+      - name: 执行设备列表同步（核心步骤）
         run: |
-          # 调用你的 sync-devices.sh 生成设备列表
+          echo "📝 开始从OpenWrt源码同步设备列表..."
+          # 执行同步脚本，生成device-drivers.json
           ./scripts/sync-devices.sh || {
-            echo "❌ 同步脚本执行失败，查看 sync-logs 日志"
+            echo "❌ 同步脚本执行失败，查看sync-logs获取详情"
             exit 1
           }
-          # 验证生成的设备列表
-          if [ ! -f "device-drivers.json" ] || [ ! -s "device-drivers.json" ]; then
-            echo "❌ 设备列表生成失败（文件为空或不存在）"
+          # 验证生成结果
+          if [ ! -f "device-drivers.json" ] || [ $(jq '.devices | length' "device-drivers.json") -eq 0 ]; then
+            echo "❌ 设备列表生成失败或为空"
             exit 1
           fi
-          echo "✅ device-drivers.json 生成成功"
+          echo "✅ 设备列表同步完成，共发现 $(jq '.devices | length' "device-drivers.json") 个设备"
 
-      - name: 准备生成脚本（更新 build.yml 选项）
+      - name: 生成更新build.yml
         run: |
+          # 检查生成脚本
           if [ ! -f "scripts/generate-workflow.sh" ]; then
-            echo "❌ 未找到生成脚本：scripts/generate-workflow.sh"
+            echo "❌ 生成脚本不存在: scripts/generate-workflow.sh"
             exit 1
           fi
           chmod +x scripts/generate-workflow.sh
-          echo "✅ 生成脚本准备完成"
-
-      - name: 动态生成 build.yml（基于最新设备列表）
-        run: |
+          
+          # 执行生成脚本
           ./scripts/generate-workflow.sh || {
-            echo "❌ 生成 build.yml 失败"
+            echo "❌ 生成build.yml失败"
             exit 1
           }
-          echo "✅ build.yml 已更新设备/芯片选项"
+          echo "✅ build.yml已更新为最新设备选项"
 
       - name: 提交更新到仓库
         run: |
+          # 配置Git身份
           git config --global user.name "设备同步Bot"
           git config --global user.email "bot@example.com"
           
-          # 提交设备列表和更新后的 build.yml
+          # 强制使用GITHUB_TOKEN认证（解决权限问题）
+          git remote set-url origin "https://x-access-token:${{ github.token }}@github.com/jkl66678/openwrt-custom-builder.git"
+          
+          # 添加变更文件
           git add device-drivers.json .github/workflows/build.yml sync-logs/
-          if ! git diff --cached --quiet; then
-            git commit -m "自动同步设备列表（$(date +%Y-%m-%d)）"
-            git push origin main --force-with-lease
-            echo "✅ 提交成功"
-          else
-            echo "ℹ️ 无变更，无需提交"
+          
+          # 检查是否有变更
+          if git diff --cached --quiet; then
+            echo "ℹ️ 无变更内容，无需提交"
+            exit 0
           fi
+          
+          # 拉取远程最新代码（避免冲突）
+          git pull --rebase origin main || {
+            echo "⚠️ 拉取远程代码冲突，尝试自动解决"
+            git rebase --abort
+            git pull origin main
+          }
+          
+          # 提交并推送
+          git commit -m "自动同步设备列表（$(date +%Y-%m-%d %H:%M)）"
+          git push origin main
+          echo "✅ 成功推送更新到远程仓库"
 
-      - name: 上传同步日志（便于调试）
+      - name: 上传同步日志（调试用）
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: sync-logs-${{ github.run_id }}
+          name: sync-debug-logs-${{ github.run_id }}
           path: |
             sync-logs/
             device-drivers.json
             .github/workflows/build.yml
-          retention-days: 14
+          retention-days: 14  # 日志保留14天
