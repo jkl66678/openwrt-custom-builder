@@ -21,10 +21,13 @@ jobs:
           sudo apt update && sudo apt install -y git jq dos2unix python3 python3-pip
           pip3 install PyJWT cryptography
 
-      - name: 准备同步脚本
+      - name: 准备脚本文件
         run: |
+          # 确保同步脚本和JWT生成脚本存在且可执行
           [ -f "scripts/sync-devices.sh" ] || { echo "❌ 缺少同步脚本"; exit 1; }
-          dos2unix scripts/sync-devices.sh && chmod +x scripts/sync-devices.sh
+          [ -f "scripts/generate_jwt.py" ] || { echo "❌ 缺少JWT生成脚本"; exit 1; }
+          dos2unix scripts/*.sh && chmod +x scripts/*.sh
+          chmod +x scripts/generate_jwt.py
 
       - name: 执行同步脚本
         run: |
@@ -34,35 +37,35 @@ jobs:
       - name: 生成工作流文件（可选）
         run: |
           if [ -f "scripts/generate-workflow.sh" ]; then
-            chmod +x scripts/generate-workflow.sh && ./scripts/generate-workflow.sh
+            ./scripts/generate-workflow.sh
           fi
 
-      - name: 生成GitHub App访问令牌
+      - name: 生成GitHub App访问令牌（无内嵌代码块）
         run: |
           APP_ID=${{ secrets.GH_APP_ID }}
           PRIVATE_KEY="${{ secrets.GH_APP_PRIVATE_KEY }}"
           
-          # 第55行核心修复：严格2空格缩进，无多余空格
+          # 写入私钥到临时文件
           echo "$PRIVATE_KEY" > /tmp/key.pem
           chmod 600 /tmp/key.pem
           
+          # 验证私钥格式
           grep -q "-----BEGIN RSA PRIVATE KEY-----" /tmp/key.pem || { echo "❌ 私钥格式错误"; exit 1; }
           grep -q "-----END RSA PRIVATE KEY-----" /tmp/key.pem || { echo "❌ 私钥格式错误"; exit 1; }
           
-          # 极简Python代码块，消除缩进冲突
-          python3 <<END
-with open('/tmp/key.pem','r') as f:private_key=f.read()
-import jwt,time
-token=jwt.encode({'iat':int(time.time()),'exp':int(time.time())+600,'iss':'$APP_ID'},private_key,algorithm='RS256')
-print(f"JWT={token}")
-END
-          JWT=$(grep "JWT=" <(cat) | cut -d'=' -f2)
+          # 调用独立Python脚本生成JWT（彻底规避YAML代码块）
+          JWT=$(python3 scripts/generate_jwt.py "$APP_ID" /tmp/key.pem | grep "JWT=" | cut -d'=' -f2)
           [ -n "$JWT" ] || { echo "❌ JWT生成失败"; exit 1; }
+          echo "✅ JWT生成成功"
           
-          INSTALLATION_ID=$(curl -s -H "Authorization: Bearer $JWT" "https://api.github.com/app/installations" | jq -r '.[] | select(.repositories[0].name == "openwrt-custom-builder") | .id')
+          # 获取安装ID
+          INSTALLATION_ID=$(curl -s -H "Authorization: Bearer $JWT" \
+            "https://api.github.com/app/installations" | jq -r '.[] | select(.repositories[0].name == "openwrt-custom-builder") | .id')
           [ "$INSTALLATION_ID" != "null" ] || { echo "❌ 未找到安装记录"; exit 1; }
           
-          ACCESS_TOKEN=$(curl -s -X POST -H "Authorization: Bearer $JWT" "https://api.github.com/app/installations/$INSTALLATION_ID/access_tokens" | jq -r '.token')
+          # 获取访问令牌
+          ACCESS_TOKEN=$(curl -s -X POST -H "Authorization: Bearer $JWT" \
+            "https://api.github.com/app/installations/$INSTALLATION_ID/access_tokens" | jq -r '.token')
           [ "$ACCESS_TOKEN" != "null" ] || { echo "❌ 令牌生成失败"; exit 1; }
           
           echo "ACCESS_TOKEN=$ACCESS_TOKEN" >> $GITHUB_ENV
