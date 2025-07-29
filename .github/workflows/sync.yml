@@ -3,7 +3,7 @@ name: 设备列表自动同步
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 0 * * 0"  # 每周日自动同步
+    - cron: "0 0 * * 0"
 
 jobs:
   sync-devices:
@@ -16,114 +16,68 @@ jobs:
       - name: 拉取仓库代码
         uses: actions/checkout@v4
 
-      - name: 安装依赖工具
+      - name: 安装依赖
         run: |
-          sudo apt update && sudo apt install -y git jq dos2unix
-          sudo apt install -y python3 python3-pip
+          sudo apt update && sudo apt install -y git jq dos2unix python3 python3-pip
           pip3 install PyJWT cryptography
 
       - name: 准备同步脚本
         run: |
-          if [ ! -f "scripts/sync-devices.sh" ]; then
-            echo "❌ 未找到同步脚本：scripts/sync-devices.sh"
-            exit 1
-          fi
-          dos2unix scripts/sync-devices.sh
-          chmod +x scripts/sync-devices.sh
+          [ -f "scripts/sync-devices.sh" ] || { echo "❌ 缺少同步脚本"; exit 1; }
+          dos2unix scripts/sync-devices.sh && chmod +x scripts/sync-devices.sh
 
-      - name: 执行设备列表同步脚本
+      - name: 执行同步脚本
         run: |
           mkdir -p sync-logs
-          ./scripts/sync-devices.sh > sync-logs/sync-detail.log 2>&1 || {
-            echo "❌ 同步脚本执行失败"
-            cat sync-logs/sync-detail.log
-            exit 1
-          }
+          ./scripts/sync-devices.sh > sync-logs/sync-detail.log 2>&1 || { cat sync-logs/sync-detail.log; exit 1; }
 
-      - name: 生成新工作流文件
+      - name: 生成工作流文件（可选）
         run: |
           if [ -f "scripts/generate-workflow.sh" ]; then
-            chmod +x scripts/generate-workflow.sh
-            ./scripts/generate-workflow.sh
-          else
-            echo "⚠️ 跳过生成工作流步骤"
+            chmod +x scripts/generate-workflow.sh && ./scripts/generate-workflow.sh
           fi
 
-      - name: 生成GitHub App访问令牌（修复第88行语法）
+      - name: 生成GitHub App访问令牌
         run: |
           APP_ID=${{ secrets.GH_APP_ID }}
           PRIVATE_KEY="${{ secrets.GH_APP_PRIVATE_KEY }}"
           
-          echo "$PRIVATE_KEY" > /tmp/private-key.pem
-          chmod 600 /tmp/private-key.pem
+          # 写入私钥
+          echo "$PRIVATE_KEY" > /tmp/key.pem && chmod 600 /tmp/key.pem
           
-          echo "🔍 验证私钥格式..."
-          if ! grep -q "-----BEGIN RSA PRIVATE KEY-----" /tmp/private-key.pem; then
-            echo "❌ 私钥缺少开头标记"
-            exit 1
-          fi
-          if ! grep -q "-----END RSA PRIVATE KEY-----" /tmp/private-key.pem; then
-            echo "❌ 私钥缺少结尾标记"
-            exit 1
-          fi
-          echo "✅ 私钥格式验证通过"
+          # 验证私钥格式
+          grep -q "-----BEGIN RSA PRIVATE KEY-----" /tmp/key.pem || { echo "❌ 私钥格式错误"; exit 1; }
+          grep -q "-----END RSA PRIVATE KEY-----" /tmp/key.pem || { echo "❌ 私钥格式错误"; exit 1; }
           
-          echo "🔑 生成JWT令牌..."
-          # 核心修复：使用标准格式的Here Document，避免YAML解析歧义
-          python3 << END
-# 读取私钥（基础缩进）
-with open('/tmp/private-key.pem', 'r') as f:
+          # 生成JWT（核心修复：代码块极简格式）
+          python3 <<END
+with open('/tmp/key.pem', 'r') as f:
     private_key = f.read()
 
-          # 右移10个空格的import语句
           import jwt
           import time
 
-          # 后续代码保持相同缩进（10个空格）
           iat = int(time.time())
           exp = iat + 600
-
-          token = jwt.encode(
-              {
-                  'iat': iat,
-                  'exp': exp,
-                  'iss': '$APP_ID'
-              },
-              private_key,
-              algorithm='RS256'
-          )
-
+          token = jwt.encode({'iat': iat, 'exp': exp, 'iss': '$APP_ID'}, private_key, algorithm='RS256')
           print(f"JWT={token}")
 END
-          # 提取JWT令牌
-          JWT=$(python3 -c "import sys,re; print(re.search(r'JWT=(.*)', sys.stdin.read()).group(1))" 2>/dev/null)
-          if [ -z "$JWT" ]; then
-            echo "❌ 提取JWT令牌失败"
-            exit 1
-          fi
-          echo "✅ JWT生成成功（前20字符）：${JWT:0:20}..."
+          # 提取JWT
+          JWT=$(grep "JWT=" <(cat) | cut -d'=' -f2)
+          [ -n "$JWT" ] || { echo "❌ JWT生成失败"; exit 1; }
           
-          # 获取安装ID和访问令牌
-          INSTALLATION_RESPONSE=$(curl -s -H "Authorization: Bearer $JWT" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/app/installations")
-          INSTALLATION_ID=$(echo "$INSTALLATION_RESPONSE" | jq -r '.[] | select(.repository_selection == "selected" and .repositories[0].name == "openwrt-custom-builder") | .id')
-          if [ "$INSTALLATION_ID" = "null" ] || [ -z "$INSTALLATION_ID" ]; then
-            echo "❌ 未找到仓库安装记录"
-            exit 1
-          fi
-          echo "✅ 安装ID：$INSTALLATION_ID"
+          # 获取安装ID
+          INSTALLATION_ID=$(curl -s -H "Authorization: Bearer $JWT" \
+            "https://api.github.com/app/installations" | jq -r '.[] | select(.repositories[0].name == "openwrt-custom-builder") | .id')
+          [ "$INSTALLATION_ID" != "null" ] || { echo "❌ 未找到安装记录"; exit 1; }
           
-          ACCESS_TOKEN_RESPONSE=$(curl -s -X POST -H "Authorization: Bearer $JWT" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/app/installations/$INSTALLATION_ID/access_tokens")
-          ACCESS_TOKEN=$(echo "$ACCESS_TOKEN_RESPONSE" | jq -r '.token')
-          if [ "$ACCESS_TOKEN" = "null" ] || [ -z "$ACCESS_TOKEN" ]; then
-            echo "❌ 令牌生成失败"
-            exit 1
-          fi
+          # 获取访问令牌
+          ACCESS_TOKEN=$(curl -s -X POST -H "Authorization: Bearer $JWT" \
+            "https://api.github.com/app/installations/$INSTALLATION_ID/access_tokens" | jq -r '.token')
+          [ "$ACCESS_TOKEN" != "null" ] || { echo "❌ 令牌生成失败"; exit 1; }
+          
           echo "ACCESS_TOKEN=$ACCESS_TOKEN" >> $GITHUB_ENV
-          rm -f /tmp/private-key.pem
+          rm -f /tmp/key.pem
 
       - name: 提交更新
         run: |
@@ -132,11 +86,8 @@ END
           git remote set-url origin "https://x-access-token:${{ env.ACCESS_TOKEN }}@github.com/jkl66678/openwrt-custom-builder.git"
           
           git add device-drivers.json .github/workflows/build.yml sync-logs/
-          if git diff --cached --quiet; then
-            echo "⚠️ 无更新可提交"
-          else
-            git commit -m "自动更新设备列表（$(date +%Y%m%d)）"
-            git push origin main
+          if ! git diff --cached --quiet; then
+            git commit -m "自动更新设备列表（$(date +%Y%m%d)）" && git push origin main
           fi
 
       - name: 上传结果
@@ -144,7 +95,5 @@ END
         uses: actions/upload-artifact@v4
         with:
           name: sync-results-${{ github.run_id }}
-          path: |
-            sync-logs/
-            device-drivers.json
+          path: sync-logs/ device-drivers.json
           retention-days: 14
