@@ -121,28 +121,55 @@ done < "$LOG_DIR/dts_files.tmp"  # 从临时文件读取.dts列表
 rm -f "$LOG_DIR/dts_files.tmp"
 
 # ==============================================
-# 5. 提取芯片信息（去重并关联平台）
+# 5. 提取芯片信息（修复版：解决子shell和空值问题）
 # ==============================================
 log "🔍 开始提取芯片信息..."
-declare -A PROCESSED_CHIPS  # 关联数组：用于芯片去重
+CHIP_TMP_FILE="$LOG_DIR/processed_chips.tmp"  # 用临时文件替代关联数组
+> "$CHIP_TMP_FILE"  # 初始化临时文件
 
-# 从设备列表中提取芯片并去重
+# 从设备列表中提取芯片并去重（避免子shell问题）
 jq -r '.devices[].chip' "$OUTPUT_JSON" | sort | uniq | while read -r chip; do
-    if ! [[ -v PROCESSED_CHIPS["$chip"] ]]; then
-        PROCESSED_CHIPS["$chip"]=1
-
-        # 关联芯片与平台（取第一个使用该芯片的设备的平台）
-        platform=$(jq --arg c "$chip" '.devices[] | select(.chip == $c) | .kernel_target' "$OUTPUT_JSON" | head -n1)
-        
-        # 写入芯片信息到JSON
-        jq --arg name "$chip" \
-           --arg p "$platform" \
-           '.chips += [{"name": $name, "platform": $p}]' \
-           "$OUTPUT_JSON" > "$OUTPUT_JSON.tmp" && mv "$OUTPUT_JSON.tmp" "$OUTPUT_JSON"
-
-        log "ℹ️ 提取芯片：$chip（关联平台：$platform）"
+    # 跳过空芯片名
+    if [ -z "$chip" ]; then
+        log "⚠️ 跳过空芯片名"
+        continue
     fi
+
+    # 检查是否已处理（通过临时文件）
+    if grep -q "^$chip$" "$CHIP_TMP_FILE"; then
+        continue
+    fi
+
+    # 关联芯片与平台（取第一个匹配的设备平台，添加错误捕获）
+    platform=$(jq --arg c "$chip" '.devices[] | select(.chip == $c) | .kernel_target' "$OUTPUT_JSON" 2>> "$SYNC_LOG" | head -n1)
+    if [ -z "$platform" ] || [ "$platform" = "null" ]; then
+        log "⚠️ 芯片 $chip 未找到关联平台，使用默认值"
+        platform="unknown-platform"  # 兜底值，避免jq报错
+    fi
+
+    # 写入芯片信息到JSON（添加错误检查）
+    if ! jq --arg name "$chip" \
+            --arg p "$platform" \
+            '.chips += [{"name": $name, "platform": $p}]' \
+            "$OUTPUT_JSON" > "$OUTPUT_JSON.tmp" 2>> "$SYNC_LOG"; then
+        log "❌ 芯片 $chip 写入失败，跳过"
+        continue
+    fi
+
+    # 原子性替换原文件（检查是否成功）
+    if ! mv "$OUTPUT_JSON.tmp" "$OUTPUT_JSON" 2>> "$SYNC_LOG"; then
+        log "❌ 芯片 $chip 无法更新配置文件，跳过"
+        rm -f "$OUTPUT_JSON.tmp"  # 清理临时文件
+        continue
+    fi
+
+    # 标记为已处理（写入临时文件）
+    echo "$chip" >> "$CHIP_TMP_FILE"
+    log "ℹ️ 提取芯片：$chip（关联平台：$platform）"
 done
+
+# 清理临时文件
+rm -f "$CHIP_TMP_FILE"
 
 # ==============================================
 # 6. 补充默认驱动（针对常见芯片）
