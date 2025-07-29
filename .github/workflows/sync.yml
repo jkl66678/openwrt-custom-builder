@@ -1,129 +1,73 @@
-name: OpenWrt设备与芯片同步（完整版）
+name: 设备列表自动同步
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 2 * * *"
+    - cron: "0 0 * * 0"  # 每周日自动同步
 
 jobs:
   sync-devices:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # 确保有写入权限
-      pull-requests: write
-
+      contents: write  # 允许推送更新
     steps:
-      # 1. 拉取代码
-      - name: 拉取仓库
+      - name: 拉取仓库代码
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: main
 
-      # 2. 调试：显示目录结构
-      - name: 查看工作目录
+      - name: 显示工作目录
         run: |
-          echo "工作区: $(pwd)"
+          echo "当前工作目录：$(pwd)"
           ls -la
-          ls -la scripts/ || echo "scripts目录不存在"
 
-      # 3. 安装依赖
-      - name: 安装工具
-        run: |
-          sudo apt update -y
-          sudo apt install -y git jq dos2unix
+      - name: 安装依赖
+        run: sudo apt install -y git jq dos2unix
 
-      # 4. 准备脚本
-      - name: 修复脚本格式
+      - name: 准备同步脚本
         run: |
           if [ ! -f "scripts/sync-devices.sh" ]; then
-            echo "❌ 未找到脚本"
+            echo "❌ 未找到脚本：scripts/sync-devices.sh"
             exit 1
           fi
           dos2unix scripts/sync-devices.sh
           chmod +x scripts/sync-devices.sh
-          head -n1 scripts/sync-devices.sh
+          head -n 5 scripts/sync-devices.sh
 
-      # 5. 执行同步脚本
-      - name: 运行同步
+      - name: 执行同步脚本
         run: |
           ./scripts/sync-devices.sh || {
-            echo "❌ 脚本执行失败，完整日志:"
+            echo "❌ 脚本执行失败，日志："
             cat sync-logs/sync-detail.log
             exit 1
           }
 
-      # 6. 验证输出文件
-      - name: 检查生成结果
+      - name: 验证文件生成
         if: always()
         run: |
-          echo "===== 设备配置文件内容 ====="
-          cat device-drivers.json || echo "文件不存在"
-          
-          echo "===== 设备数量 ====="
-          jq '.devices | length' device-drivers.json || echo "0"
-          
-          echo "===== 芯片数量 ====="
-          jq '.chips | length' device-drivers.json || echo "0"
-          
-          echo "===== 日志最后20行 ====="
-          tail -n 20 sync-logs/sync-detail.log || echo "日志文件不存在"
+          echo "工作目录内容："
+          ls -la
+          echo "日志目录内容："
+          ls -la sync-logs/ || echo "sync-logs 不存在"
+          echo "配置文件内容："
+          cat device-drivers.json || echo "device-drivers.json 不存在"
 
-      # 7. 更新build.yml
-      - name: 更新编译选项
+      - name: 生成新工作流（含最新设备）
         run: |
-          DEVICES=$(jq -r '.devices[].name | sort | uniq' device-drivers.json | tr '\n' ',' | sed 's/,$//')
-          CHIPS=$(jq -r '.chips[].name | sort | uniq' device-drivers.json | tr '\n' ',' | sed 's/,$//')
-          
-          [ -z "$DEVICES" ] && DEVICES="test-device"
-          [ -z "$CHIPS" ] && CHIPS="test-chip"
-          
-          echo "更新设备列表: $DEVICES"
-          echo "更新芯片列表: $CHIPS"
-          
-          sed -i "s/options: \[.*\]  # AUTO-SYNC-DEVICES/options: [$DEVICES]  # AUTO-SYNC-DEVICES/" .github/workflows/build.yml
-          sed -i "s/options: \[.*\]  # AUTO-SYNC-CHIPS/options: [$CHIPS]  # AUTO-SYNC-CHIPS/" .github/workflows/build.yml
+          chmod +x scripts/generate-workflow.sh
+          ./scripts/generate-workflow.sh
 
-      # 8. 提交更新（修复未暂存问题）
-      - name: 提交到仓库
+      - name: 提交更新
         run: |
-          git config --global user.name "OpenWrt Sync Bot"
-          git config --global user.email "sync@example.com"
-          
-          # 检查所有可能修改的文件
-          if git diff --quiet device-drivers.json .github/workflows/build.yml scripts/sync-devices.sh; then
-            echo "⚠️ 无更新，无需提交"
-            exit 0
-          fi
-          
-          # 暂存所有修改（关键：包含脚本和配置文件）
-          git add device-drivers.json .github/workflows/build.yml scripts/sync-devices.sh sync-logs/
-          git stash
-          
-          # 拉取远程代码
-          git pull --rebase origin main
-          
-          # 应用暂存并重新暂存（解决未暂存问题）
-          if ! git stash pop; then
-            echo "⚠️ 冲突，手动合并"
-            git add device-drivers.json .github/workflows/build.yml scripts/sync-devices.sh
-            git commit -m "合并冲突：同步设备列表（$(date +%Y-%m-%d)）"
+          git config --global user.name "Sync Bot"
+          git config --global user.email "bot@example.com"
+          git add device-drivers.json .github/workflows/build.yml
+          if git diff --cached --quiet; then
+            echo "⚠️ 无更新可提交"
           else
-            # 确保弹出后文件被暂存
-            git add device-drivers.json .github/workflows/build.yml scripts/sync-devices.sh
+            git commit -m "自动更新设备列表（$(date +%Y%m%d)）"
+            git push
           fi
-          
-          # 提交（允许空提交，避免遗漏）
-          git commit -m "自动同步设备与芯片（$(date +%Y-%m-%d)）" || {
-            echo "⚠️ 强制提交"
-            git commit -m "自动同步设备与芯片（$(date +%Y-%m-%d)）" --allow-empty
-          }
-          
-          # 推送（不忽略错误）
-          git push origin main
 
-      # 9. 上传日志和结果
-      - name: 上传 artifacts
+      - name: 上传日志和配置文件
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -131,9 +75,4 @@ jobs:
           path: |
             ${{ github.workspace }}/sync-logs/
             ${{ github.workspace }}/device-drivers.json
-            ${{ github.workspace }}/.github/workflows/build.yml
           retention-days: 14
-
-    concurrency:
-      group: openwrt-sync
-      cancel-in-progress: true
