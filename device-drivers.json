@@ -1,59 +1,65 @@
-{
-  "devices": [
-    {
-      "name": "cuby-tr3000",
-      "chip": "mt7981",
-      "kernel_target": "mediatek/filogic",
-      "drivers": [
-        "kmod-mt7981-firmware", "kmod-mt7921e", "kmod-switch-mt7530",
-        "kmod-net-ethernet-mtk_eth_soc", "kmod-usb3", "kmod-spi-nor"
-      ]
-    },
-    {
-      "name": "redmi-ac2100",
-      "chip": "mt7621",
-      "kernel_target": "ramips/mt7621",
-      "drivers": [
-        "kmod-mt7603", "kmod-mt7615e", "kmod-switch-rtl8367s", "kmod-usb3"
-      ]
-    },
-    {
-      "name": "x86_64-generic",
-      "chip": "x86_64",
-      "kernel_target": "x86/64",
-      "drivers": [
-        "kmod-e1000", "kmod-igb", "kmod-r8169", "kmod-usb3", "kmod-i2c-i801"
-      ]
-    }
-  ],
-  "chips": [
-    {
-      "name": "mt7981",
-      "kernel_target": "mediatek/filogic",
-      "drivers": [
-        "kmod-mt7981-firmware", "kmod-mt7921e", "kmod-switch-mt7530", "kmod-usb3"
-      ]
-    },
-    {
-      "name": "mt7621",
-      "kernel_target": "ramips/mt7621",
-      "drivers": [
-        "kmod-mt7603", "kmod-mt7615e", "kmod-switch-rtl8367s", "kmod-usb3"
-      ]
-    },
-    {
-      "name": "ipq8065",
-      "kernel_target": "ipq806x/generic",
-      "drivers": [
-        "kmod-ath10k-ct", "kmod-qca-nss-dp", "kmod-usb3"
-      ]
-    },
-    {
-      "name": "x86_64",
-      "kernel_target": "x86/64",
-      "drivers": [
-        "kmod-e1000", "kmod-igb", "kmod-r8169", "kmod-usb3"
-      ]
-    }
-  ]
+{"devices": [
+        {
+            "name": "cudy-tr3000",
+            "chip": "mt7981",
+            "kernel_target": "mediatek/filogic",
+            "drivers": [
+                "kmod-mt7981-firmware",
+                "kmod-gmac",
+                "kmod-usb3",
+                "kmod-mtd-rw"
+            ]
+        },
+        {
+            "name": "redmi-ac2100",
+            "chip": "mt7621",
+            "kernel_target": "ramips/mt7621",
+            "drivers": [
+                "kmod-mt7603e",
+                "kmod-mt7615e",
+                "kmod-switch-rtl8367s"
+            ]
+        },
+        {
+            "name": "x86-64-generic",
+            "chip": "x86_64",
+            "kernel_target": "x86/64",
+            "drivers": [
+                "kmod-e1000e",
+                "kmod-igb",
+                "kmod-rtc-pc"
+            ]
+        },
+        {
+            "name": "phicomm-k2p",
+            "chip": "mt7621",
+            "kernel_target": "ramips/mt7621",
+            "drivers": [
+                "kmod-mt7603",
+                "kmod-mt7615d"
+            ]
+        }
+    ],
+    "chips": [
+        {
+            "name": "mt7981",
+            "platform": "mediatek/filogic"
+        },
+        {
+            "name": "mt7621",
+            "platform": "ramips/mt7621"
+        },
+        {
+            "name": "x86_64",
+            "platform": "x86/64"
+        },
+        {
+            "name": "ipq8065",
+            "platform": "ipq806x/generic"
+        },
+        {
+            "name": "bcm53573",
+            "platform": "bcm53xx/generic"
+        }
+    ]
 }
