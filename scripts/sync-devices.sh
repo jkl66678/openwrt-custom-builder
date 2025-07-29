@@ -9,7 +9,7 @@ cleanup() {
         log "🧹 清理临时源码目录: $TMP_SRC"
     fi
     # 清理临时文件（容错处理）
-    for tmp in "$DTS_LIST_TMP" "$CHIP_TMP_FILE" "$DEVICE_TMP_JSON" "$CHIP_TMP_JSON"; do
+    for tmp in "$DTS_LIST_TMP" "$CHIP_TMP_FILE" "$DEVICE_TMP_JSON" "$CHIP_TMP_JSON" "$DEDUP_FILE"; do
         [ -f "$tmp" ] && rm -f "$tmp"
     done
 }
@@ -25,8 +25,7 @@ SYNC_LOG="$LOG_DIR/sync-detail.log"
 # 资源阈值（根据Runner配置调整）
 MAX_MEM_THRESHOLD=6000  # 最大内存使用(MB)
 MAX_DTS_SIZE=5242880    # 最大dts文件大小(5MB)，超过则跳过
-CLONE_RETRIES=3         # 源码克隆重试次数
-CLONE_TIMEOUT=300       # 克隆超时时间(秒)
+CLONE_RETRIES=5         # 源码克隆重试次数（增加重试提高成功率）
 SOURCE_REPOS=(          # 源码仓库列表（主仓库+镜像）
     "https://git.openwrt.org/openwrt/openwrt.git"
     "https://github.com/openwrt/openwrt.git"
@@ -37,6 +36,7 @@ DTS_LIST_TMP="$LOG_DIR/dts_files.tmp"
 CHIP_TMP_FILE="$LOG_DIR/processed_chips.tmp"
 DEVICE_TMP_JSON="$LOG_DIR/devices_temp.json"  # 设备临时JSON（批量处理用）
 CHIP_TMP_JSON="$LOG_DIR/chips_temp.json"      # 芯片临时JSON（批量处理用）
+DEDUP_FILE="$LOG_DIR/processed_devices.tmp"   # 设备去重文件
 
 # ==============================================
 # 初始化与日志系统
@@ -51,8 +51,9 @@ mkdir -p "$LOG_DIR" || {
 > "$CHIP_TMP_FILE"  # 初始化芯片去重文件
 echo '[]' > "$DEVICE_TMP_JSON"  # 初始化设备临时JSON
 echo '[]' > "$CHIP_TMP_JSON"    # 初始化芯片临时JSON
+> "$DEDUP_FILE"  # 初始化设备去重文件
 
-# 日志函数：支持日志级别控制（默认INFO，可通过参数调整）
+# 日志函数：支持日志级别控制（默认INFO）
 LOG_LEVEL="${1:-INFO}"  # 允许通过第一个参数设置日志级别（DEBUG/INFO/WARN/ERROR）
 log() {
     local level=$1
@@ -86,7 +87,7 @@ check_resources() {
     if command -v free &>/dev/null; then
         local mem_used=$(free -m | awk '/Mem:/ {print $3}')
     else
-        #  fallback for systems without free (如busybox)
+        # fallback for systems without free (如busybox)
         local mem_used=$(grep MemTotal /proc/meminfo | awk '{print $2/1024}')
         mem_used=${mem_used%.*}  # 取整数
     fi
@@ -119,20 +120,26 @@ log "INFO" "开始设备与芯片信息同步"
 log "INFO" "========================================="
 
 # ==============================================
-# 1. 检查依赖工具（增强版）
+# 1. 检查依赖工具（修复jq版本解析）
 # ==============================================
 log "INFO" "检查依赖工具..."
-REQUIRED_TOOLS=("git" "jq" "grep" "sed" "awk" "find" "cut" "wc" "stat")
+REQUIRED_TOOLS=("git" "jq" "grep" "sed" "awk" "find" "cut" "wc" "stat" "timeout")
 for tool in "${REQUIRED_TOOLS[@]}"; do
     if ! command -v "$tool" &> /dev/null; then
         log "ERROR" "缺失必要工具：$tool（请先安装）"
         exit 1
     fi
 done
-# 检查jq版本（确保支持基本语法）
-jq_version=$(jq --version | cut -d'-' -f2 | awk -F. '{print $1*100 + $2}')  # 转为数字（如1.6→106）
-if [ "$jq_version" -lt 106 ]; then
-    log "ERROR" "jq版本过低（需要≥1.6，当前版本：$(jq --version)）"
+# 修复jq版本检查（兼容更多版本格式）
+jq_version_str=$(jq --version 2>/dev/null)
+jq_version=$(echo "$jq_version_str" | awk -F'[.-]' '{
+    if ($1 ~ /jq/) { major = $2 } else { major = $1 }
+    minor = $3 + 0  # 确保是数字
+    print major * 100 + minor
+}')
+# 验证版本是否有效（≥1.6）
+if ! [[ "$jq_version" =~ ^[0-9]+$ ]] || [ "$jq_version" -lt 106 ]; then
+    log "ERROR" "jq版本过低（需要≥1.6，当前版本：$jq_version_str）"
     exit 1
 fi
 log "SUCCESS" "所有依赖工具已就绪"
@@ -153,23 +160,27 @@ fi
 log "DEBUG" "输出文件初始化完成：$(cat "$OUTPUT_JSON" | jq .)"
 
 # ==============================================
-# 3. 克隆OpenWrt源码（多仓库重试+超时机制）
+# 3. 克隆OpenWrt源码（修复Git版本兼容问题）
 # ==============================================
 TMP_SRC=$(mktemp -d -t openwrt-src-XXXXXX)  # 更安全的临时目录命名
 log "INFO" "准备克隆源码到临时目录：$TMP_SRC"
 
 clone_success=0
 for repo in "${SOURCE_REPOS[@]}"; do
-    log "INFO" "尝试克隆仓库：$repo（剩余重试：$CLONE_RETRIES）"
-    # 添加超时和深度限制，避免卡住
-    if git clone --depth 1 --timeout "$CLONE_TIMEOUT" "$repo" "$TMP_SRC" 2>> "$SYNC_LOG"; then
-        log "SUCCESS" "源码克隆成功（仓库：$repo）"
-        clone_success=1
-        break
-    fi
-    CLONE_RETRIES=$((CLONE_RETRIES - 1))
-    [ "$CLONE_RETRIES" -eq 0 ] && break  # 重试次数耗尽
-    log "WARN" "仓库 $repo 克隆失败，剩余重试：$CLONE_RETRIES"
+    retry=$CLONE_RETRIES
+    while [ $retry -gt 0 ]; do
+        log "INFO" "尝试克隆仓库：$repo（剩余重试：$retry）"
+        # 用timeout命令替代--timeout，兼容旧Git版本（5分钟超时）
+        if timeout 300 git clone --depth 1 "$repo" "$TMP_SRC" 2>> "$SYNC_LOG"; then
+            log "SUCCESS" "源码克隆成功（仓库：$repo）"
+            clone_success=1
+            break
+        fi
+        retry=$((retry - 1))
+        log "WARN" "仓库 $repo 克隆失败，剩余重试：$retry"
+        [ $retry -gt 0 ] && sleep 2  # 间隔重试
+    done
+    [ $clone_success -eq 1 ] && break
 done
 
 if [ "$clone_success" -eq 0 ]; then
@@ -181,8 +192,6 @@ fi
 # 4. 提取设备信息（修复去重失效+增强解析）
 # ==============================================
 log "INFO" "开始提取设备信息（过滤异常文件）..."
-DEDUP_FILE="$LOG_DIR/processed_devices.tmp"  # 用文件存储去重键（解决子shell问题）
-> "$DEDUP_FILE"
 
 # 收集所有dts文件（排除过大/特殊文件）
 find "$TMP_SRC/target/linux" -name "*.dts" | while read -r dts_file; do
@@ -204,12 +213,11 @@ find "$TMP_SRC/target/linux" -name "*.dts" | while read -r dts_file; do
     echo "$dts_file" >> "$DTS_LIST_TMP"
 done
 
-# 处理过滤后的dts文件（用进程替换避免子shell，保留变量）
+# 处理过滤后的dts文件
 total_dts=$(wc -l < "$DTS_LIST_TMP")
 log "INFO" "共发现有效dts文件：$total_dts 个，开始解析..."
 
 processed_count=0
-# 使用while循环+文件读取（避免子shell导致的变量丢失）
 while IFS= read -r dts_file; do
     # 每次处理前检查资源（更及时）
     if ! check_resources; then
@@ -219,7 +227,7 @@ while IFS= read -r dts_file; do
 
     # 解析文件名（增强正则，适应更多格式）
     filename=$(basename "$dts_file" .dts)
-    # 提取设备名（支持更多前缀格式：如"rt305x-", "qca9531_", "bcm5301x-"等）
+    # 提取设备名（支持更多前缀格式）
     device_name=$(echo "$filename" | sed -E \
         -e 's/^[a-z0-9]+[-_]//' \           # 移除前缀芯片名（如mt7621-、ramips_）
         -e 's/^([a-z]+[0-9]+)-//' \        # 移除纯字母+数字前缀（如rt305x-）
@@ -252,7 +260,7 @@ while IFS= read -r dts_file; do
     if ! grep -qxF "$dedup_key" "$DEDUP_FILE"; then
         echo "$dedup_key" >> "$DEDUP_FILE"  # 记录已处理
 
-        # 从dts文件提取型号（增强匹配，支持多行注释内的model，处理特殊字符）
+        # 从dts文件提取型号（增强匹配，处理特殊字符）
         model=$(grep -E 'model\s*=\s*"[^"]+"' "$dts_file" | \
             sed -n 's/.*model\s*=\s*"\(.*\)";.*/\1/p' | head -n1 | \
             sed 's/"/\\"/g' | sed 's/^[ \t]*//;s/[ \t]*$//')  # 转义双引号，去首尾空格
