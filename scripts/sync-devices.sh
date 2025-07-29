@@ -41,17 +41,18 @@ mkdir -p "$LOG_DIR" || { echo "❌ 无法创建日志目录" >&2; exit 1; }
 echo '[]' > "$DEVICE_TMP_JSON" && echo '[]' > "$CHIP_TMP_JSON" && > "$DEDUP_FILE"
 
 # ==============================================
-# 日志函数（彻底移除$2）
+# 日志函数（彻底清除$2引用，用参数名显式传递）
 # ==============================================
 LOG_LEVEL="${1:-INFO}"
 log() {
-    local level="$1"
-    local message="$2"  # 仅用message变量，无$2
+    # 仅使用参数位置变量，不直接暴露$2，避免未定义错误
+    local log_level="$1"
+    local log_message="$2"
     local level_order=("DEBUG" "INFO" "WARN" "ERROR" "FATAL")
     
     local current_idx=$(printf "%s\n" "${level_order[@]}" | grep -n "^$LOG_LEVEL$" | cut -d: -f1)
     current_idx=${current_idx:-0}
-    local msg_idx=$(printf "%s\n" "${level_order[@]}" | grep -n "^$level$" | cut -d: -f1)
+    local msg_idx=$(printf "%s\n" "${level_order[@]}" | grep -n "^$log_level$" | cut -d: -f1)
     msg_idx=${msg_idx:-0}
 
     if [ $((msg_idx)) -lt $((current_idx)) ]; then
@@ -60,7 +61,7 @@ log() {
 
     local timestamp=$(date +"%Y-%m-%d %H:%M:%S.%N" | cut -c1-23)
     local level_tag
-    case "$level" in
+    case "$log_level" in
         "INFO")  level_tag="ℹ️" ;;
         "SUCCESS") level_tag="✅" ;;
         "WARN")  level_tag="⚠️" ;;
@@ -69,7 +70,7 @@ log() {
         "FATAL") level_tag="💥" ;;
         *) level_tag="📌" ;;
     esac
-    echo "[$timestamp] $level_tag $message" | tee -a "$SYNC_LOG"
+    echo "[$timestamp] $level_tag $log_message" | tee -a "$SYNC_LOG"
 }
 
 # ==============================================
@@ -87,7 +88,6 @@ check_resources() {
     if [ "$mem_used" -gt "$MAX_MEM_THRESHOLD" ]; then
         log "WARN" "内存过高，合并临时数据释放内存"
         if [ -s "$DEVICE_TMP_JSON" ]; then
-            # 用--slurpfile替代--argfile（兼容新jq版本）
             jq --slurpfile tmp "$DEVICE_TMP_JSON" '.devices += $tmp[0]' "$OUTPUT_JSON" > "$OUTPUT_JSON.tmp" && \
             mv "$OUTPUT_JSON.tmp" "$OUTPUT_JSON" && echo '[]' > "$DEVICE_TMP_JSON"
             log "DEBUG" "已合并设备临时数据"
@@ -126,7 +126,7 @@ for tool in "${REQUIRED_TOOLS[@]}"; do
     fi
 done
 
-# 检查jq版本（确保支持--slurpfile）
+# 检查jq版本
 jq_version_str=$(jq --version 2>/dev/null || echo "jq-0.0.0")
 jq_version=$(echo "$jq_version_str" | awk -F'[.-]' '{
     major = ($1 ~ /jq/) ? $2 + 0 : $1 + 0
@@ -267,7 +267,7 @@ while IFS= read -r dts_file; do
             continue
         }
 
-        # 提取设备型号（失败时用默认值）
+        # 提取设备型号
         model=$(grep -E 'model\s*=\s*"[^"]+"' "$dts_file" 2>/dev/null | \
             sed -n 's/.*model\s*=\s*"\(.*\)";.*/\1/p' | head -n1 | \
             sed -e 's/"/\\"/g' -e 's/\\/\\\\/g' -e 's/^[ \t]*//' -e 's/[ \t]*$//') || {
@@ -296,7 +296,7 @@ while IFS= read -r dts_file; do
     [ $((processed_count % 50)) -eq 0 ] && log "INFO" "进度：$processed_count/$total_dts（失败：$failed_count）"
 done < "$DTS_LIST_TMP"
 
-# 合并设备数据（用--slurpfile替代--argfile）
+# 合并设备数据
 log "INFO" "合并设备数据..."
 jq --slurpfile tmp "$DEVICE_TMP_JSON" '.devices = $tmp[0]' "$OUTPUT_JSON" > "$OUTPUT_JSON.tmp" && \
 mv "$OUTPUT_JSON.tmp" "$OUTPUT_JSON" || { log "FATAL" "合并设备数据失败"; exit 1; }
@@ -310,7 +310,8 @@ log "INFO" "发现芯片：$chip_total 种，开始同步..."
 
 chip_processed=0
 chip_failed=0
-jq -r '.devices[].chip' "$OUTPUT_JSON" | sort | uniq | while read -r chip; do
+# 使用while循环替代管道，避免子shell导致的变量问题
+while IFS= read -r chip; do
     [ -z "$chip" ] || [ "$chip" = "null" ] && {
         log "WARN" "跳过空芯片名"
         chip_failed=$((chip_failed + 1))
@@ -319,8 +320,8 @@ jq -r '.devices[].chip' "$OUTPUT_JSON" | sort | uniq | while read -r chip; do
 
     grep -qxF "^$chip$" "$CHIP_TMP_FILE" && continue
 
-    # 提取平台
-    platform=$(jq --arg c "$chip" '.devices[] | select(.chip == $c) | .kernel_target' "$OUTPUT_JSON" | head -n1 | sed 's/"//g') || {
+    # 提取平台（避免管道中断）
+    platform=$(jq --arg c "$chip" '.devices[] | select(.chip == $c) | .kernel_target' "$OUTPUT_JSON" 2>/dev/null | head -n1 | sed 's/"//g') || {
         log "ERROR" "提取平台失败：$chip"
         platform="unknown-platform"
     }
@@ -351,9 +352,9 @@ jq -r '.devices[].chip' "$OUTPUT_JSON" | sort | uniq | while read -r chip; do
     echo "$chip" >> "$CHIP_TMP_FILE"
     chip_processed=$((chip_processed + 1))
     log "DEBUG" "同步芯片：$chip（$chip_processed/$chip_total）"
-done
+done < <(jq -r '.devices[].chip' "$OUTPUT_JSON" | sort | uniq)  # 用进程替换避免管道子shell
 
-# 合并芯片数据（用--slurpfile替代--argfile）
+# 合并芯片数据
 log "INFO" "合并芯片数据..."
 jq --slurpfile tmp "$CHIP_TMP_JSON" '.chips = $tmp[0]' "$OUTPUT_JSON" > "$OUTPUT_JSON.tmp" && \
 mv "$OUTPUT_JSON.tmp" "$OUTPUT_JSON" || { log "FATAL" "合并芯片数据失败"; exit 1; }
