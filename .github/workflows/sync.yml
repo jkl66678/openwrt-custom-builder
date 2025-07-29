@@ -6,138 +6,101 @@ on:
     - cron: "0 0 * * 0"  # 每周日自动同步（UTC时间）
 
 jobs:
-  sync-devices-and-update-options:
-    name: 同步设备并更新选项
+  sync-devices:
+    name: 同步设备与芯片列表
     runs-on: ubuntu-latest
     steps:
-      - name: 拉取仓库代码（包含所有分支历史）
+      # 步骤1：拉取仓库代码（完整历史）
+      - name: 拉取仓库代码
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 拉取完整历史，避免提交失败
+          fetch-depth: 0  # 拉取完整历史，避免提交冲突
 
+      # 步骤2：安装系统依赖
       - name: 安装依赖工具
         run: |
-          sudo apt update || echo "⚠️ apt更新失败，尝试直接安装依赖"
-          sudo apt install -y git jq || {
-            echo "❌ 依赖安装失败"
-            exit 1
-          }
+          sudo apt update
+          sudo apt install -y git jq dos2unix
 
-      - name: 检查同步脚本是否存在
+      # 步骤3：准备同步脚本（确保格式正确）
+      - name: 检查并修复同步脚本
         run: |
+          # 确保脚本存在
           if [ ! -f "scripts/sync-devices.sh" ]; then
-            echo "❌ 错误：未找到同步脚本 scripts/sync-devices.sh"
+            echo "❌ 未找到脚本：scripts/sync-devices.sh"
             exit 1
           fi
-          # 检查脚本是否可执行
-          if [ ! -x "scripts/sync-devices.sh" ]; then
-            chmod +x scripts/sync-devices.sh
-            echo "⚠️ 已为同步脚本添加可执行权限"
-          fi
+          # 转换为Unix换行符（避免格式错误）
+          dos2unix scripts/sync-devices.sh
+          # 添加执行权限
+          chmod +x scripts/sync-devices.sh
+          # 显示脚本首行（验证shebang）
+          head -n 1 scripts/sync-devices.sh
 
-      - name: 执行设备同步（生成device-drivers.json）
+      # 步骤4：执行设备同步（核心步骤）
+      - name: 执行设备同步
         run: |
-          echo "📥 开始同步设备信息..."
-          # 捕获同步脚本的错误输出
-          if ! ./scripts/sync-devices.sh > sync.log 2>&1; then
-            echo "❌ 设备同步失败，日志："
-            cat sync.log
-            exit 1
-          fi
-          echo "✅ 设备同步完成"
+          echo "开始执行同步脚本..."
+          ./scripts/sync-devices.sh
 
-      - name: 提取设备和芯片列表（用于更新选项）
+      # 步骤5：调试 - 查看生成的文件（辅助排查）
+      - name: 查看同步结果文件
+        if: always()
         run: |
-          # 检查JSON文件是否有效
-          if ! jq . device-drivers.json > /dev/null 2>&1; then
-            echo "❌ 错误：device-drivers.json 格式无效"
-            exit 1
-          fi
+          echo "当前工作目录：$(pwd)"
+          echo "设备配置文件内容："
+          cat device-drivers.json | jq .  # 格式化显示JSON
+          echo "日志目录内容："
+          ls -la sync-logs/
+          echo "同步日志最后100行："
+          tail -n 100 sync-logs/sync-detail.log
 
-          # 从JSON中提取设备名称（去重、排序，处理空值）
+      # 步骤6：更新编译工作流的设备/芯片选项
+      - name: 更新build.yml中的选项
+        run: |
+          # 提取设备和芯片列表
           DEVICES=$(jq -r '.devices[].name | select(. != null)' device-drivers.json | sort | uniq | tr '\n' ' ')
-          # 从JSON中提取芯片名称（去重、排序，处理空值）
           CHIPS=$(jq -r '.chips[].name | select(. != null)' device-drivers.json | sort | uniq | tr '\n' ' ')
           
-          # 处理空列表（避免替换后选项为空）
-          if [ -z "$DEVICES" ]; then
-            echo "⚠️ 未提取到任何设备，使用默认列表"
-            DEVICES="cudy-tr3000, redmi-ac2100"  # 默认设备
-          fi
-          if [ -z "$CHIPS" ]; then
-            echo "⚠️ 未提取到任何芯片，使用默认列表"
-            CHIPS="mt7981, mt7621"  # 默认芯片
-          fi
+          # 处理空列表（使用默认值）
+          [ -z "$DEVICES" ] && DEVICES="cudy-tr3000, redmi-ac2100"
+          [ -z "$CHIPS" ] && CHIPS="mt7981, mt7621"
           
-          echo "📋 同步到的设备：$DEVICES"
-          echo "📋 同步到的芯片：$CHIPS"
+          echo "提取到的设备：$DEVICES"
+          echo "提取到的芯片：$CHIPS"
           
-          # 保存到环境变量，供后续步骤使用
-          echo "DEVICES=$DEVICES" >> $GITHUB_ENV
-          echo "CHIPS=$CHIPS" >> $GITHUB_ENV
-
-      - name: 更新build.yml中的设备和芯片选项
-        run: |
-          # 替换build.yml中设备选项的内容
-          if [ ! -f ".github/workflows/build.yml" ]; then
-            echo "❌ 错误：未找到编译工作流 .github/workflows/build.yml"
-            exit 1
-          fi
-
-          # 使用sed替换（支持包含空格的设备名称）
-          # 先转义特殊字符（如/）
+          # 替换build.yml中的选项（使用转义处理特殊字符）
           ESCAPED_DEVICES=$(echo "$DEVICES" | sed 's/\//\\\//g')
           ESCAPED_CHIPS=$(echo "$CHIPS" | sed 's/\//\\\//g')
           
-          # 替换设备选项
-          if ! sed -i "s/options: \[.*\]  # 自动更新标记/options: [$ESCAPED_DEVICES]  # 自动更新标记/" .github/workflows/build.yml; then
-            echo "❌ 替换设备选项失败，检查build.yml中的注释标记是否正确"
-            exit 1
-          fi
-          # 替换芯片选项
-          if ! sed -i "s/options: \[.*\]  # 自动更新标记/options: [$ESCAPED_CHIPS]  # 自动更新标记/" .github/workflows/build.yml; then
-            echo "❌ 替换芯片选项失败，检查build.yml中的注释标记是否正确"
-            exit 1
-          fi
-          
-          echo "✅ 已更新build.yml中的设备和芯片选项"
+          sed -i "s/options: \[.*\]  # 自动更新标记/options: [$ESCAPED_DEVICES]  # 自动更新标记/" .github/workflows/build.yml
+          sed -i "s/options: \[.*\]  # 自动更新标记/options: [$ESCAPED_CHIPS]  # 自动更新标记/" .github/workflows/build.yml
 
-      - name: 提交更新到仓库
+      # 步骤7：提交更新到仓库
+      - name: 提交更新
         run: |
-          # 配置Git身份
-          git config --global user.name "Device Sync Bot"
-          git config --global user.email "bot@github.com"
+          git config --global user.name "Sync Bot"
+          git config --global user.email "bot@example.com"
           
           # 检查是否有变化
           if git diff --quiet device-drivers.json .github/workflows/build.yml; then
-            echo "⚠️ 无新设备或芯片需要更新"
+            echo "⚠️ 无更新内容，无需提交"
             exit 0
           fi
           
-          # 提交更新（带重试）
-          retries=3
-          while [ $retries -gt 0 ]; do
-            if git add device-drivers.json .github/workflows/build.yml && \
-               git commit -m "自动更新设备和芯片列表（$(date +%Y%m%d)）" && \
-               git push; then
-              echo "✅ 设备和芯片列表已更新并提交"
-              exit 0
-            fi
-            retries=$((retries - 1))
-            echo "⚠️ 提交失败，重试（剩余$retries次）..."
-            git pull --rebase  # 拉取远程更新，避免冲突
-            sleep 3
-          done
-          
-          echo "❌ 提交更新失败（已重试3次）"
-          exit 1
-      
-      - name: 上传详细日志（即使失败也上传）
-        if: always()  # 无论成功/失败都执行
+          # 提交并处理冲突
+          git add device-drivers.json .github/workflows/build.yml
+          git commit -m "自动更新设备与芯片列表（$(date +%Y%m%d)）"
+          git pull --rebase origin main  # 拉取最新代码避免冲突
+          git push origin main
+
+      # 步骤8：上传日志（无论成功/失败）
+      - name: 上传同步日志
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-         name: sync-logs  # 日志包名称
-         path: |
-          sync-detail.log  # 要上传的日志文件
-          sync.log  # 如果有其他日志也一起上传
-         retention-days: 7  # 日志保留7天
+          name: sync-logs-${{ github.run_id }}
+          path: |
+            sync-logs/  # 日志目录
+            device-drivers.json  # 生成的配置文件
+          retention-days: 14  # 日志保留14天
