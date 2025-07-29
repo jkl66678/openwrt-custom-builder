@@ -25,45 +25,43 @@ SYNC_LOG="$LOG_DIR/sync-detail.log"
 # 资源阈值（根据Runner配置调整）
 MAX_MEM_THRESHOLD=6000  # 最大内存使用(MB)
 MAX_DTS_SIZE=5242880    # 最大dts文件大小(5MB)，超过则跳过
-CLONE_RETRIES=5         # 源码克隆重试次数（增加重试提高成功率）
+CLONE_RETRIES=5         # 源码克隆重试次数
 SOURCE_REPOS=(          # 源码仓库列表（主仓库+镜像）
     "https://git.openwrt.org/openwrt/openwrt.git"
     "https://github.com/openwrt/openwrt.git"
 )
 
-# 临时文件（避免子shell变量丢失）
+# 临时文件
 DTS_LIST_TMP="$LOG_DIR/dts_files.tmp"
 CHIP_TMP_FILE="$LOG_DIR/processed_chips.tmp"
-DEVICE_TMP_JSON="$LOG_DIR/devices_temp.json"  # 设备临时JSON（批量处理用）
-CHIP_TMP_JSON="$LOG_DIR/chips_temp.json"      # 芯片临时JSON（批量处理用）
-DEDUP_FILE="$LOG_DIR/processed_devices.tmp"   # 设备去重文件
+DEVICE_TMP_JSON="$LOG_DIR/devices_temp.json"
+CHIP_TMP_JSON="$LOG_DIR/chips_temp.json"
+DEDUP_FILE="$LOG_DIR/processed_devices.tmp"
 
 # ==============================================
 # 初始化与日志系统
 # ==============================================
-# 确保日志目录存在
 mkdir -p "$LOG_DIR" || {
     echo "❌ 无法创建日志目录 $LOG_DIR（权限不足）" >&2
     exit 1
 }
-> "$SYNC_LOG"  # 清空旧日志
-> "$DTS_LIST_TMP"  # 初始化dts文件列表
-> "$CHIP_TMP_FILE"  # 初始化芯片去重文件
-echo '[]' > "$DEVICE_TMP_JSON"  # 初始化设备临时JSON
-echo '[]' > "$CHIP_TMP_JSON"    # 初始化芯片临时JSON
-> "$DEDUP_FILE"  # 初始化设备去重文件
+> "$SYNC_LOG"
+> "$DTS_LIST_TMP"
+> "$CHIP_TMP_FILE"
+echo '[]' > "$DEVICE_TMP_JSON"
+echo '[]' > "$CHIP_TMP_JSON"
+> "$DEDUP_FILE"
 
-# 日志函数：支持日志级别控制（默认INFO）
-LOG_LEVEL="${1:-INFO}"  # 允许通过第一个参数设置日志级别（DEBUG/INFO/WARN/ERROR）
+# 日志函数
+LOG_LEVEL="${1:-INFO}"
 log() {
     local level=$1
     local message=$2
-    # 日志级别过滤（如设置为INFO则不输出DEBUG）
     local level_order=("DEBUG" "INFO" "WARN" "ERROR")
     local current_idx=$(printf "%s\n" "${level_order[@]}" | grep -n "^$LOG_LEVEL$" | cut -d: -f1)
     local msg_idx=$(printf "%s\n" "${level_order[@]}" | grep -n "^$level$" | cut -d: -f1)
     if [ "$msg_idx" -lt "$current_idx" ]; then
-        return  # 低于当前级别则不输出
+        return
     fi
 
     local timestamp=$(date +"%Y-%m-%d %H:%M:%S")
@@ -80,28 +78,24 @@ log() {
 }
 
 # ==============================================
-# 资源监控函数（增强版：更及时的检查）
+# 资源监控函数
 # ==============================================
 check_resources() {
-    # 检查内存使用（兼容不同版本free命令）
     if command -v free &>/dev/null; then
         local mem_used=$(free -m | awk '/Mem:/ {print $3}')
     else
-        # fallback for systems without free (如busybox)
-        local mem_used=$(grep MemTotal /proc/meminfo | awk '{print $2/1024}')
-        mem_used=${mem_used%.*}  # 取整数
+        local mem_used=$(grep MemTotal /proc/meminfo | awk '{print int($2/1024)}')
     fi
     if [ "$mem_used" -gt "$MAX_MEM_THRESHOLD" ]; then
-        log "WARN" "内存使用过高($mem_used MB)，暂停处理以释放资源"
-        sleep 10  # 等待系统自动回收内存
+        log "WARN" "内存使用过高($mem_used MB)，暂停处理"
+        sleep 10
         return 1
     fi
 
-    # 检查磁盘空间（临时目录所在分区）
     if command -v df &>/dev/null; then
-        local disk_free=$(df -P "$LOG_DIR" | awk 'NR==2 {print $4}')  # 剩余空间(KB)
-        if [ "$disk_free" -lt 1048576 ]; then  # 小于1GB
-            log "ERROR" "磁盘空间不足（剩余<$((disk_free/1024))MB），终止同步"
+        local disk_free=$(df -P "$LOG_DIR" | awk 'NR==2 {print $4}')
+        if [ "$disk_free" -lt 1048576 ]; then
+            log "ERROR" "磁盘空间不足（剩余<$((disk_free/1024))MB）"
             exit 1
         fi
     fi
@@ -111,7 +105,7 @@ check_resources() {
 # ==============================================
 # 启动同步流程
 # ==============================================
-start_time=$(date +%s)  # 记录开始时间
+start_time=$(date +%s)
 log "INFO" "========================================="
 log "INFO" "工作目录：$WORK_DIR"
 log "INFO" "输出文件：$OUTPUT_JSON"
@@ -120,7 +114,7 @@ log "INFO" "开始设备与芯片信息同步"
 log "INFO" "========================================="
 
 # ==============================================
-# 1. 检查依赖工具（修复jq版本解析）
+# 1. 检查依赖工具（彻底修复jq版本解析）
 # ==============================================
 log "INFO" "检查依赖工具..."
 REQUIRED_TOOLS=("git" "jq" "grep" "sed" "awk" "find" "cut" "wc" "stat" "timeout")
@@ -130,39 +124,40 @@ for tool in "${REQUIRED_TOOLS[@]}"; do
         exit 1
     fi
 done
-# 修复jq版本检查（兼容更多版本格式）
-jq_version_str=$(jq --version 2>/dev/null)
+
+# 修复jq版本解析（增加容错处理）
+jq_version_str=$(jq --version 2>/dev/null || echo "jq-0.0.0")
 jq_version=$(echo "$jq_version_str" | awk -F'[.-]' '{
-    if ($1 ~ /jq/) { major = $2 } else { major = $1 }
-    minor = $3 + 0  # 确保是数字
+    if ($1 ~ /jq/) { major = $2 + 0 } else { major = $1 + 0 }
+    minor = $3 + 0
     print major * 100 + minor
 }')
-# 验证版本是否有效（≥1.6）
-if ! [[ "$jq_version" =~ ^[0-9]+$ ]] || [ "$jq_version" -lt 106 ]; then
+# 强制转为整数，避免空值
+jq_version=$((jq_version))
+if [ "$jq_version" -lt 106 ]; then
     log "ERROR" "jq版本过低（需要≥1.6，当前版本：$jq_version_str）"
     exit 1
 fi
 log "SUCCESS" "所有依赖工具已就绪"
 
 # ==============================================
-# 2. 初始化输出JSON（确保结构正确）
+# 2. 初始化输出JSON
 # ==============================================
 log "INFO" "初始化输出配置文件..."
 if ! echo '{"devices": [], "chips": []}' > "$OUTPUT_JSON"; then
     log "ERROR" "无法创建输出文件 $OUTPUT_JSON（权限不足）"
     exit 1
 fi
-# 验证JSON格式（避免初始化失败）
 if ! jq . "$OUTPUT_JSON" &> /dev/null; then
-    log "ERROR" "输出文件JSON格式错误，初始化失败"
+    log "ERROR" "输出文件JSON格式错误"
     exit 1
 fi
-log "DEBUG" "输出文件初始化完成：$(cat "$OUTPUT_JSON" | jq .)"
+log "DEBUG" "输出文件初始化完成"
 
 # ==============================================
-# 3. 克隆OpenWrt源码（修复Git版本兼容问题）
+# 3. 克隆OpenWrt源码
 # ==============================================
-TMP_SRC=$(mktemp -d -t openwrt-src-XXXXXX)  # 更安全的临时目录命名
+TMP_SRC=$(mktemp -d -t openwrt-src-XXXXXX)
 log "INFO" "准备克隆源码到临时目录：$TMP_SRC"
 
 clone_success=0
@@ -170,7 +165,6 @@ for repo in "${SOURCE_REPOS[@]}"; do
     retry=$CLONE_RETRIES
     while [ $retry -gt 0 ]; do
         log "INFO" "尝试克隆仓库：$repo（剩余重试：$retry）"
-        # 用timeout命令替代--timeout，兼容旧Git版本（5分钟超时）
         if timeout 300 git clone --depth 1 "$repo" "$TMP_SRC" 2>> "$SYNC_LOG"; then
             log "SUCCESS" "源码克隆成功（仓库：$repo）"
             clone_success=1
@@ -178,33 +172,31 @@ for repo in "${SOURCE_REPOS[@]}"; do
         fi
         retry=$((retry - 1))
         log "WARN" "仓库 $repo 克隆失败，剩余重试：$retry"
-        [ $retry -gt 0 ] && sleep 2  # 间隔重试
+        [ $retry -gt 0 ] && sleep 2
     done
     [ $clone_success -eq 1 ] && break
 done
 
 if [ "$clone_success" -eq 0 ]; then
-    log "ERROR" "所有仓库克隆失败（已尝试${#SOURCE_REPOS[@]}个仓库）"
+    log "ERROR" "所有仓库克隆失败"
     exit 1
 fi
 
 # ==============================================
-# 4. 提取设备信息（修复去重失效+增强解析）
+# 4. 提取设备信息（修复sed命令参数）
 # ==============================================
 log "INFO" "开始提取设备信息（过滤异常文件）..."
 
-# 收集所有dts文件（排除过大/特殊文件）
+# 收集有效dts文件
 find "$TMP_SRC/target/linux" -name "*.dts" | while read -r dts_file; do
-    # 过滤不存在的文件（防御性检查）
     [ ! -f "$dts_file" ] && continue
 
-    # 过滤超大文件
     file_size=$(stat -c%s "$dts_file" 2>/dev/null || echo $((MAX_DTS_SIZE + 1)))
     if [ "$file_size" -gt "$MAX_DTS_SIZE" ]; then
         log "WARN" "跳过超大dts文件：$dts_file（大小：$((file_size/1024))KB）"
         continue
     fi
-    # 过滤含特殊字符的文件（避免解析异常）
+
     filename=$(basename "$dts_file")
     if [[ "$filename" =~ [^a-zA-Z0-9_.-] ]]; then
         log "WARN" "跳过含特殊字符的文件：$filename"
@@ -213,150 +205,125 @@ find "$TMP_SRC/target/linux" -name "*.dts" | while read -r dts_file; do
     echo "$dts_file" >> "$DTS_LIST_TMP"
 done
 
-# 处理过滤后的dts文件
 total_dts=$(wc -l < "$DTS_LIST_TMP")
 log "INFO" "共发现有效dts文件：$total_dts 个，开始解析..."
 
 processed_count=0
 while IFS= read -r dts_file; do
-    # 每次处理前检查资源（更及时）
     if ! check_resources; then
         log "WARN" "资源紧张，跳过当前文件：$dts_file"
         continue
     fi
 
-    # 解析文件名（增强正则，适应更多格式）
+    # 修复sed命令参数异常（使用完整引号包裹，避免空值）
     filename=$(basename "$dts_file" .dts)
-    # 提取设备名（支持更多前缀格式）
     device_name=$(echo "$filename" | sed -E \
-        -e 's/^[a-z0-9]+[-_]//' \           # 移除前缀芯片名（如mt7621-、ramips_）
-        -e 's/^([a-z]+[0-9]+)-//' \        # 移除纯字母+数字前缀（如rt305x-）
-        -e 's/^[a-z]+([0-9]+)?-//' \       # 移除字母+可选数字前缀（如qca-、ar9344-）
-        -e 's/^[0-9]+-//' \                # 移除纯数字前缀（如123-）
-        -e 's/_/-/g' \                     # 下划线转连字符
-        -e 's/^-+//; s/-+$//' \            # 移除首尾连字符
-        -e 's/-+/\-/g')                    # 合并连续连字符
-    # 兜底：若提取失败则用原始文件名（去后缀）
+        -e 's/^[a-z0-9]+[-_]//' \
+        -e 's/^([a-z]+[0-9]+)-//' \
+        -e 's/^[a-z]+([0-9]+)?-//' \
+        -e 's/^[0-9]+-//' \
+        -e 's/_/-/g' \
+        -e 's/^-+//; s/-+$//' \
+        -e 's/-+/\-/g')
+
+    # 强制兜底，避免空设备名
     if [ -z "$device_name" ] || [ "$device_name" = "." ]; then
-        device_name="$filename"
+        device_name="unknown-device-${filename}"
     fi
 
-    # 解析芯片与平台路径（增强容错）
-    platform_path=$(dirname "$dts_file" | sed "s|$TMP_SRC/target/linux/||; s|/$||")  # 移除末尾斜杠
-    # 从路径提取芯片（支持多级目录，优先取最深层有效目录）
+    platform_path=$(dirname "$dts_file" | sed "s|$TMP_SRC/target/linux/||; s|/$||")
     chip=$(echo "$platform_path" | awk -F '/' '{
-        # 优先取最后一个非"generic"的目录（如"ramips/mt7621"→mt7621；"x86/generic"→x86）
         for (i=NF; i>=1; i--) {
             if ($i != "generic" && $i != "base-files" && $i != "dts") {
                 print $i; exit
             }
         }
-        print $0;  # 兜底：全路径
+        print $0
     }')
     kernel_target="$platform_path"
 
-    # 去重键：设备名+芯片（用文件存储，解决子shell关联数组失效问题）
     dedup_key="${device_name}_${chip}"
     if ! grep -qxF "$dedup_key" "$DEDUP_FILE"; then
-        echo "$dedup_key" >> "$DEDUP_FILE"  # 记录已处理
+        echo "$dedup_key" >> "$DEDUP_FILE"
 
-        # 从dts文件提取型号（增强匹配，处理特殊字符）
-        model=$(grep -E 'model\s*=\s*"[^"]+"' "$dts_file" | \
+        # 提取model时处理特殊字符
+        model=$(grep -E 'model\s*=\s*"[^"]+"' "$dts_file" 2>/dev/null | \
             sed -n 's/.*model\s*=\s*"\(.*\)";.*/\1/p' | head -n1 | \
-            sed 's/"/\\"/g' | sed 's/^[ \t]*//;s/[ \t]*$//')  # 转义双引号，去首尾空格
-        # 兜底型号
+            sed 's/"/\\"/g; s/^[ \t]*//; s/[ \t]*$//')
         if [ -z "$model" ]; then
             model="Unknown ${device_name} (${chip})"
         fi
 
-        # 写入临时JSON（批量处理，减少IO）
+        # 安全写入JSON
         jq --arg name "$device_name" \
            --arg chip "$chip" \
            --arg kt "$kernel_target" \
            --arg model "$model" \
            '. += [{"name": $name, "chip": $chip, "kernel_target": $kt, "model": $model, "drivers": []}]' \
            "$DEVICE_TMP_JSON" > "$DEVICE_TMP_JSON.tmp" && mv "$DEVICE_TMP_JSON.tmp" "$DEVICE_TMP_JSON"
-        log "DEBUG" "已提取设备：$device_name（芯片：$chip，型号：$model）"
+        log "DEBUG" "已提取设备：$device_name（芯片：$chip）"
     fi
 
     processed_count=$((processed_count + 1))
-    # 进度提示（每50个文件）
     if [ $((processed_count % 50)) -eq 0 ]; then
         log "INFO" "设备解析进度：$processed_count/$total_dts"
     fi
 done < "$DTS_LIST_TMP"
 
-# 批量合并设备信息到输出文件（减少jq调用次数）
 jq --argfile tmp "$DEVICE_TMP_JSON" '.devices = $tmp' "$OUTPUT_JSON" > "$OUTPUT_JSON.tmp" && mv "$OUTPUT_JSON.tmp" "$OUTPUT_JSON"
 log "SUCCESS" "设备信息提取完成，共处理文件：$processed_count 个"
 
 # ==============================================
-# 5. 提取芯片信息（扩展驱动列表+批量处理）
+# 5. 提取芯片信息
 # ==============================================
 log "INFO" "开始提取芯片信息..."
 
-# 从设备列表提取芯片并去重
 jq -r '.devices[].chip' "$OUTPUT_JSON" | sort | uniq | while read -r chip; do
     if [ -z "$chip" ] || [ "$chip" = "null" ]; then
         log "WARN" "跳过空芯片名"
         continue
     fi
 
-    # 检查是否已处理
     if grep -qxF "^$chip$" "$CHIP_TMP_FILE"; then
         continue
     fi
 
-    # 关联芯片与平台（取第一个匹配的设备平台）
     platform=$(jq --arg c "$chip" '.devices[] | select(.chip == $c) | .kernel_target' "$OUTPUT_JSON" | head -n1 | sed 's/"//g')
     if [ -z "$platform" ] || [ "$platform" = "null" ]; then
-        log "WARN" "芯片 $chip 未找到关联平台，使用默认值"
         platform="unknown-platform"
     fi
 
-    # 补充芯片默认驱动（扩展常见芯片列表）
     case "$chip" in
-        mt7621)      drivers='["kmod-mt7603e", "kmod-mt7615e", "kmod-switch-rtl8367s", "kmod-usb3"]' ;;
-        mt7981)      drivers='["kmod-mt7981-firmware", "kmod-gmac", "kmod-usb3", "kmod-mt7921e"]' ;;
-        mt7620)      drivers='["kmod-mt76", "kmod-usb2", "kmod-switch-rtl8366rb"]' ;;
-        ipq806x)     drivers='["kmod-qca-nss-dp", "kmod-qca-nss-ecm", "kmod-ath10k", "kmod-usb3"]' ;;
-        ipq4019)     drivers='["kmod-ath10k-smallbuffers", "kmod-usb3", "kmod-leds-gpio"]' ;;
-        x86_64|x86)  drivers='["kmod-e1000e", "kmod-igb", "kmod-rtc-pc", "kmod-usb-xhci-hcd", "kmod-i2c-piix4"]' ;;
-        bcm53xx)     drivers='["kmod-brcmfmac", "kmod-usb-ohci", "kmod-leds-gpio", "kmod-b53"]' ;;
-        ar9344)      drivers='["kmod-ath9k", "kmod-usb2", "kmod-gpio-button-hotplug"]' ;;
-        qca9531)     drivers='["kmod-ath9k", "kmod-usb2", "kmod-switch-rtl8306"]' ;;
-        rt305x)      drivers='["kmod-rt2800-soc", "kmod-usb2", "kmod-ledtrig-gpio"]' ;;
-        *)           drivers='[]' ;;  # 未知芯片默认空驱动
+        mt7621)      drivers='["kmod-mt7603e", "kmod-mt7615e", "kmod-switch-rtl8367s"]' ;;
+        mt7981)      drivers='["kmod-mt7981-firmware", "kmod-gmac", "kmod-usb3"]' ;;
+        ipq806x)     drivers='["kmod-qca-nss-dp", "kmod-ath10k"]' ;;
+        x86_64)      drivers='["kmod-e1000e", "kmod-igb", "kmod-usb-xhci-hcd"]' ;;
+        *)           drivers='[]' ;;
     esac
 
-    # 写入临时JSON（批量处理）
     jq --arg name "$chip" \
        --arg p "$platform" \
        --argjson drv "$drivers" \
        '. += [{"name": $name, "platform": $p, "default_drivers": $drv}]' \
        "$CHIP_TMP_JSON" > "$CHIP_TMP_JSON.tmp" && mv "$CHIP_TMP_JSON.tmp" "$CHIP_TMP_JSON"
     echo "$chip" >> "$CHIP_TMP_FILE"
-    log "DEBUG" "已提取芯片：$chip（平台：$platform，默认驱动：${drivers:1:-1}）"
+    log "DEBUG" "已提取芯片：$chip"
 done
 
-# 批量合并芯片信息到输出文件
 jq --argfile tmp "$CHIP_TMP_JSON" '.chips = $tmp' "$OUTPUT_JSON" > "$OUTPUT_JSON.tmp" && mv "$OUTPUT_JSON.tmp" "$OUTPUT_JSON"
 log "SUCCESS" "芯片信息提取完成"
 
 # ==============================================
-# 6. 最终校验与兜底
+# 6. 最终校验
 # ==============================================
 log "INFO" "验证输出文件完整性..."
 device_count=$(jq '.devices | length' "$OUTPUT_JSON" 2>/dev/null || echo 0)
 chip_count=$(jq '.chips | length' "$OUTPUT_JSON" 2>/dev/null || echo 0)
 
-# 兜底：确保至少有基础数据
 if [ "$device_count" -eq 0 ] || [ "$chip_count" -eq 0 ]; then
-    log "WARN" "数据提取不足，添加测试数据兜底"
-    # 添加测试设备
+    log "WARN" "数据提取不足，添加测试数据"
     jq '.devices += [{"name": "test-device", "chip": "test-chip", "kernel_target": "generic", "model": "Test Device", "drivers": []}]' \
         "$OUTPUT_JSON" > "$OUTPUT_JSON.tmp" && mv "$OUTPUT_JSON.tmp" "$OUTPUT_JSON"
-    # 添加测试芯片
     jq '.chips += [{"name": "test-chip", "platform": "generic", "default_drivers": ["kmod-generic"]}]' \
         "$OUTPUT_JSON" > "$OUTPUT_JSON.tmp" && mv "$OUTPUT_JSON.tmp" "$OUTPUT_JSON"
     device_count=$((device_count + 1))
@@ -371,6 +338,6 @@ elapsed=$((end_time - start_time))
 log "========================================="
 log "SUCCESS" "同步完成！总耗时：$((elapsed/60))分$((elapsed%60))秒"
 log "SUCCESS" "统计结果：设备 $device_count 个，芯片 $chip_count 个"
-log "SUCCESS" "输出文件：$OUTPUT_JSON（大小：$(du -h "$OUTPUT_JSON" | cut -f1)）"
+log "SUCCESS" "输出文件：$OUTPUT_JSON"
 log "SUCCESS" "详细日志：$SYNC_LOG"
 log "========================================="
