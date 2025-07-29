@@ -42,36 +42,29 @@ jobs:
           APP_ID=${{ secrets.GH_APP_ID }}
           PRIVATE_KEY="${{ secrets.GH_APP_PRIVATE_KEY }}"
           
-          # 写入私钥到文件
           echo "$PRIVATE_KEY" > /tmp/key.pem
           chmod 600 /tmp/key.pem
           
-          # 验证私钥格式
           grep -q "-----BEGIN RSA PRIVATE KEY-----" /tmp/key.pem || { echo "❌ 私钥格式错误"; exit 1; }
           grep -q "-----END RSA PRIVATE KEY-----" /tmp/key.pem || { echo "❌ 私钥格式错误"; exit 1; }
           
-          # 生成JWT（第63行核心修复：缩进绝对一致，无多余空格）
+          # 第63行所在代码块：使用极简缩进，消除所有歧义
           python3 <<END
 with open('/tmp/key.pem', 'r') as f:
     private_key = f.read()
-
-          import jwt
-          import time
-
-          iat = int(time.time())
-          exp = iat + 600
-          token = jwt.encode({'iat': iat, 'exp': exp, 'iss': '$APP_ID'}, private_key, algorithm='RS256')
-          print(f"JWT={token}")
+import jwt
+import time
+iat = int(time.time())
+exp = iat + 600
+token = jwt.encode({'iat': iat, 'exp': exp, 'iss': '$APP_ID'}, private_key, algorithm='RS256')
+print(f"JWT={token}")
 END
-          # 提取JWT令牌
           JWT=$(grep "JWT=" <(cat) | cut -d'=' -f2)
           [ -n "$JWT" ] || { echo "❌ JWT生成失败"; exit 1; }
           
-          # 获取安装ID
           INSTALLATION_ID=$(curl -s -H "Authorization: Bearer $JWT" "https://api.github.com/app/installations" | jq -r '.[] | select(.repositories[0].name == "openwrt-custom-builder") | .id')
           [ "$INSTALLATION_ID" != "null" ] || { echo "❌ 未找到安装记录"; exit 1; }
           
-          # 获取访问令牌
           ACCESS_TOKEN=$(curl -s -X POST -H "Authorization: Bearer $JWT" "https://api.github.com/app/installations/$INSTALLATION_ID/access_tokens" | jq -r '.token')
           [ "$ACCESS_TOKEN" != "null" ] || { echo "❌ 令牌生成失败"; exit 1; }
           
