@@ -131,3 +131,13 @@ jobs:
           
           echo "❌ 提交更新失败（已重试3次）"
           exit 1
+      
+      - name: 上传详细日志（即使失败也上传）
+        if: always()  # 无论成功/失败都执行
+        uses: actions/upload-artifact@v4
+        with:
+         name: sync-logs  # 日志包名称
+         path: |
+          sync-detail.log  # 要上传的日志文件
+          sync.log  # 如果有其他日志也一起上传
+         retention-days: 7  # 日志保留7天
