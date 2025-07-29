@@ -42,14 +42,21 @@ jobs:
           APP_ID=${{ secrets.GH_APP_ID }}
           PRIVATE_KEY="${{ secrets.GH_APP_PRIVATE_KEY }}"
           
-          # 写入私钥
-          echo "$PRIVATE_KEY" > /tmp/key.pem && chmod 600 /tmp/key.pem
+          # 写入私钥到文件
+          echo "$PRIVATE_KEY" > /tmp/key.pem
+          chmod 600 /tmp/key.pem
           
           # 验证私钥格式
-          grep -q "-----BEGIN RSA PRIVATE KEY-----" /tmp/key.pem || { echo "❌ 私钥格式错误"; exit 1; }
-          grep -q "-----END RSA PRIVATE KEY-----" /tmp/key.pem || { echo "❌ 私钥格式错误"; exit 1; }
+          if ! grep -q "-----BEGIN RSA PRIVATE KEY-----" /tmp/key.pem; then
+            echo "❌ 私钥缺少开头标记"
+            exit 1
+          fi
+          if ! grep -q "-----END RSA PRIVATE KEY-----" /tmp/key.pem; then
+            echo "❌ 私钥缺少结尾标记"
+            exit 1
+          fi
           
-          # 生成JWT（核心修复：代码块极简格式）
+          # 生成JWT（第62行附近重点修复：缩进严格一致）
           python3 <<END
 with open('/tmp/key.pem', 'r') as f:
     private_key = f.read()
@@ -59,22 +66,35 @@ with open('/tmp/key.pem', 'r') as f:
 
           iat = int(time.time())
           exp = iat + 600
-          token = jwt.encode({'iat': iat, 'exp': exp, 'iss': '$APP_ID'}, private_key, algorithm='RS256')
+          token = jwt.encode(
+              {'iat': iat, 'exp': exp, 'iss': '$APP_ID'},
+              private_key,
+              algorithm='RS256'
+          )
           print(f"JWT={token}")
 END
-          # 提取JWT
+          # 提取JWT令牌
           JWT=$(grep "JWT=" <(cat) | cut -d'=' -f2)
-          [ -n "$JWT" ] || { echo "❌ JWT生成失败"; exit 1; }
+          if [ -z "$JWT" ]; then
+            echo "❌ JWT生成失败"
+            exit 1
+          fi
           
           # 获取安装ID
           INSTALLATION_ID=$(curl -s -H "Authorization: Bearer $JWT" \
             "https://api.github.com/app/installations" | jq -r '.[] | select(.repositories[0].name == "openwrt-custom-builder") | .id')
-          [ "$INSTALLATION_ID" != "null" ] || { echo "❌ 未找到安装记录"; exit 1; }
+          if [ "$INSTALLATION_ID" = "null" ] || [ -z "$INSTALLATION_ID" ]; then
+            echo "❌ 未找到安装记录"
+            exit 1
+          fi
           
           # 获取访问令牌
           ACCESS_TOKEN=$(curl -s -X POST -H "Authorization: Bearer $JWT" \
             "https://api.github.com/app/installations/$INSTALLATION_ID/access_tokens" | jq -r '.token')
-          [ "$ACCESS_TOKEN" != "null" ] || { echo "❌ 令牌生成失败"; exit 1; }
+          if [ "$ACCESS_TOKEN" = "null" ] || [ -z "$ACCESS_TOKEN" ]; then
+            echo "❌ 令牌生成失败"
+            exit 1
+          fi
           
           echo "ACCESS_TOKEN=$ACCESS_TOKEN" >> $GITHUB_ENV
           rm -f /tmp/key.pem
@@ -95,5 +115,7 @@ END
         uses: actions/upload-artifact@v4
         with:
           name: sync-results-${{ github.run_id }}
-          path: sync-logs/ device-drivers.json
+          path:
+            - sync-logs/
+            - device-drivers.json
           retention-days: 14
