@@ -142,7 +142,8 @@ jobs:
           
           # 强制使用令牌URL推送（彻底避免认证干扰）
           echo "开始推送更新..."
-          git push "https://x-access-token:${{ github.token }}@github.com/jkl66678/openwrt-custom-builder.git" main || {
+          # 在推送步骤替换为：
+            git push "https://x-access-token:${{ secrets.CUSTOM_TOKEN }}@github.com/jkl66678/openwrt-custom-builder.git" main || {
             echo "❌ 推送失败，最后的排查方向："
             echo "1. 确认仓库已卸载所有GitHub App（Settings → Integrations）"
             echo "2. 确认main分支无保护规则（Settings → Branches）"
