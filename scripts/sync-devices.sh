@@ -7,7 +7,7 @@ LOG_FILE="${LOG_DIR}/sync-detail.log"
 DEVICE_JSON="device-drivers.json"
 OPENWRT_REPO="https://github.com/openwrt/openwrt.git"
 OPENWRT_DIR="openwrt-source"
-TARGET_DEVICES=("cuby-tr3000")  # 关键设备
+TARGET_DEVICES=("cuby-tr3000")
 SEARCH_FILES=("*.dts" "*.dtsi" "*.mk" "Makefile" "*.conf" "*.yml")
 SEARCH_KEYWORDS=(
     "DEVICE_NAME" "DEVICE_TITLE" "model" "boardname" 
@@ -21,7 +21,7 @@ init() {
     mkdir -p "${LOG_DIR}"
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] 开始设备同步流程" > "${LOG_FILE}"
     
-    local required_tools=("git" "jq" "grep" "awk" "find" "sort" "uniq")
+    local required_tools=("git" "jq" "grep" "awk" "find" "sort" "uniq" "xargs")
     for tool in "${required_tools[@]}"; do
         if ! command -v "${tool}" &> /dev/null; then
             echo "❌ 缺少必要工具: ${tool}" | tee -a "${LOG_FILE}"
@@ -54,43 +54,51 @@ update_openwrt_source() {
 
 clone_openwrt_source() {
     echo "克隆源码仓库..." | tee -a "${LOG_FILE}"
-    git clone --depth 1 "${OPENWRT_REPO}" "${OPENWRT_DIR}" >> "${LOG_FILE}" 2>&1 || {
+    if ! git clone --depth 1 "${OPENWRT_REPO}" "${OPENWRT_DIR}" >> "${LOG_FILE}" 2>&1; then
         echo "❌ 源码克隆失败，请检查网络或仓库地址" | tee -a "${LOG_FILE}"
         exit 1
-    }
+    fi
 }
 
-# 抓取设备列表（修复sed语法错误）
+# 抓取设备列表（增强错误处理）
 fetch_devices() {
     echo -e "\n===== 抓取设备列表 =====" | tee -a "${LOG_FILE}"
     
-    # 构建文件搜索表达式
+    # 1. 构建文件搜索表达式
     local file_pattern=""
     for pattern in "${SEARCH_FILES[@]}"; do
         file_pattern+=" -o -name '${pattern}'"
     done
     file_pattern=$(echo "${file_pattern}" | sed 's/^ -o //')
     
-    # 查找相关文件
+    # 2. 查找相关文件（用-print0处理含空格的文件名）
+    echo "查找设备文件路径: ${OPENWRT_DIR}/target/linux/" | tee -a "${LOG_FILE}"
     local device_files
     device_files=$(find "${OPENWRT_DIR}/target/linux/" \
         -path "${OPENWRT_DIR}/target/linux/*/dts" \
         -o -path "${OPENWRT_DIR}/target/linux/*/profiles" \
         -o -path "${OPENWRT_DIR}/target/linux/*/image" \
-        -type f \( ${file_pattern} \) 2>> "${LOG_FILE}")
+        -type f \( ${file_pattern} \) -print0 2>> "${LOG_FILE}")
     
-    echo "找到 $(echo "${device_files}" | wc -l) 个设备相关文件" | tee -a "${LOG_FILE}"
+    # 检查文件列表是否有效
+    local file_count=$(echo -n "${device_files}" | tr '\0' '\n' | wc -l)
+    echo "找到 ${file_count} 个设备相关文件" | tee -a "${LOG_FILE}"
+    if [ "${file_count}" -eq 0 ]; then
+        echo "❌ 未找到任何设备相关文件" | tee -a "${LOG_FILE}"
+        exit 1
+    fi
     
-    # 构建关键词正则
+    # 3. 构建关键词正则
     local keyword_regex=""
     for kw in "${SEARCH_KEYWORDS[@]}"; do
         keyword_regex+="|${kw}"
     done
     keyword_regex="(${keyword_regex:1})"
     
-    # 提取设备名称（修复sed续行问题）
+    # 4. 提取设备名称（用xargs -0处理含空格的文件名，避免grep解析错误）
+    echo "开始提取设备名称..." | tee -a "${LOG_FILE}"
     local raw_devices
-    raw_devices=$(grep -hE "${keyword_regex}[:=][[:space:]]*" ${device_files} 2>> "${LOG_FILE}" | \
+    raw_devices=$(echo -n "${device_files}" | xargs -0 grep -hE "${keyword_regex}[:=][[:space:]]*" 2>> "${LOG_FILE}" | \
         sed -E \
             -e "s/${keyword_regex}[:=][[:space:]]*//gi" \
             -e "s/[\"'<>\`]//g" \
@@ -100,11 +108,18 @@ fetch_devices() {
         tr '[:upper:]' '[:lower:]' | \
         sort -u)
     
-    # 保存原始结果
-    echo "${raw_devices}" > "${LOG_DIR}/raw-devices.tmp"
-    echo "初步提取到 $(wc -l < "${LOG_DIR}/raw-devices.tmp") 个设备名称" | tee -a "${LOG_FILE}"
+    # 检查提取结果是否为空
+    if [ -z "${raw_devices}" ]; then
+        echo "❌ 设备名称提取结果为空（无有效设备信息）" | tee -a "${LOG_FILE}"
+        exit 1
+    fi
     
-    # 强制保留关键设备
+    # 5. 保存原始结果
+    echo "${raw_devices}" > "${LOG_DIR}/raw-devices.tmp"
+    local raw_count=$(wc -l < "${LOG_DIR}/raw-devices.tmp")
+    echo "初步提取到 ${raw_count} 个设备名称" | tee -a "${LOG_FILE}"
+    
+    # 6. 强制保留关键设备
     local final_devices="${raw_devices}"
     for target in "${TARGET_DEVICES[@]}"; do
         if ! echo -e "${final_devices}\n${final_devices^^}" | grep -q "^${target}$"; then
@@ -113,7 +128,7 @@ fetch_devices() {
         fi
     done
     
-    # 输出最终结果
+    # 7. 输出最终结果
     echo "${final_devices}" | sort -u > "${LOG_DIR}/final-devices.tmp"
     local total=$(wc -l < "${LOG_DIR}/final-devices.tmp")
     echo "✅ 最终设备列表生成完成（共 ${total} 个设备）" | tee -a "${LOG_FILE}"
