@@ -27,7 +27,7 @@ log() {
 log "========================================="
 log "📌 工作目录：$WORK_DIR"
 log "📌 输出文件：$OUTPUT_JSON"
-log "📥 开始设备与芯片同步（移除第7步兜底）"
+log "📥 开始设备与芯片同步（完整支持x86架构）"
 log "========================================="
 
 # ==============================================
@@ -77,16 +77,17 @@ fi
 # ==============================================
 # 4. 提取设备信息
 # ==============================================
-log "🔍 开始提取设备信息（仅源码提取）..."
+log "🔍 开始提取设备信息（完整支持x86架构）..."
 declare -A PROCESSED_DEVICES
 BATCH_SIZE=300
 TMP_BATCH_DIR="$LOG_DIR/dts_batches"
 mkdir -p "$TMP_BATCH_DIR" && rm -rf "$TMP_BATCH_DIR"/*
 
-# 收集设备文件
-log "ℹ️ 收集设备定义文件（.dts/.dtsi/.mk/profiles.mk）..."
+# 收集设备文件（新增.config和Makefile支持）
+log "ℹ️ 收集设备定义文件（.dts/.dtsi/.mk/profiles.mk/.config）..."
 find "$TMP_SRC/target/linux" \( \
     -name "*.dts" -o -name "*.dtsi" -o -name "devices.mk" -o -name "profiles.mk" \
+    -o -name "*.config" -o -name "Makefile" \
 \) > "$LOG_DIR/device_files.tmp"
 total_files=$(wc -l < "$LOG_DIR/device_files.tmp")
 log "ℹ️ 共发现 $total_files 个设备相关文件"
@@ -116,6 +117,7 @@ for batch_file in "$TMP_BATCH_DIR"/batch_*; do
         device_names=""
         model=""
         compatible=""
+        chip=""
 
         case "$file_ext" in
             dts|dtsi)
@@ -128,6 +130,14 @@ for batch_file in "$TMP_BATCH_DIR"/batch_*; do
             mk)
                 device_names=$(grep -E 'DEVICE_NAME|SUPPORTED_DEVICES' "$file" 2>> "$SYNC_LOG" | 
                               sed -E 's/DEVICE_NAME[[:space:]]*[:=][[:space:]]*//; s/SUPPORTED_DEVICES[[:space:]]*[:=][[:space:]]*//; s/["'\'']//g')
+                # 从Makefile提取SOC名称
+                chip=$(grep -E 'SOC_NAME|CONFIG_SOC' "$file" 2>> "$SYNC_LOG" | 
+                      sed -E 's/.*(mt[0-9]+|ipq[0-9]+|qca[0-9]+|rtl[0-9]+|ath[0-9]+|bcm[0-9]+|ex[0-9]+|x86|i386|amd64|x86_64).*/\1/; t; d')
+                ;;
+            config)
+                # 从.config文件提取架构信息
+                chip=$(grep -E '^CONFIG_TARGET_x86' "$file" 2>> "$SYNC_LOG" | 
+                      sed -E 's/CONFIG_TARGET_//; s/=.*//')
                 ;;
             *)
                 log "⚠️ 跳过不支持的文件类型：$file"
@@ -135,12 +145,10 @@ for batch_file in "$TMP_BATCH_DIR"/batch_*; do
                 ;;
         esac
 
-        # 解析芯片
-        chip_from_content=$(grep -E 'SOC|CHIP' "$file" 2>> "$SYNC_LOG" | 
-                           sed -E 's/.*(mt[0-9]+|ipq[0-9]+|qca[0-9]+|rtl[0-9]+).*/\1/; t; d' | head -n1)
+        # 解析芯片（优先使用文件内容提取的芯片，其次从路径提取）
         platform_path=$(dirname "$file" | sed "s|$TMP_SRC/target/linux/||")
         chip_from_dir=$(echo "$platform_path" | awk -F '/' '{print $2}')
-        chip=${chip_from_content:-$chip_from_dir}
+        chip=${chip:-$chip_from_dir}
         chip=$(echo "$chip" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]//g')
 
         # 处理设备名
@@ -183,26 +191,39 @@ log "✅ 设备提取完成，共 $device_count 个设备"
 # ==============================================
 # 5. 提取芯片信息
 # ==============================================
-log "🔍 开始提取芯片信息（仅源码提取）..."
+log "🔍 开始提取芯片信息（完整支持x86架构）..."
 CHIP_TMP_FILE="$LOG_DIR/processed_chips.tmp"
 > "$CHIP_TMP_FILE"
 
-# 合并芯片来源
-jq -r '.devices[].chip' "$OUTPUT_JSON" | sort | uniq > "$LOG_DIR/chips_from_devices.tmp"
-find "$TMP_SRC/target/linux" -name "Makefile" -exec grep -hE 'SOC_NAME|CONFIG_SOC' {} + 2>> "$SYNC_LOG" | 
-    sed -E 's/.*(mt[0-9]+|ipq[0-9]+|qca[0-9]+|rtl[0-9]+).*/\1/; t; d' | tr '[:upper:]' '[:lower:]' | sort | uniq >> "$LOG_DIR/chips_from_devices.tmp"
+# 定义有效芯片正则（包含x86架构）
+VALID_CHIP_REGEX='^(mt[0-9]+|ipq[0-9]+|qca[0-9]+|rtl[0-9]+|ath[0-9]+|bcm[0-9]+|ex[0-9]+|x86|i386|amd64|x86_64)$'
+
+# 合并芯片来源并过滤无效值
+jq -r '.devices[].chip' "$OUTPUT_JSON" | sort | uniq | \
+    grep -E "$VALID_CHIP_REGEX" > "$LOG_DIR/chips_from_devices.tmp"
+
+find "$TMP_SRC/target/linux" -name "Makefile" -exec grep -hE 'SOC_NAME|CONFIG_SOC' {} + 2>> "$SYNC_LOG" | \
+    sed -E 's/.*(mt[0-9]+|ipq[0-9]+|qca[0-9]+|rtl[0-9]+|ath[0-9]+|bcm[0-9]+|ex[0-9]+|x86|i386|amd64|x86_64).*/\1/; t; d' | \
+    tr '[:upper:]' '[:lower:]' | sort | uniq | \
+    grep -E "$VALID_CHIP_REGEX" >> "$LOG_DIR/chips_from_devices.tmp"
+
 sort -u "$LOG_DIR/chips_from_devices.tmp" > "$LOG_DIR/all_chips.tmp"
 
-# 验证芯片提取结果（数量为0时报错）
+# 验证芯片提取结果（过滤后可能为空，需处理）
 chip_count_total=$(wc -l < "$LOG_DIR/all_chips.tmp")
 if [ "$chip_count_total" -eq 0 ]; then
-    log "❌ 未从源码中提取到任何芯片，同步失败"
+    log "❌ 未从源码中提取到有效芯片型号（包含x86）"
     exit 1
 fi
 
-# 处理每个芯片
+# 处理每个芯片（仅保留有效型号）
 while read -r chip; do
     [ -z "$chip" ] && { log "⚠️ 跳过空芯片名"; continue; }
+    # 再次验证芯片格式（双重保险）
+    if ! echo "$chip" | grep -qE "$VALID_CHIP_REGEX"; then
+        log "⚠️ 过滤无效芯片名：$chip"
+        continue
+    fi
     if grep -q "^$chip$" "$CHIP_TMP_FILE"; then
         continue
     fi
@@ -211,12 +232,13 @@ while read -r chip; do
                 sort | uniq | tr '\n' ',' | sed 's/,$//')
     [ -z "$platforms" ] && platforms=""
 
-    # 芯片驱动映射
+    # 芯片驱动映射（新增x86默认驱动）
     case "$chip" in
         mt7621) drivers='["kmod-mt7603e", "kmod-mt7615e"]' ;;
         mt7981|mt7986) drivers='["kmod-mt7981-firmware", "kmod-gmac"]' ;;
         ipq806x|ipq807x) drivers='["kmod-qca-nss-dp"]' ;;
         qca9563|qca9531) drivers='["kmod-ath9k"]' ;;
+        x86|i386|amd64|x86_64) drivers='["kmod-ata-core", "kmod-ahci", "kmod-e1000"]' ;;
         *) drivers='[]' ;;
     esac
 
@@ -261,15 +283,11 @@ jq -c '.devices[]' "$OUTPUT_JSON" | while read -r device; do
 done
 
 # ==============================================
-# （已移除第7步：不再补充默认设备/芯片）
-# ==============================================
-
-# ==============================================
 # 8. 清理与完成
 # ==============================================
 rm -rf "$TMP_SRC" "$TMP_BATCH_DIR"
 log "========================================="
-log "✅ 同步完成（已移除第7步兜底）"
+log "✅ 同步完成（完整支持x86架构）"
 log "📊 最终统计：设备 $device_count 个，芯片 $final_chip_count 个"
 log "📄 配置文件路径：$OUTPUT_JSON"
 log "📄 详细日志路径：$SYNC_LOG"
