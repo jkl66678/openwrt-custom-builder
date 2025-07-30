@@ -23,7 +23,7 @@ log() {
 log "========================================="
 log "📌 工作目录：$WORK_DIR"
 log "📌 输出文件：$OUTPUT_JSON"
-log "📥 开始OpenWrt设备同步（修复sed错误）"
+log "📥 开始OpenWrt设备同步（修复grep错误）"
 log "========================================="
 
 # ==============================================
@@ -71,7 +71,7 @@ if [ $retries -eq 0 ]; then
 fi
 
 # ==============================================
-# 4. 提取设备信息（修复sed正则）
+# 4. 提取设备信息
 # ==============================================
 log "🔍 提取设备信息..."
 declare -A PROCESSED_DEVICES
@@ -79,7 +79,7 @@ BATCH_SIZE=1000
 TMP_BATCH_DIR="$LOG_DIR/device_batches"
 mkdir -p "$TMP_BATCH_DIR" && rm -rf "$TMP_BATCH_DIR"/*
 
-# 收集设备文件（修复find语法）
+# 收集设备文件
 log "ℹ️ 收集设备定义文件..."
 find "$TMP_SRC/target/linux" \( -name "*.dts" -o -name "*.dtsi" -o -name "*.dtso" \
     -o -name "*.mk" -o -name "Makefile" -o -name "*.conf" \
@@ -150,13 +150,9 @@ for batch_file in "$TMP_BATCH_DIR"/batch_*; do
         chip=${chip:-$chip_from_dir}
         chip=$(echo "$chip" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9-]//g')
 
-        # ==============================================
-        # 核心修复：调整sed中[]内的-位置，避免无效范围
-        # 将-放在开头或结尾，明确表示连字符而非范围符号
-        # ==============================================
+        # 处理设备名（修复sed正则）
         for name in $device_names; do
             [ -z "$name" ] && continue
-            # 修复sed错误：将[^a-z0-9- ]改为[^a-z0-9 -]（-放在末尾）
             device_name=$(echo "$name" | tr '[:upper:]' '[:lower:]' | 
                          sed -E 's/[_,:;\/]+/-/g; s/[^a-z0-9 -]//g; s/[[:space:]]+/-/g; s/--+/-/g; s/^-+//; s/-+$//')
             [ -z "$device_name" ] && continue
@@ -192,30 +188,41 @@ fi
 log "✅ 设备提取完成，共 $device_count 个"
 
 # ==============================================
-# 5. 提取芯片信息
+# 5. 提取芯片信息（核心修复：正则表达式括号问题）
 # ==============================================
 log "🔍 提取芯片信息..."
 CHIP_TMP_FILE="$LOG_DIR/processed_chips.tmp"
 > "$CHIP_TMP_FILE"
 
-VALID_CHIP_REGEX='^(
-    mt[0-9]+|ipq[0-9]+|qca[0-9]+|rtl[0-9]+|ath[0-9]+|bcm[0-9]+|
-    x86|i386|amd64|x86_64|ppc|mips|arm|arm64|riscv
-)$'
+# ==============================================
+# 修复点1：将正则表达式改为单行，确保括号正确闭合
+# 移除多行格式，避免grep解析时出现括号不匹配
+# ==============================================
+VALID_CHIP_REGEX='^(mt[0-9]+|ipq[0-9]+|qca[0-9]+|rtl[0-9]+|ath[0-9]+|bcm[0-9]+|sun[0-9]+|exynos[0-9]+|imx[0-9]+|x86|i386|amd64|x86_64|ppc|powerpc|mips|mipsel|arm|arm64|aarch64|riscv|riscv64|mediatek|qualcomm|broadcom|allwinner|rockchip|nvidia)$'
 
-jq -r '.devices[].chip' "$OUTPUT_JSON" | sort | uniq | \
-    grep -E "$VALID_CHIP_REGEX" > "$LOG_DIR/chips_from_devices.tmp"
+# ==============================================
+# 修复点2：拆分管道命令，避免Broken pipe错误
+# 先将结果保存到临时文件，再进行后续处理
+# ==============================================
+# 从设备中提取芯片
+jq -r '.devices[].chip' "$OUTPUT_JSON" | sort | uniq > "$LOG_DIR/chips_step1.tmp"
+# 过滤有效芯片
+grep -E "$VALID_CHIP_REGEX" "$LOG_DIR/chips_step1.tmp" > "$LOG_DIR/chips_from_devices.tmp"
 
-find "$TMP_SRC/target/linux" -name "Makefile" -exec grep -hE 'ARCH|SOC' {} + 2>> "$SYNC_LOG" | \
-    sed -E 's/.*(mt|ipq|qca|rtl|ath|bcm|x86|ppc|mips|arm|riscv).*/\1/; t; d' | \
-    tr '[:upper:]' '[:lower:]' | sort | uniq | \
-    grep -E "$VALID_CHIP_REGEX" >> "$LOG_DIR/chips_from_devices.tmp"
+# 从Makefile补充芯片
+find "$TMP_SRC/target/linux" -name "Makefile" -exec grep -hE 'ARCH|SOC|CPU' {} + 2>> "$SYNC_LOG" | \
+    sed -E 's/.*(mt|ipq|qca|rtl|ath|bcm|sun|exynos|imx|x86|ppc|mips|arm|riscv|mediatek|qualcomm).*/\1/; t; d' | \
+    tr '[:upper:]' '[:lower:]' | sort | uniq > "$LOG_DIR/chips_step2.tmp"
+# 过滤有效芯片
+grep -E "$VALID_CHIP_REGEX" "$LOG_DIR/chips_step2.tmp" >> "$LOG_DIR/chips_from_devices.tmp"
 
+# 合并去重
 sort -u "$LOG_DIR/chips_from_devices.tmp" > "$LOG_DIR/all_chips.tmp"
 
+# 验证芯片提取结果
 chip_count_total=$(wc -l < "$LOG_DIR/all_chips.tmp")
 if [ "$chip_count_total" -eq 0 ]; then
-    log "❌ 未提取到任何芯片"
+    log "❌ 未提取到任何有效芯片信息"
     exit 1
 fi
 
@@ -234,34 +241,52 @@ while read -r chip; do
                 sort | uniq | tr '\n' ',' | sed 's/,$//')
     [ -z "$platforms" ] && platforms="unknown"
 
+    vendors=$(jq --arg c "$chip" '.devices[] | select(.chip == $c) | .vendor' "$OUTPUT_JSON" 2>> "$SYNC_LOG" | 
+              sort | uniq | tr '\n' ',' | sed 's/,$//')
+
+    # 芯片驱动映射
     case "$chip" in
-        mt*|mediatek*) drivers='["kmod-mt76"]' ;;
-        ipq*|qca*) drivers='["kmod-ath10k"]' ;;
-        x86*) drivers='["kmod-e1000", "kmod-ahci"]' ;;
+        mt*|mediatek*) drivers='["kmod-mt76", "kmod-rtc-mt6397"]' ;;
+        ipq*|qca*|qualcomm*) drivers='["kmod-ath10k", "kmod-qca-nss-dp"]' ;;
+        bcm*|broadcom*) drivers='["kmod-brcm-wl", "kmod-brcmutil"]' ;;
+        sun*|allwinner*) drivers='["kmod-sunxi-mmc", "kmod-rtc-sunxi"]' ;;
+        x86|i386|amd64|x86_64) drivers='["kmod-e1000", "kmod-ahci", "kmod-r8169"]' ;;
+        arm|arm64|aarch64) drivers='["kmod-armada-37xx", "kmod-i2c-arm"]' ;;
+        mips*) drivers='["kmod-mt7603", "kmod-switch-rtl8366"]' ;;
+        riscv*) drivers='["kmod-riscv-timer", "kmod-serial-8250"]' ;;
         *) drivers='[]' ;;
     esac
 
+    # 写入芯片信息
     if ! jq --arg name "$chip" \
             --arg p "$platforms" \
+            --arg v "$vendors" \
             --argjson d "$drivers" \
-            '.chips += [{"name": $name, "platforms": $p, "default_drivers": $d}]' \
+            '.chips += [{"name": $name, "platforms": $p, "vendors": $v, "default_drivers": $d}]' \
             "$OUTPUT_JSON" > "$OUTPUT_JSON.tmp" 2>> "$SYNC_LOG"; then
-        log "⚠️ 芯片 $chip 写入失败"
+        log "⚠️ 芯片 $chip 写入失败（跳过）"
         continue
     fi
     mv "$OUTPUT_JSON.tmp" "$OUTPUT_JSON" && echo "$chip" >> "$CHIP_TMP_FILE"
-    log "ℹ️ 提取芯片：$chip"
+    log "ℹ️ 提取芯片：$chip（支持厂商：$vendors）"
 done < "$LOG_DIR/all_chips.tmp"
 
-rm -f "$CHIP_TMP_FILE" "$LOG_DIR/chips_from_devices.tmp" "$LOG_DIR/all_chips.tmp"
+# 清理临时文件
+rm -f "$CHIP_TMP_FILE" "$LOG_DIR/chips_from_devices.tmp" "$LOG_DIR/all_chips.tmp" \
+      "$LOG_DIR/chips_step1.tmp" "$LOG_DIR/chips_step2.tmp"
 
+# 验证芯片结果
 final_chip_count=$(jq '.chips | length' "$OUTPUT_JSON" 2>/dev/null || echo 0)
-log "✅ 芯片提取完成，共 $final_chip_count 个"
+if [ "$final_chip_count" -eq 0 ]; then
+    log "❌ 芯片信息提取失败"
+    exit 1
+fi
+log "✅ 芯片提取完成，共 $final_chip_count 个芯片"
 
 # ==============================================
-# 6. 补充驱动
+# 6. 补充设备驱动
 # ==============================================
-log "🔧 补充设备驱动..."
+log "🔧 为设备补充驱动..."
 jq -c '.devices[]' "$OUTPUT_JSON" | while read -r device; do
     device_name=$(echo "$device" | jq -r '.name')
     chip=$(echo "$device" | jq -r '.chip')
@@ -279,6 +304,8 @@ done
 # ==============================================
 rm -rf "$TMP_SRC" "$TMP_BATCH_DIR"
 log "========================================="
-log "✅ 同步完成：设备 $device_count 个，芯片 $final_chip_count 个"
+log "✅ OpenWrt设备同步完成"
+log "📊 最终统计：设备 $device_count 个，芯片 $final_chip_count 个"
 log "📄 配置文件：$OUTPUT_JSON"
+log "📄 日志：$SYNC_LOG"
 log "========================================="
