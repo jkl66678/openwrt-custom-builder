@@ -1,24 +1,24 @@
 name: 设备数据与工作流同步
 
 on:
-  # 手动触发同步
+  # 手动触发
   workflow_dispatch:
-  # 定时自动同步（每天凌晨3点）
+  # 每日自动同步（凌晨3点）
   schedule:
     - cron: '0 3 * * *'
 
-# 全局环境变量（确保所有步骤使用UTF-8编码）
+# 全局环境变量（确保全流程UTF-8编码）
 env:
   LC_ALL: en_US.UTF-8
   LANG: en_US.UTF-8
   LANGUAGE: en_US.UTF-8
-  TZ: Asia/Shanghai  # 统一时区，避免日志时间混乱
+  TZ: Asia/Shanghai  # 统一时区为上海
 
 jobs:
-  sync-and-generate:
+  sync:
     name: 同步设备信息并生成工作流
     runs-on: ubuntu-22.04
-    timeout-minutes: 240  # 充足的超时时间（适应大仓库克隆和驱动提取）
+    timeout-minutes: 240  # 充足超时时间
 
     steps:
       - name: 拉取代码仓库
@@ -26,112 +26,119 @@ jobs:
         with:
           fetch-depth: 1
           lfs: true
-          # 确保中文文件名正常处理
-          path: ./openwrt-custom-builder
+          path: ./openwrt-builder  # 简化工作目录名，避免路径问题
 
       - name: 进入工作目录
         run: |
-          cd openwrt-custom-builder
-          pwd  # 验证工作目录
+          cd openwrt-builder
+          pwd  # 输出当前目录，便于调试路径问题
 
-      - name: 安装系统依赖（含中文支持）
+      - name: 安装系统依赖（修复包依赖问题）
         run: |
-          cd openwrt-custom-builder
-          # 更新包列表并安装基础工具
+          cd openwrt-builder
+          # 更新包索引
           sudo apt update -y
+          
+          # 核心修复：用gawk替代awk（虚拟包），移除iconv（系统内置）
           sudo apt install -y \
-            build-essential git jq grep sed awk file gcc g++ \
-            iconv dos2unix curl wget zip unzip \
-            golang snapd locales  # 新增本地化支持包
-
-          # 配置UTF-8 locale（彻底解决中文编码问题）
+            build-essential git jq grep sed gawk \
+            file gcc g++ dos2unix curl wget zip unzip \
+            golang snapd locales  # 保留必要工具
+          
+          # 配置UTF-8本地化（解决中文显示根本问题）
           sudo locale-gen en_US.UTF-8
           sudo update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
-
-          # 安装yamlfmt（YAML格式化工具）
+          
+          # 安装yamlfmt工具
           go install github.com/google/yamlfmt/cmd/yamlfmt@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
-
+          
           # 安装yq（YAML处理工具）
           sudo snap install yq
-
-          # 验证工具安装
-          echo "验证关键工具版本："
+          
+          # 验证关键工具安装状态
+          echo "===== 工具版本验证 ====="
           jq --version
           yq --version
           yamlfmt --version
           git --version
+          gawk --version  # 验证awk替代工具
+          echo "======================="
 
-      - name: 准备脚本文件（处理编码和权限）
+      - name: 准备脚本文件（确保证编码和权限）
         run: |
-          cd openwrt-custom-builder
-          # 确保脚本目录存在
+          cd openwrt-builder
+          # 创建必要目录
           mkdir -p scripts sync-logs configs
-
-          # 赋予执行权限
+          
+          # 赋予予脚本执行权限
           chmod +x scripts/*.sh
-
-          # 强制转换为Unix换行符（避免Windows格式导致的脚本错误）
+          
+          # 转换换行符（防止Windows格式导致脚本执行错误）
           dos2unix scripts/sync-devices.sh
-          dos2unix scripts/generate-workflow.sh
-
+          dos2unix scriptscripts/generate-workflow.sh
+          
           # 验证文件编码（确保为UTF-8）
+          echo "===== 脚本编码验证 ====="
           file -i scripts/sync-devices.sh
           file -i scripts/generate-workflow.sh
+          echo "======================="
 
       - name: 执行设备数据同步（含驱动提取）
         run: |
-          cd openwrt-custom-builder
-          # 执行同步脚本，输出详细日志
-          ./scripts/sync-devices.sh | tee sync-logs/sync-$(date +%Y%m%d).log
-        # 传递环境变量确保中文正常
-        env:
-          LC_ALL: en_US.UTF-8
-          LANG: en_US.UTF-8
+          cd openwrt-builder
+          # 执行同步脚本并记录详细日志
+          ./scripts/sync-devices.sh | tee sync-logs/sync-$(date +%Y%m%d_%H%M%S).log
 
       - name: 生成编译工作流文件
         run: |
-          cd openwrt-custom-builder
-          # 生成工作流，输出详细日志
-          ./scripts/generate-workflow.sh | tee sync-logs/workflow-$(date +%Y%m%d).log
+          cd openwrt-builder
+          # 生成工作流并记录日志
+          ./scripts/generate-workflow.sh | tee sync-logs/workflow-$(date +%Y%m%d_%H%M%S).log
 
-      - name: 验证同步结果（防乱码和完整性）
+      - name: 严格验证同步结果
         run: |
-          cd openwrt-custom-builder
-          # 检查核心文件存在性
+          cd openwrt-builder
+          echo "===== 结果验证 ====="
+          
+          # 验证核心文件存在性
           if [ ! -f ".github/workflows/build.yml" ]; then
             echo "❌ 工作流文件未生成"
             exit 1
           fi
+          
           if [ ! -s "device-drivers.json" ]; then
             echo "❌ 设备驱动JSON文件为空或不存在"
             exit 1
           fi
+          
           if [ ! -s "sync-logs/source_branches.tmp" ]; then
-            echo "❌ 源码分支文件为空或不存在"
+            echo "❌ 源码码分支文件为空或不存在"
             exit 1
           fi
-
-          # 验证中文内容是否正常（通过grep检查设备名中的中文字符）
+          
+          # 验证中文内容存在（非强制，但作为警告）
           if ! grep -qE '[一-龥]' "device-drivers.json"; then
-            echo "⚠️ 设备JSON中未检测到中文字符，可能存在编码问题"
-            # 此处不退出，仅警告（部分设备可能无中文名称）
+            echo "⚠️ 警告：设备JSON中未检测到中文字符，可能存在编码问题"
           fi
-
+          
           # 验证JSON和YAML格式合法性
-          jq . "device-drivers.json" > /dev/null || {
+          if ! jq . "device-drivers.json" > /dev/null; then
             echo "❌ 设备JSON格式错误"
             exit 1
-          }
-          yq eval '.' ".github/workflows/build.yml" > /dev/null || {
+          fi
+          
+          if ! yq eval '.' ".github/workflows/build.yml" > /dev/null; then
             echo "❌ 工作流YAML格式错误"
             exit 1
-          }
+          fi
+          
+          echo "✅ 验证通过"
 
       - name: 提交同步结果
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          repository: ./openwrt-custom-builder  # 指定仓库路径
+          repository: ./openwrt-builder  # 工作目录路径
           commit_message: "自动同步设备数据与工作流（${{ github.sha }}）"
           file_pattern: |
             .github/workflows/build.yml
@@ -141,12 +148,11 @@ jobs:
             configs/*.json
           commit_user_name: "同步机器人"
           commit_user_email: "sync-bot@example.com"
-          # 确保中文文件名正确提交
-          encoding: "utf-8"
+          encoding: "utf-8"  # 强制UTF-8编码提交
 
       - name: 上传同步日志（便于调试）
         uses: actions/upload-artifact@v4
         with:
           name: sync-logs-${{ github.run_id }}
-          path: openwrt-custom-builder/sync-logs/*.log
+          path: openwrt-builder/sync-logs/*.log
           retention-days: 7  # 日志保留7天
