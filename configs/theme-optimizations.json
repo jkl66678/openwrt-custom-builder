@@ -1,0 +1,7 @@
+{
+  "themes": [
+    {"name": "argon", "architectures": ["generic", "armv8", "x86"], "opts": ["O2", "O3"]},
+    {"name": "bootstrap", "architectures": ["generic"], "opts": ["O2"]},
+    {"name": "material", "architectures": ["generic"], "opts": ["Os"]}
+  ]
+}
