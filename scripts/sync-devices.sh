@@ -1,42 +1,53 @@
 #!/bin/bash
-set -uo pipefail  # 保留容错，避免小错误中断
+set -uo pipefail
 
 # ==============================================
-# 配置参数（精准匹配OpenWrt官方目录结构）
+# 配置参数（同时包含设备和芯片）
 # ==============================================
 LOG_DIR="sync-logs"
 LOG_FILE="${LOG_DIR}/sync-detail.log"
 DEVICE_JSON="device-drivers.json"
 OPENWRT_REPO="https://github.com/openwrt/openwrt.git"
 OPENWRT_DIR="openwrt-source"
-# OpenWrt官方设备文件核心目录（必含设备信息）
+
+# 设备相关配置
 DEVICE_CORE_DIRS=(
-    "${OPENWRT_DIR}/target/linux/ath79/dts"       # Atheros芯片设备树
-    "${OPENWRT_DIR}/target/linux/ramips/dts"      # 联发科RAMIPS系列设备树
-    "${OPENWRT_DIR}/target/linux/mediatek/dts"   # 联发科MTK系列设备树
-    "${OPENWRT_DIR}/target/linux/x86/profiles"    # x86平台配置文件
-    "${OPENWRT_DIR}/target/linux/realtek/dts"    # 瑞昱芯片设备树
+    "${OPENWRT_DIR}/target/linux/ath79/dts"
+    "${OPENWRT_DIR}/target/linux/ramips/dts"
+    "${OPENWRT_DIR}/target/linux/mediatek/dts"
+    "${OPENWRT_DIR}/target/linux/x86/profiles"
 )
-# 设备定义关键词（严格匹配源码格式）
 DEVICE_KEYWORDS=(
-    "DEVICE_NAME[:=][[:space:]]*[\"']"  # .mk文件中：DEVICE_NAME := "设备名"
-    "model[[:space:]]*=[[:space:]]*[\"']"  # .dts文件中：model = "设备名";
-    "SUPPORTED_DEVICES[[:=][:space:]]*"   # .mk文件中：SUPPORTED_DEVICES := 设备名
+    "DEVICE_NAME[:=][[:space:]]*[\"']"
+    "model[[:space:]]*=[[:space:]]*[\"']"
+    "SUPPORTED_DEVICES[[:=][:space:]]*"
+)
+
+# 芯片相关配置（新增）
+CHIP_CORE_DIRS=(
+    "${OPENWRT_DIR}/target/linux/*/Makefile"  # 芯片架构定义
+    "${OPENWRT_DIR}/target/linux/*/config-*"  # 芯片配置文件
+    "${OPENWRT_DIR}/package/kernel/linux/modules/"  # 内核模块中的芯片驱动
+)
+CHIP_KEYWORDS=(
+    "CONFIG_SOC_|CONFIG_MT|CONFIG_ATH"  # 联发科、高通等芯片的配置关键词
+    "SOC_NAME[[:=][:space:]]*"         # 芯片名称定义
+    "mt7981|mt7621|ipq8074|qca9563"    # 常见芯片型号
 )
 
 # ==============================================
-# 初始化环境（增强日志）
+# 初始化环境
 # ==============================================
 init() {
     echo "===== 初始化同步环境 ====="
     mkdir -p "${LOG_DIR}"
-    > "${LOG_FILE}"  # 清空日志
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] 开始设备同步（精准提取模式）" >> "${LOG_FILE}"
+    > "${LOG_FILE}"
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] 开始设备和芯片同步" >> "${LOG_FILE}"
     
     local required_tools=("git" "jq" "grep" "sed" "find" "ls" "wc")
     for tool in "${required_tools[@]}"; do
         if ! command -v "${tool}" &> /dev/null; then
-            echo "❌ 缺少必要工具: ${tool}" | tee -a "${LOG_FILE}"
+            echo "❌ 缺少工具: ${tool}" | tee -a "${LOG_FILE}"
             exit 1
         fi
     done
@@ -44,127 +55,154 @@ init() {
 }
 
 # ==============================================
-# 克隆源码（确保完整且分支正确）
+# 克隆源码
 # ==============================================
 update_openwrt_source() {
     echo -e "\n===== 处理OpenWrt源码 =====" | tee -a "${LOG_FILE}"
     
-    # 强制删除旧目录，避免缓存干扰
-    if [ -d "${OPENWRT_DIR}" ]; then
-        echo "移除旧源码目录..." | tee -a "${LOG_FILE}"
-        rm -rf "${OPENWRT_DIR}" || true
-    fi
+    [ -d "${OPENWRT_DIR}" ] && rm -rf "${OPENWRT_DIR}"
     
-    # 克隆main分支（OpenWrt主线，设备支持最完整）
-    echo "克隆OpenWrt主线分支（main）..." | tee -a "${LOG_FILE}"
+    echo "克隆OpenWrt主线分支..." | tee -a "${LOG_FILE}"
     if ! git clone -b main --depth 5 "${OPENWRT_REPO}" "${OPENWRT_DIR}" >> "${LOG_FILE}" 2>&1; then
-        echo "❌ 源码克隆失败（网络或仓库地址错误）" | tee -a "${LOG_FILE}"
+        echo "❌ 源码克隆失败" | tee -a "${LOG_FILE}"
         exit 1
     fi
     
-    # 验证核心设备目录是否存在
+    # 验证设备和芯片目录
     local missing=0
-    for dir in "${DEVICE_CORE_DIRS[@]}"; do
-        if [ ! -d "${dir}" ]; then
-            echo "⚠️ 核心设备目录不存在: ${dir}" | tee -a "${LOG_FILE}"
+    for dir in "${DEVICE_CORE_DIRS[@]}" "${CHIP_CORE_DIRS[@]}"; do
+        # 处理通配符目录（如*）
+        expanded_dirs=$(ls -d ${dir} 2>/dev/null || true)
+        if [ -z "${expanded_dirs}" ]; then
+            echo "⚠️ 核心目录缺失: ${dir}" | tee -a "${LOG_FILE}"
             missing=1
-        else
-            # 统计目录下的文件数量（至少1个才正常）
-            local file_count=$(find "${dir}" -type f | wc -l)
-            echo "目录 ${dir} 包含 ${file_count} 个文件" | tee -a "${LOG_FILE}"
-            if [ "${file_count}" -eq 0 ]; then
-                echo "⚠️ 核心目录为空: ${dir}" | tee -a "${LOG_FILE}"
-                missing=1
-            fi
         fi
     done
-    
     if [ "${missing}" -eq 1 ]; then
-        echo "❌ 源码不完整，关键设备目录缺失或为空" | tee -a "${LOG_FILE}"
+        echo "❌ 源码不完整" | tee -a "${LOG_FILE}"
         exit 1
     fi
     
-    echo "✅ 源码克隆完成，核心设备目录验证通过" | tee -a "${LOG_FILE}"
+    echo "✅ 源码克隆完成" | tee -a "${LOG_FILE}"
 }
 
 # ==============================================
-# 抓取设备列表（精准提取，无兜底）
+# 抓取设备列表（复用之前的逻辑）
 # ==============================================
 fetch_devices() {
     echo -e "\n===== 抓取设备列表 =====" | tee -a "${LOG_FILE}"
     
-    # 1. 收集所有设备文件（遍历核心目录）
     local device_files=()
     for dir in "${DEVICE_CORE_DIRS[@]}"; do
-        # 只找.dts（设备树）和.mk（配置文件）
         while IFS= read -r file; do
             device_files+=("${file}")
         done < <(find "${dir}" -type f \( -name "*.dts" -o -name "*.mk" \) 2>> "${LOG_FILE}")
     done
     
-    # 2. 验证文件数量
     local file_count=${#device_files[@]}
-    echo "找到 ${file_count} 个设备文件（核心目录）" | tee -a "${LOG_FILE}"
+    echo "找到 ${file_count} 个设备文件" | tee -a "${LOG_FILE}"
     if [ "${file_count}" -eq 0 ]; then
-        echo "❌ 未找到任何设备文件，源码异常" | tee -a "${LOG_FILE}"
+        echo "❌ 未找到设备文件" | tee -a "${LOG_FILE}"
         exit 1
     fi
-    # 输出前5个文件路径（调试用）
-    echo "示例设备文件: ${device_files[@]:0:5}" | tee -a "${LOG_FILE}"
     
-    # 3. 构建关键词正则（匹配源码格式）
     local keyword_regex="($(IFS=\|; echo "${DEVICE_KEYWORDS[*]}"))"
-    
-    # 4. 提取设备名称（精准匹配）
     local raw_devices
     for file in "${device_files[@]}"; do
-        # 提取关键词后的设备名（移除引号和特殊符号）
         grep -E "${keyword_regex}" "${file}" 2>/dev/null | \
             sed -E \
-                -e "s/${keyword_regex}//gi" \  # 移除关键词前缀（如DEVICE_NAME:="）
-                -e "s/[\"';, ]//g" \          # 移除引号、分号等符号
-                -e "s/^[[:space:]]*//g" \     # 移除前导空格
-                -e "/^$/d"                    # 过滤空行
+                -e "s/${keyword_regex}//gi" \
+                -e "s/[\"';, ]//g" \
+                -e "s/^[[:space:]]*//g" \
+                -e "/^$/d"
     done | sort -u > "${LOG_DIR}/raw-devices.tmp"
     
-    # 5. 检查提取结果（禁止兜底）
     local raw_count=$(wc -l < "${LOG_DIR}/raw-devices.tmp")
-    echo "从源码中提取到 ${raw_count} 个设备名称" | tee -a "${LOG_FILE}"
+    echo "提取到 ${raw_count} 个设备" | tee -a "${LOG_FILE}"
     if [ "${raw_count}" -eq 0 ]; then
-        echo "❌ 未提取到任何设备，匹配规则错误" | tee -a "${LOG_FILE}"
-        # 输出首个文件内容片段（调试匹配规则）
-        echo "首个文件内容（前10行）:" >> "${LOG_FILE}"
-        head -n 10 "${device_files[0]}" >> "${LOG_FILE}"
+        echo "❌ 未提取到设备" | tee -a "${LOG_FILE}"
         exit 1
     fi
     
-    # 6. 输出最终结果（无兜底）
     cp "${LOG_DIR}/raw-devices.tmp" "${LOG_DIR}/final-devices.tmp"
-    echo "✅ 最终设备列表生成（共 ${raw_count} 个，纯源码提取）" | tee -a "${LOG_FILE}"
+    echo "✅ 设备列表生成（共 ${raw_count} 个）" | tee -a "${LOG_FILE}"
 }
 
 # ==============================================
-# 生成JSON（修复jq命令问题）
+# 抓取芯片列表（新增逻辑）
 # ==============================================
-generate_device_json() {
-    echo -e "\n===== 生成设备JSON =====" | tee -a "${LOG_FILE}"
+fetch_chips() {
+    echo -e "\n===== 抓取芯片列表 =====" | tee -a "${LOG_FILE}"
     
-    # 简化JSON生成，避免格式错误
+    # 收集芯片相关文件
+    local chip_files=()
+    for dir in "${CHIP_CORE_DIRS[@]}"; do
+        # 处理含通配符的目录（如*）
+        while IFS= read -r expanded_dir; do
+            while IFS= read -r file; do
+                chip_files+=("${file}")
+            done < <(find "${expanded_dir}" -type f 2>> "${LOG_FILE}")
+        done < <(ls -d ${dir} 2>/dev/null)
+    done
+    
+    local file_count=${#chip_files[@]}
+    echo "找到 ${file_count} 个芯片相关文件" | tee -a "${LOG_FILE}"
+    if [ "${file_count}" -eq 0 ]; then
+        echo "❌ 未找到芯片文件" | tee -a "${LOG_FILE}"
+        exit 1
+    fi
+    
+    # 提取芯片型号
+    local keyword_regex="($(IFS=\|; echo "${CHIP_KEYWORDS[*]}"))"
+    local raw_chips
+    for file in "${chip_files[@]}"; do
+        grep -Eo "${keyword_regex}[a-z0-9]+" "${file}" 2>/dev/null | \
+            sed -E \
+                -e "s/CONFIG_//g" \  # 移除配置前缀
+                -e "s/SOC_NAME[:=]//gi" \
+                -e "s/^[[:space:]]*//g" \
+                -e "s/[^a-z0-9]//g" \  # 保留字母和数字
+                -e "/^$/d"
+    done | sort -u > "${LOG_DIR}/raw-chips.tmp"
+    
+    local raw_count=$(wc -l < "${LOG_DIR}/raw-chips.tmp")
+    echo "提取到 ${raw_count} 个芯片" | tee -a "${LOG_FILE}"
+    if [ "${raw_count}" -eq 0 ]; then
+        echo "❌ 未提取到芯片" | tee -a "${LOG_FILE}"
+        exit 1
+    fi
+    
+    cp "${LOG_DIR}/raw-chips.tmp" "${LOG_DIR}/final-chips.tmp"
+    echo "✅ 芯片列表生成（共 ${raw_count} 个）" | tee -a "${LOG_FILE}"
+}
+
+# ==============================================
+# 生成包含设备和芯片的JSON
+# ==============================================
+generate_json() {
+    echo -e "\n===== 生成设备和芯片JSON =====" | tee -a "${LOG_FILE}"
+    
+    # 同时处理设备和芯片
     local devices_str=$(cat "${LOG_DIR}/final-devices.tmp" | tr '\n' ' ')
-    jq -n \
-        --arg devices "${devices_str}" \
-        '{
-            "devices": $devices | split(" ") | map(select(length > 0))
-        }' > "${DEVICE_JSON}" || {
-        echo "⚠️ jq命令失败，手动生成JSON" | tee -a "${LOG_FILE}"
-        # 手动构建JSON数组（确保格式正确）
-        echo '{"devices": [' > "${DEVICE_JSON}"
-        sed 's/^/    "'"'"'/' "${LOG_DIR}/final-devices.tmp" | sed 's/$/"'"'",/' >> "${DEVICE_JSON}"
-        sed -i '$ s/,$//' "${DEVICE_JSON}"  # 移除最后一个逗号
-        echo ']}' >> "${DEVICE_JSON}"
-    }
+    local chips_str=$(cat "${LOG_DIR}/final-chips.tmp" | tr '\n' ' ')
     
-    # 验证JSON有效性
+    if ! jq -n \
+        --arg devices "${devices_str}" \
+        --arg chips "${chips_str}" \
+        '{
+            "devices": $devices | split(" ") | map(select(length > 0)),
+            "chips": $chips | split(" ") | map(select(length > 0))
+        }' > "${DEVICE_JSON}" 2>> "${LOG_FILE}"; then
+        echo "⚠️ jq失败，手动生成JSON" | tee -a "${LOG_FILE}"
+        # 手动构建包含设备和芯片的JSON
+        echo '{"devices": [' > "${DEVICE_JSON}"
+        sed 's/^/    "/; s/$/"/' "${LOG_DIR}/final-devices.tmp" | sed '$!s/$/,/' >> "${DEVICE_JSON}"
+        echo '  ],' >> "${DEVICE_JSON}"
+        echo '  "chips": [' >> "${DEVICE_JSON}"
+        sed 's/^/    "/; s/$/"/' "${LOG_DIR}/final-chips.tmp" | sed '$!s/$/,/' >> "${DEVICE_JSON}"
+        echo '  ]}' >> "${DEVICE_JSON}"
+    fi
+    
     if ! jq . "${DEVICE_JSON}" &> /dev/null; then
         echo "❌ JSON格式无效" | tee -a "${LOG_FILE}"
         exit 1
@@ -174,17 +212,19 @@ generate_device_json() {
 }
 
 # ==============================================
-# 主流程（无兜底，强制源码提取）
+# 主流程（同时执行设备和芯片提取）
 # ==============================================
 main() {
     init
     update_openwrt_source
     fetch_devices
-    generate_device_json
+    fetch_chips  # 新增芯片提取步骤
+    generate_json
     
-    echo -e "\n===== 设备同步完成 =====" | tee -a "${LOG_FILE}"
+    echo -e "\n===== 同步完成 =====" | tee -a "${LOG_FILE}"
+    echo "设备数量: $(jq '.devices | length' "${DEVICE_JSON}")"
+    echo "芯片数量: $(jq '.chips | length' "${DEVICE_JSON}")"
     echo "详细日志: ${LOG_FILE}"
-    echo "设备列表: ${DEVICE_JSON}（共 $(jq '.devices | length' "${DEVICE_JSON}") 个设备）"
 }
 
 main
