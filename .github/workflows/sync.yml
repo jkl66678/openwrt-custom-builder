@@ -1,180 +1,152 @@
-name: 设备列表与编译选项同步系统
+name: 设备数据与工作流同步
 
-# 触发条件：手动触发 + 每周日自动执行
 on:
-  workflow_dispatch:  # 支持手动触发（便于紧急更新）
+  # 手动触发同步
+  workflow_dispatch:
+  # 定时自动同步（每天凌晨3点）
   schedule:
-    - cron: "0 0 * * 0"  # 每周日0点自动执行（UTC时间）
+    - cron: '0 3 * * *'
+
+# 全局环境变量（确保所有步骤使用UTF-8编码）
+env:
+  LC_ALL: en_US.UTF-8
+  LANG: en_US.UTF-8
+  LANGUAGE: en_US.UTF-8
+  TZ: Asia/Shanghai  # 统一时区，避免日志时间混乱
 
 jobs:
-  sync-and-update:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write  # 允许读写仓库内容（用于提交更新）
-      actions: read    # 允许读取工作流信息
+  sync-and-generate:
+    name: 同步设备信息并生成工作流
+    runs-on: ubuntu-22.04
+    timeout-minutes: 240  # 充足的超时时间（适应大仓库克隆和驱动提取）
 
     steps:
-      - name: 拉取仓库代码（禁用默认凭据缓存）
+      - name: 拉取代码仓库
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-          persist-credentials: false  # 禁用默认凭据，避免权限冲突
+          lfs: true
+          # 确保中文文件名正常处理
+          path: ./openwrt-custom-builder
 
-      - name: 安装系统依赖工具
+      - name: 进入工作目录
         run: |
-          sudo apt update -qq > /dev/null 2>&1
-          sudo apt install -y -qq git jq dos2unix build-essential libncurses5-dev \
-            zlib1g-dev gawk gettext libssl-dev xsltproc wget unzip python3 python3-pip \
-            gcc yq  # 新增yq用于YAML验证
-          
-          # 验证关键工具是否安装成功
-          for tool in git jq yq gcc python3; do
-            if ! command -v "$tool" &> /dev/null; then
-              echo "❌ 缺失必要工具: $tool"
-              exit 1
-            fi
-          done
-          echo "✅ 系统依赖安装完成"
+          cd openwrt-custom-builder
+          pwd  # 验证工作目录
 
-      - name: 配置同步脚本权限
+      - name: 安装系统依赖（含中文支持）
         run: |
-          # 检查同步脚本是否存在
-          if [ ! -f "scripts/sync-devices.sh" ]; then
-            echo "❌ 同步脚本不存在: scripts/sync-devices.sh"
-            exit 1
-          fi
-          # 确保脚本格式正确（处理Windows换行问题）
+          cd openwrt-custom-builder
+          # 更新包列表并安装基础工具
+          sudo apt update -y
+          sudo apt install -y \
+            build-essential git jq grep sed awk file gcc g++ \
+            iconv dos2unix curl wget zip unzip \
+            golang snapd locales  # 新增本地化支持包
+
+          # 配置UTF-8 locale（彻底解决中文编码问题）
+          sudo locale-gen en_US.UTF-8
+          sudo update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
+
+          # 安装yamlfmt（YAML格式化工具）
+          go install github.com/google/yamlfmt/cmd/yamlfmt@latest
+          echo "$HOME/go/bin" >> $GITHUB_PATH
+
+          # 安装yq（YAML处理工具）
+          sudo snap install yq
+
+          # 验证工具安装
+          echo "验证关键工具版本："
+          jq --version
+          yq --version
+          yamlfmt --version
+          git --version
+
+      - name: 准备脚本文件（处理编码和权限）
+        run: |
+          cd openwrt-custom-builder
+          # 确保脚本目录存在
+          mkdir -p scripts sync-logs configs
+
+          # 赋予执行权限
+          chmod +x scripts/*.sh
+
+          # 强制转换为Unix换行符（避免Windows格式导致的脚本错误）
           dos2unix scripts/sync-devices.sh
-          chmod +x scripts/sync-devices.sh
-          echo "✅ 同步脚本权限配置完成"
-
-      - name: 执行设备与选项全量同步
-        run: |
-          echo "📝 开始全量同步（设备/芯片/驱动/功能/主题）..."
-          # 执行同步脚本并捕获详细日志
-          ./scripts/sync-devices.sh || {
-            echo "❌ 同步过程失败，查看同步日志获取详情"
-            exit 1
-          }
-          # 验证核心输出文件有效性
-          if [ ! -f "device-drivers.json" ] || [ $(jq '.devices | length' "device-drivers.json") -eq 0 ]; then
-            echo "❌ 设备列表生成失败或为空"
-            exit 1
-          fi
-          if [ ! -d "configs" ] || [ ! -f "configs/core-features.json" ] || [ ! -f "configs/theme-optimizations.json" ]; then
-            echo "❌ 功能/主题配置文件生成失败"
-            exit 1
-          fi
-          echo "✅ 全量同步完成"
-          echo "→ 设备总数: $(jq '.devices | length' "device-drivers.json")"
-          echo "→ 核心功能数: $(jq '.features | length' "configs/core-features.json")"
-          echo "→ 主题数: $(jq '.themes | length' "configs/theme-optimizations.json")"
-
-      - name: 生成最新编译工作流（build.yml）
-        run: |
-          # 检查工作流生成脚本
-          if [ ! -f "scripts/generate-workflow.sh" ]; then
-            echo "❌ 工作流生成脚本不存在: scripts/generate-workflow.sh"
-            exit 1
-          fi
           dos2unix scripts/generate-workflow.sh
-          chmod +x scripts/generate-workflow.sh
-          
-          # 执行生成脚本
-          echo "📝 开始生成最新编译工作流..."
-          ./scripts/generate-workflow.sh || {
-            echo "❌ 工作流生成失败"
-            exit 1
-          }
-          # 验证生成结果
-          if [ ! -f ".github/workflows/build.yml" ]; then
-            echo "❌ 生成的build.yml不存在"
-            exit 1
-          fi
-          echo "✅ 编译工作流已更新"
 
-      - name: 提交更新到仓库（带冲突处理）
+          # 验证文件编码（确保为UTF-8）
+          file -i scripts/sync-devices.sh
+          file -i scripts/generate-workflow.sh
+
+      - name: 执行设备数据同步（含驱动提取）
         run: |
-          # 配置提交身份
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          
-          # 清除旧凭据缓存
-          git credential-cache exit
-          rm -f ~/.git-credentials
-          
-          # 重新配置远程仓库（使用令牌认证）
-          git remote remove origin
-          git remote add origin "https://github.com/jkl66678/openwrt-custom-builder.git"
-          
-          # 配置Git凭据
-          git credential approve <<EOF
-          protocol=https
-          host=github.com
-          username=github-actions[bot]
-          password=${{ github.token }}
-          EOF
-          
-          # 添加所有变更文件
-          git add device-drivers.json \
-                  sync-logs/ \
-                  configs/ \
-                  .github/workflows/build.yml \
-                  scripts/  # 确保脚本变更也被提交
-          
-          # 检查是否有实际变更
-          if git diff --cached --quiet; then
-            echo "ℹ️ 无变更内容，无需提交"
-            exit 0
+          cd openwrt-custom-builder
+          # 执行同步脚本，输出详细日志
+          ./scripts/sync-devices.sh | tee sync-logs/sync-$(date +%Y%m%d).log
+        # 传递环境变量确保中文正常
+        env:
+          LC_ALL: en_US.UTF-8
+          LANG: en_US.UTF-8
+
+      - name: 生成编译工作流文件
+        run: |
+          cd openwrt-custom-builder
+          # 生成工作流，输出详细日志
+          ./scripts/generate-workflow.sh | tee sync-logs/workflow-$(date +%Y%m%d).log
+
+      - name: 验证同步结果（防乱码和完整性）
+        run: |
+          cd openwrt-custom-builder
+          # 检查核心文件存在性
+          if [ ! -f ".github/workflows/build.yml" ]; then
+            echo "❌ 工作流文件未生成"
+            exit 1
           fi
-          
-          # 暂存本地更改，避免拉取冲突
-          git stash push -u -m "temp stash before pull" || echo "ℹ️ 无需要暂存的内容"
-          
-          # 拉取远程最新代码（优先rebase，失败则普通拉取）
-          if ! git pull --rebase origin main; then
-            echo "⚠️ rebase失败，尝试普通拉取"
-            git pull origin main || {
-              echo "❌ 拉取远程代码失败，可能存在冲突"
-              exit 1
-            }
+          if [ ! -s "device-drivers.json" ]; then
+            echo "❌ 设备驱动JSON文件为空或不存在"
+            exit 1
           fi
-          
-          # 恢复暂存的更改
-          if git stash list | grep -q "temp stash before pull"; then
-            git stash pop || {
-              echo "⚠️ 恢复暂存内容时发生冲突，请手动处理"
-              exit 1
-            }
+          if [ ! -s "sync-logs/source_branches.tmp" ]; then
+            echo "❌ 源码分支文件为空或不存在"
+            exit 1
           fi
-          
-          # 再次确认变更并提交
-          git add .
-          commit_msg="自动同步设备与选项（$(date +"%Y-%m-%d %H:%M")）"
-          git commit -m "$commit_msg" || {
-            echo "ℹ️ 无新变更可提交"
-            exit 0
-          }
-          
-          # 推送更新（使用令牌确保权限）
-          echo "📤 推送更新到远程仓库..."
-          git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/jkl66678/openwrt-custom-builder.git" main || {
-            echo "❌ 推送失败，请检查以下可能原因："
-            echo "1. 仓库Workflow权限是否为Read and write（Settings → Actions）"
-            echo "2. 分支保护规则是否限制推送（Settings → Branches）"
-            echo "3. 令牌权限是否正确（默认GITHUB_TOKEN应有足够权限）"
+
+          # 验证中文内容是否正常（通过grep检查设备名中的中文字符）
+          if ! grep -qE '[一-龥]' "device-drivers.json"; then
+            echo "⚠️ 设备JSON中未检测到中文字符，可能存在编码问题"
+            # 此处不退出，仅警告（部分设备可能无中文名称）
+          fi
+
+          # 验证JSON和YAML格式合法性
+          jq . "device-drivers.json" > /dev/null || {
+            echo "❌ 设备JSON格式错误"
             exit 1
           }
-          echo "✅ 成功推送更新"
+          yq eval '.' ".github/workflows/build.yml" > /dev/null || {
+            echo "❌ 工作流YAML格式错误"
+            exit 1
+          }
 
-      - name: 上传同步日志（调试用）
-        if: always()  # 无论成功失败都上传日志
+      - name: 提交同步结果
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          repository: ./openwrt-custom-builder  # 指定仓库路径
+          commit_message: "自动同步设备数据与工作流（${{ github.sha }}）"
+          file_pattern: |
+            .github/workflows/build.yml
+            device-drivers.json
+            sync-logs/*.log
+            sync-logs/source_branches.tmp
+            configs/*.json
+          commit_user_name: "同步机器人"
+          commit_user_email: "sync-bot@example.com"
+          # 确保中文文件名正确提交
+          encoding: "utf-8"
+
+      - name: 上传同步日志（便于调试）
         uses: actions/upload-artifact@v4
         with:
           name: sync-logs-${{ github.run_id }}
-          path: |
-            sync-logs/
-            device-drivers.json
-            configs/
-            .github/workflows/build.yml
-          retention-days: 14  # 日志保留14天，便于问题排查
+          path: openwrt-custom-builder/sync-logs/*.log
+          retention-days: 7  # 日志保留7天
