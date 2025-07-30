@@ -1,124 +1,141 @@
-name: 设备列表同步与编译选项自动更新
+name: 设备列表与编译选项同步系统
 
+# 触发条件：手动触发 + 每周日自动执行
 on:
-  workflow_dispatch:  # 手动触发
+  workflow_dispatch:  # 支持手动触发（便于紧急更新）
   schedule:
-    - cron: "0 0 * * 0"  # 每周日自动执行
+    - cron: "0 0 * * 0"  # 每周日0点自动执行（UTC时间）
 
 jobs:
-  sync-devices:
+  sync-and-update:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # 核心权限：读写仓库内容
+      contents: write  # 允许读写仓库内容（用于提交更新）
+      actions: read    # 允许读取工作流信息
 
     steps:
       - name: 拉取仓库代码（禁用默认凭据缓存）
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-          persist-credentials: false  # 禁用默认凭据，避免干扰
+          persist-credentials: false  # 禁用默认凭据，避免权限冲突
 
-      - name: 安装依赖工具
+      - name: 安装系统依赖工具
         run: |
           sudo apt update -qq > /dev/null 2>&1
           sudo apt install -y -qq git jq dos2unix build-essential libncurses5-dev \
-            zlib1g-dev gawk gettext libssl-dev xsltproc wget unzip python3 python3-pip
+            zlib1g-dev gawk gettext libssl-dev xsltproc wget unzip python3 python3-pip \
+            gcc yq  # 新增yq用于YAML验证
           
-          # 验证工具是否安装
-          for tool in git jq awk python3; do
+          # 验证关键工具是否安装成功
+          for tool in git jq yq gcc python3; do
             if ! command -v "$tool" &> /dev/null; then
               echo "❌ 缺失必要工具: $tool"
               exit 1
             fi
           done
-          echo "✅ 依赖工具安装完成"
+          echo "✅ 系统依赖安装完成"
 
       - name: 配置同步脚本权限
         run: |
+          # 检查同步脚本是否存在
           if [ ! -f "scripts/sync-devices.sh" ]; then
             echo "❌ 同步脚本不存在: scripts/sync-devices.sh"
             exit 1
           fi
+          # 确保脚本格式正确（处理Windows换行问题）
+          dos2unix scripts/sync-devices.sh
           chmod +x scripts/sync-devices.sh
           echo "✅ 同步脚本权限配置完成"
 
-      - name: 执行设备列表同步（核心步骤）
+      - name: 执行设备与选项全量同步
         run: |
-          echo "📝 开始从OpenWrt源码同步设备列表..."
+          echo "📝 开始全量同步（设备/芯片/驱动/功能/主题）..."
+          # 执行同步脚本并捕获详细日志
           ./scripts/sync-devices.sh || {
-            echo "❌ 同步脚本执行失败，查看sync-logs获取详情"
+            echo "❌ 同步过程失败，查看同步日志获取详情"
             exit 1
           }
-          # 验证设备列表有效性
+          # 验证核心输出文件有效性
           if [ ! -f "device-drivers.json" ] || [ $(jq '.devices | length' "device-drivers.json") -eq 0 ]; then
             echo "❌ 设备列表生成失败或为空"
             exit 1
           fi
-          echo "✅ 设备列表同步完成，共发现 $(jq '.devices | length' "device-drivers.json") 个设备"
-
-      - name: 生成更新build.yml
-        run: |
-          if [ ! -f "scripts/generate-workflow.sh" ]; then
-            echo "❌ 生成脚本不存在: scripts/generate-workflow.sh"
+          if [ ! -d "configs" ] || [ ! -f "configs/core-features.json" ] || [ ! -f "configs/theme-optimizations.json" ]; then
+            echo "❌ 功能/主题配置文件生成失败"
             exit 1
           fi
+          echo "✅ 全量同步完成"
+          echo "→ 设备总数: $(jq '.devices | length' "device-drivers.json")"
+          echo "→ 核心功能数: $(jq '.features | length' "configs/core-features.json")"
+          echo "→ 主题数: $(jq '.themes | length' "configs/theme-optimizations.json")"
+
+      - name: 生成最新编译工作流（build.yml）
+        run: |
+          # 检查工作流生成脚本
+          if [ ! -f "scripts/generate-workflow.sh" ]; then
+            echo "❌ 工作流生成脚本不存在: scripts/generate-workflow.sh"
+            exit 1
+          fi
+          dos2unix scripts/generate-workflow.sh
           chmod +x scripts/generate-workflow.sh
           
+          # 执行生成脚本
+          echo "📝 开始生成最新编译工作流..."
           ./scripts/generate-workflow.sh || {
-            echo "❌ 生成build.yml失败"
+            echo "❌ 工作流生成失败"
             exit 1
           }
-          echo "✅ build.yml已更新为最新设备选项"
+          # 验证生成结果
+          if [ ! -f ".github/workflows/build.yml" ]; then
+            echo "❌ 生成的build.yml不存在"
+            exit 1
+          fi
+          echo "✅ 编译工作流已更新"
 
-      - name: 提交更新到仓库（完整凭据修复版）
+      - name: 提交更新到仓库（带冲突处理）
         run: |
-          # 配置GitHub官方机器人身份
+          # 配置提交身份
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
-          # 清除所有旧凭据缓存
+          # 清除旧凭据缓存
           git credential-cache exit
           rm -f ~/.git-credentials
-          echo "✅ 旧凭据缓存已清除"
           
-          # 重新配置远程仓库
+          # 重新配置远程仓库（使用令牌认证）
           git remote remove origin
           git remote add origin "https://github.com/jkl66678/openwrt-custom-builder.git"
-          echo "✅ 远程仓库已重新配置"
           
-          # 【终极修复】完整Git凭据格式（包含所有必要字段）
+          # 配置Git凭据
           git credential approve <<EOF
           protocol=https
           host=github.com
           username=github-actions[bot]
           password=${{ github.token }}
           EOF
-          echo "✅ Git凭据配置完成（包含协议、主机、用户名和密码）"
-          
-          # 调试信息：确认当前配置
-          echo "当前Git用户配置："
-          git config user.name
-          git config user.email
-          echo "当前远程仓库配置："
-          git remote -v
           
           # 添加所有变更文件
-          git add .github/workflows/build.yml device-drivers.json sync-logs/ scripts/
+          git add device-drivers.json \
+                  sync-logs/ \
+                  configs/ \
+                  .github/workflows/build.yml \
+                  scripts/  # 确保脚本变更也被提交
           
-          # 检查是否有变更
+          # 检查是否有实际变更
           if git diff --cached --quiet; then
             echo "ℹ️ 无变更内容，无需提交"
             exit 0
           fi
           
-          # 暂存未提交的更改（确保拉取时工作区干净）
-          git stash push -u -m "temp stash before pull" || echo "ℹ️ 没有需要暂存的内容"
+          # 暂存本地更改，避免拉取冲突
+          git stash push -u -m "temp stash before pull" || echo "ℹ️ 无需要暂存的内容"
           
-          # 拉取远程最新代码（处理冲突）
+          # 拉取远程最新代码（优先rebase，失败则普通拉取）
           if ! git pull --rebase origin main; then
             echo "⚠️ rebase失败，尝试普通拉取"
             git pull origin main || {
-              echo "❌ 拉取远程代码失败，请检查网络"
+              echo "❌ 拉取远程代码失败，可能存在冲突"
               exit 1
             }
           fi
@@ -126,39 +143,38 @@ jobs:
           # 恢复暂存的更改
           if git stash list | grep -q "temp stash before pull"; then
             git stash pop || {
-              echo "⚠️ 恢复暂存内容冲突，已保留文件"
+              echo "⚠️ 恢复暂存内容时发生冲突，请手动处理"
+              exit 1
             }
           fi
           
-          # 再次暂存所有变更（确保无遗漏）
-          git add .github/workflows/build.yml device-drivers.json sync-logs/ scripts/
-          
-          # 提交变更（带完整时间戳）
-          commit_msg="自动同步设备列表（$(date +"%Y-%m-%d %H:%M")）"
+          # 再次确认变更并提交
+          git add .
+          commit_msg="自动同步设备与选项（$(date +"%Y-%m-%d %H:%M")）"
           git commit -m "$commit_msg" || {
             echo "ℹ️ 无新变更可提交"
             exit 0
           }
           
-          # 强制使用令牌URL推送（彻底避免认证干扰）
-          echo "开始推送更新..."
-          # 在推送步骤替换为：
-            git push "https://x-access-token:${{ secrets.CUSTOM_TOKEN }}@github.com/jkl66678/openwrt-custom-builder.git" main || {
-            echo "❌ 推送失败，最后的排查方向："
-            echo "1. 确认仓库已卸载所有GitHub App（Settings → Integrations）"
-            echo "2. 确认main分支无保护规则（Settings → Branches）"
-            echo "3. 确认Workflow权限为Read and write（Settings → Actions）"
+          # 推送更新（使用令牌确保权限）
+          echo "📤 推送更新到远程仓库..."
+          git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/jkl66678/openwrt-custom-builder.git" main || {
+            echo "❌ 推送失败，请检查以下可能原因："
+            echo "1. 仓库Workflow权限是否为Read and write（Settings → Actions）"
+            echo "2. 分支保护规则是否限制推送（Settings → Branches）"
+            echo "3. 令牌权限是否正确（默认GITHUB_TOKEN应有足够权限）"
             exit 1
           }
-          echo "✅ 成功推送更新到远程仓库"
+          echo "✅ 成功推送更新"
 
       - name: 上传同步日志（调试用）
-        if: always()
+        if: always()  # 无论成功失败都上传日志
         uses: actions/upload-artifact@v4
         with:
-          name: sync-debug-logs-${{ github.run_id }}
+          name: sync-logs-${{ github.run_id }}
           path: |
             sync-logs/
             device-drivers.json
+            configs/
             .github/workflows/build.yml
-          retention-days: 14  # 日志保留14天
+          retention-days: 14  # 日志保留14天，便于问题排查
