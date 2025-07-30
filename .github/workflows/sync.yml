@@ -1,9 +1,9 @@
 name: 设备数据与工作流同步
 
 on:
-  # 手动触发
+  # 手动触发同步
   workflow_dispatch:
-  # 每日自动同步（凌晨3点）
+  # 每日自动同步（凌晨3点执行）
   schedule:
     - cron: '0 3 * * *'
 
@@ -12,13 +12,13 @@ env:
   LC_ALL: en_US.UTF-8
   LANG: en_US.UTF-8
   LANGUAGE: en_US.UTF-8
-  TZ: Asia/Shanghai  # 统一时区为上海
+  TZ: Asia/Shanghai  # 统一时区为上海，避免日志时间混乱
 
 jobs:
-  sync:
+  sync-and-generate:
     name: 同步设备信息并生成工作流
     runs-on: ubuntu-22.04
-    timeout-minutes: 240  # 充足超时时间
+    timeout-minutes: 240  # 充足的超时时间应对耗时操作
 
     steps:
       - name: 拉取代码仓库
@@ -26,43 +26,75 @@ jobs:
         with:
           fetch-depth: 1
           lfs: true
-          path: ./openwrt-builder  # 简化工作目录名，避免路径问题
+          path: ./openwrt-builder  # 简化工作目录路径
 
       - name: 进入工作目录
         run: |
           cd openwrt-builder
           pwd  # 输出当前目录，便于调试路径问题
 
-      - name: 安装系统依赖（修复包依赖问题）
+      - name: 安装系统依赖（自动适配最新版本）
         run: |
           cd openwrt-builder
           # 更新包索引
           sudo apt update -y
           
-          # 核心修复：用gawk替代awk（虚拟包），移除iconv（系统内置）
+          # 安装基础工具（无版本依赖的核心包）
           sudo apt install -y \
             build-essential git jq grep sed gawk \
             file gcc g++ dos2unix curl wget zip unzip \
-            golang snapd locales  # 保留必要工具
+            snapd locales  # 移除apt的golang，改用动态安装最新版
           
-          # 配置UTF-8本地化（解决中文显示根本问题）
+          # 配置UTF-8本地化（彻底解决中文编码问题）
           sudo locale-gen en_US.UTF-8
           sudo update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
+          echo "当前系统编码: $(locale)"  # 验证编码配置
           
-          # 安装yamlfmt工具
-          go install github.com/google/yamlfmt/cmd/yamlfmt@latest
-          echo "$HOME/go/bin" >> $GITHUB_PATH
+          # ==============================================
+          # 动态获取并安装最新版Go（自动适配版本更新）
+          # ==============================================
+          echo "获取最新Go稳定版..."
+          # 通过GitHub API查询Go最新release版本（避免硬编码）
+          GO_LATEST_TAG=$(curl -s "https://api.github.com/repos/golang/go/releases/latest" | jq -r '.tag_name')
+          GO_LATEST_VERSION=$(echo "$GO_LATEST_TAG" | sed 's/^go//')  # 提取纯版本号（如1.22.5）
+          echo "检测到最新Go版本: $GO_LATEST_VERSION"
           
-          # 安装yq（YAML处理工具）
-          sudo snap install yq
+          # 下载并安装最新Go
+          GO_TAR="go${GO_LATEST_VERSION}.linux-amd64.tar.gz"
+          wget "https://dl.google.com/go/${GO_TAR}" -O /tmp/${GO_TAR} || {
+            echo "❌ 下载Go失败，使用备用链接"
+            wget "https://gomirrors.org/dl/go/${GO_TAR}" -O /tmp/${GO_TAR}
+          }
           
-          # 验证关键工具安装状态
+          # 安装Go到系统目录
+          sudo rm -rf /usr/local/go  # 清理旧版本
+          sudo tar -C /usr/local -xzf /tmp/${GO_TAR}
+          export PATH="/usr/local/go/bin:$PATH"  # 临时添加到环境变量
+          go version  # 验证安装结果
+          
+          # ==============================================
+          # 安装最新版yamlfmt（自动跟随上游更新）
+          # ==============================================
+          echo "安装最新版yamlfmt..."
+          go install github.com/google/yamlfmt/cmd/yamlfmt@latest  # @latest自动拉取最新版
+          echo "$HOME/go/bin" >> $GITHUB_PATH  # 永久添加到环境变量
+          
+          # ==============================================
+          # 安装最新版yq（通过snap自动维护更新）
+          # ==============================================
+          echo "安装最新版yq..."
+          sudo snap install yq  # snap会自动更新到最新稳定版
+          
+          # ==============================================
+          # 验证所有工具版本（确保兼容性）
+          # ==============================================
           echo "===== 工具版本验证 ====="
           jq --version
           yq --version
           yamlfmt --version
           git --version
-          gawk --version  # 验证awk替代工具
+          gawk --version
+          go version
           echo "======================="
 
       - name: 准备脚本文件（确保证编码和权限）
@@ -71,12 +103,11 @@ jobs:
           # 创建必要目录
           mkdir -p scripts sync-logs configs
           
-          # 赋予予脚本执行权限
+          # 赋予脚本执行权限
           chmod +x scripts/*.sh
           
           # 转换换行符（防止Windows格式导致脚本执行错误）
-          dos2unix scripts/sync-devices.sh
-          dos2unix scriptscripts/generate-workflow.sh
+          dos2unix scripts/sync-devices.sh scripts/generate-workflow.sh
           
           # 验证文件编码（确保为UTF-8）
           echo "===== 脚本编码验证 ====="
@@ -87,7 +118,7 @@ jobs:
       - name: 执行设备数据同步（含驱动提取）
         run: |
           cd openwrt-builder
-          # 执行同步脚本并记录详细日志
+          # 执行同步脚本并记录详细日志（含时间戳）
           ./scripts/sync-devices.sh | tee sync-logs/sync-$(date +%Y%m%d_%H%M%S).log
 
       - name: 生成编译工作流文件
@@ -96,7 +127,7 @@ jobs:
           # 生成工作流并记录日志
           ./scripts/generate-workflow.sh | tee sync-logs/workflow-$(date +%Y%m%d_%H%M%S).log
 
-      - name: 严格验证同步结果
+      - name: 严格验证同步结果（防乱码和完整性）
         run: |
           cd openwrt-builder
           echo "===== 结果验证 ====="
@@ -113,11 +144,11 @@ jobs:
           fi
           
           if [ ! -s "sync-logs/source_branches.tmp" ]; then
-            echo "❌ 源码码分支文件为空或不存在"
+            echo "❌ 源码分支文件为空或不存在"
             exit 1
           fi
           
-          # 验证中文内容存在（非强制，但作为警告）
+          # 验证中文内容存在（非强制，作为警告）
           if ! grep -qE '[一-龥]' "device-drivers.json"; then
             echo "⚠️ 警告：设备JSON中未检测到中文字符，可能存在编码问题"
           fi
@@ -135,10 +166,10 @@ jobs:
           
           echo "✅ 验证通过"
 
-      - name: 提交同步结果
+      - name: 提交同步结果（确保中文正常提交）
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          repository: ./openwrt-builder  # 工作目录路径
+          repository: ./openwrt-builder
           commit_message: "自动同步设备数据与工作流（${{ github.sha }}）"
           file_pattern: |
             .github/workflows/build.yml
@@ -148,11 +179,11 @@ jobs:
             configs/*.json
           commit_user_name: "同步机器人"
           commit_user_email: "sync-bot@example.com"
-          encoding: "utf-8"  # 强制UTF-8编码提交
+          encoding: "utf-8"  # 强制UTF-8编码提交，避免中文乱码
 
       - name: 上传同步日志（便于调试）
         uses: actions/upload-artifact@v4
         with:
           name: sync-logs-${{ github.run_id }}
           path: openwrt-builder/sync-logs/*.log
-          retention-days: 7  # 日志保留7天
+          retention-days: 7  # 日志保留7天，节省存储空间
