@@ -70,15 +70,11 @@ clone_openwrt_source() {
 fetch_devices() {
     echo -e "\n===== 抓取设备列表 =====" | tee -a "${LOG_FILE}"
     
-    # 从DTS文件和设备配置中提取设备名称
-    local device_files
-    device_files=$(find "${OPENWRT_DIR}/target/linux/" -type f \( \
-        -name "*.dts" -o -name "*.dtsi" -o -name "devices.mk" -o -name "profiles.mk" \
-    \))
-    
-    # 提取设备名称（支持多种格式，如"DEVICE_NAME := cuby-tr3000"或"model = 'Cuby TR3000'"）
+    # 从DTS文件和设备配置中提取设备名称（使用-exec避免参数过长）
     local raw_devices
-    raw_devices=$(grep -hE "DEVICE_NAME[:=][[:space:]]*|model[:=][[:space:]]*|boardname[:=][[:space:]]*" ${device_files} | \
+    raw_devices=$(find "${OPENWRT_DIR}/target/linux/" -type f \( \
+        -name "*.dts" -o -name "*.dtsi" -o -name "devices.mk" -o -name "profiles.mk" \
+    \) -exec grep -hE "DEVICE_NAME[:=][[:space:]]*|model[:=][[:space:]]*|boardname[:=][[:space:]]*" {} + | \
         sed -E \
             -e "s/DEVICE_NAME[:=][[:space:]]*//g" \
             -e "s/model[:=][[:space:]]*['\"]//g" \
@@ -112,15 +108,11 @@ fetch_devices() {
 fetch_chips() {
     echo -e "\n===== 抓取芯片列表 =====" | tee -a "${LOG_FILE}"
     
-    # 从内核配置和设备树中提取芯片型号
-    local chip_files
-    chip_files=$(find "${OPENWRT_DIR}/target/linux/" -type f \( \
-        -name "Makefile" -o -name "*.dts" -o -name "config-*" \
-    \))
-    
-    # 提取芯片型号（如mt7981、ipq8065等）
+    # 从内核配置和设备树中提取芯片型号（使用-exec避免参数过长）
     local raw_chips
-    raw_chips=$(grep -hE "TARGET_(CPU|BOARD)|SOC[:=]|CHIP[:=]|ARCH[:=]" ${chip_files} | \
+    raw_chips=$(find "${OPENWRT_DIR}/target/linux/" -type f \( \
+        -name "Makefile" -o -name "*.dts" -o -name "config-*" \
+    \) -exec grep -hE "TARGET_(CPU|BOARD)|SOC[:=]|CHIP[:=]|ARCH[:=]" {} + | \
         sed -E \
             -e "s/TARGET_(CPU|BOARD|ARCH)[:=][[:space:]]*//g" \
             -e "s/SOC[:=][[:space:]]*//g" \
