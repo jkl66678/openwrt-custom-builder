@@ -14,12 +14,13 @@ on:
         description: 设备型号（仅设备模式）
         required: false
         options:
-          - -
           - 002
+          - 1-1lzmauimage
           - 10
           - 1000
           - 100m
           - 11ac
+          - 11acnas
           - 1200
           - 1200e
           - 1200i
@@ -43,13 +44,14 @@ on:
           - 1920-8g
           - 1920-8g-poe
           - 2
-          - 2-
           - 2011uias-2hnd
+          - 2015
           - 20n
           - 21
           - 256mb
           - 2610
           - 2b
+          - 2i
           - 2nd
           - 2wa
           - 3
@@ -60,7 +62,6 @@ on:
           - 32m
           - 333mhz
           - 3370
-          - 338
           - 3390
           - 3490
           - 360
@@ -75,11 +76,13 @@ on:
           - 3g-6200nl
           - 3g150b
           - 3g300m
+          - 3i
           - 4
           - 4020
           - 4040
           - 4421
           - 450e
+          - 45m
           - 493g
           - 4a
           - 4c
@@ -96,7 +99,8 @@ on:
           - 512m
           - 51e
           - 52e
-          - 54905491
+          - 52m
+          - 5490-5491
           - 5a
           - 5ac
           - 5nd
@@ -108,6 +112,7 @@ on:
           - 6431
           - 64m
           - 65w
+          - 6656k
           - 6p
           - 7
           - 7025
@@ -115,9 +120,9 @@ on:
           - 7320
           - 7321-u
           - 7341-u
-          - 73437363-u
+          - 7343-7363-u
           - 7351-u
-          - 73527372-e-u
+          - 7352-7372-e-u
           - 7360
           - 7362
           - 7412
@@ -129,31 +134,32 @@ on:
           - 760igs
           - 7688
           - 7links
-          - 7links-px-4885-
-          - 7links-px-4885-4m-
-          - 7links-px-4885-8m-
-          - 7links-wlr-1230-
-          - 7links-wlr-1240-
+          - 7links-px-4885
+          - 7links-px-4885-4m
+          - 7links-px-4885-8m
+          - 7links-wlr-1230
+          - 7links-wlr-1240
           - 8
-          - 800-
+          - 800
           - 801
           - 802
           - 803
           - 841-t6
           - 8800
-          - 8dev-carambola2-
-          - 8dev-carambola3-
+          - 8dev-carambola2
+          - 8dev-carambola3
           - 8dev-habanero-dvk
           - 8dev-jalapeno
-          - 8dev-lima-
-          - 8dev-rambutan-
+          - 8dev-lima
+          - 8dev-rambutan
           - 8devices
-          - 8devices-carambola-
-          - 8devices-kiwi-dvk-
-          - 8devices-mango-dvk-
+          - 8devices-carambola
+          - 8devices-kiwi-dvk
+          - 8devices-mango
+          - 8devices-mango-dvk
           - 8m
           - 8xp
-          - 911-2hn5hn
+          - 911-2hn-5hn
           - 911g-2-5hpnd
           - 911g-5hpacd
           - 912uag-2-5hpnd
@@ -166,11 +172,11 @@ on:
           - 962uigs-5hact2hnt
           - a
           - a1
+          - a1-a2
           - a10
           - a1004ns
           - a104ns
           - a1a0
-          - a1a2
           - a2
           - a3
           - a3002mesh
@@ -197,9 +203,10 @@ on:
           - a930
           - abaniact
           - abt
-          - abt-asr3000-
+          - abt-asr3000
           - ac
           - ac1200
+          - ac1200pro
           - ac1200rm
           - ac1750
           - ac2
@@ -209,68 +216,69 @@ on:
           - ac400i
           - access
           - accton
-          - accton-wr6202-
+          - accton-wr6202
           - ace
           - acelink
-          - acelink-ew-7886cax-
+          - acelink-ew-7886cax
           - acer
-          - acer-predator-w6-
-          - acer-predator-w6d-
-          - acer-vero-w6m-
+          - acer-predator-w6
+          - acer-predator-w6d
+          - acer-vero-w6m
           - aci
+          - acmp252
           - actiontec
-          - actiontec-r1000h-
-          - actiontec-t1200h-
+          - actiontec-r1000h
+          - actiontec-t1200h
           - ad1018
           - ad7200
           - adi-ad7416
           - adi-adt7473
           - adi-ds28cn01
           - adslr
-          - adslr-g7-
+          - adslr-g7
           - adtran
-          - adtran-bsap1800-v2-
-          - adtran-bsap1840-
+          - adtran-bluesocket
+          - adtran-bsap1800-v2
+          - adtran-bsap1840
           - adtran-mfginfo
-          - adtranbluesocket
           - aerohive
           - aerohive-br200-wp
-          - aerohive-hiveap-121-
+          - aerohive-hiveap-121
           - aerohive-hiveap-330
-          - afoundry-ew1200-
+          - afoundry-ew1200
           - ai
           - ai-br100
           - aigale
-          - aigale-ai-br100-
+          - aigale-ai-br100
           - aiot
           - air
           - air-pen
           - air3gii
           - aircube
           - airlink101
-          - airlink101-ar670w-
-          - airlink101-ar725w-
+          - airlink101-ar670w
+          - airlink101-ar725w
           - airlive
-          - airlive-air3gii-
+          - airlive-air3gii
           - airoha
-          - airoha-an7581-
-          - airoha-an7581-evb-
+          - airoha-an7581
+          - airoha-an7581-evb
           - airoha-an8855-efuse
           - airoha-an8855-mdio
           - airoha-an8855-mfd
           - airoha-an8855-switch
           - airoha-en7523
-          - airoha-en7523-evb-
+          - airoha-en7523-evb
           - airoha-en7523-gpio
-          - airoha-en7523-pcie-
+          - airoha-en7523-pcie
           - airoha-en7523-scu
           - airoha-en7523-spi
           - airoha-en7523-uart
           - airoha-en7581
-          - airoha-en7581-chip-scu-
+          - airoha-en7581-chip-scu
           - airoha-en7581-cpufreq
           - airoha-en7581-eth
-          - airoha-en7581-pbus-csr-
+          - airoha-en7581-pbus-csr
           - airoha-en7581-pcie
           - airoha-en7581-pcie-phy
           - airoha-en7581-pinctrl
@@ -285,74 +293,75 @@ on:
           - airrouter
           - airties
           - airtight
-          - airtight-c-75-
+          - airtight-c-75
           - alcatel
-          - alcatel-hh40v-
+          - alcatel-hh40v
           - alfa
-          - alfa-network-ac1200rm-
+          - alfa-network-ac1200rm
           - alfa-network-ap120c-ac
-          - alfa-network-ap120c-ax-
-          - alfa-network-ap121f-
-          - alfa-network-ap121fe-
-          - alfa-network-awusfree1-
-          - alfa-network-ax1800rm-
-          - alfa-network-n2q-
-          - alfa-network-n5q-
-          - alfa-network-pi-wifi4-
-          - alfa-network-quad-e4g-
-          - alfa-network-r36a-
-          - alfa-network-r36m-e4g-
-          - alfa-network-tube-2hq-
-          - alfa-network-tube-e4g-
-          - alfa-network-w502u-
-          - alfa-network-wifi-camppro-nano-duo-
-          - aliceo2
+          - alfa-network-ap120c-ax
+          - alfa-network-ap121f
+          - alfa-network-ap121fe
+          - alfa-network-awusfree1
+          - alfa-network-ax1800rm
+          - alfa-network-n2q
+          - alfa-network-n5q
+          - alfa-network-pi-wifi4
+          - alfa-network-quad-e4g
+          - alfa-network-r36a
+          - alfa-network-r36m-e4g
+          - alfa-network-tube-2hq
+          - alfa-network-tube-e4g
+          - alfa-network-w502u
+          - alfa-network-wifi-camppro-nano-duo
+          - alice-o2
           - aliyun
-          - aliyun-ap8220-
+          - aliyun-ap8220
           - all-sg8208m
           - all-wap02860ac
           - all0256n
+          - all0256n-4m
+          - all0256n-8m
           - all0333cj
           - all5002
           - all5003
           - allnet
-          - allnet-all-sg8208m-
-          - allnet-all-wap02860ac-
-          - allnet-all0256n-
-          - allnet-all0256n-4m-
-          - allnet-all0256n-8m-
-          - allnet-all0333cj-
-          - allnet-all5002-
-          - allnet-all5003-
+          - allnet-all-sg8208m
+          - allnet-all-wap02860ac
+          - allnet-all0256n
+          - allnet-all0256n-4m
+          - allnet-all0256n-8m
+          - allnet-all0333cj
+          - allnet-all5002
+          - allnet-all5003
           - ally-00x19k
           - ally-r1900k
           - alpha
-          - alphanetworks-asl26555-
-          - alphanetworks-asl26555-16m-
-          - alphanetworks-asl26555-8m-
-          - alphanetworks-asl56026-
-          - am29lv400bb
-          - amcc-
+          - alphanetworks-asl26555
+          - alphanetworks-asl26555-16m
+          - alphanetworks-asl26555-8m
+          - alphanetworks-asl56026
+          - amcc
           - amcc-apollo3g
           - amcc-dwc-otg
-          - amcc-ppc460ex-crypto-
-          - amcc-ppc460ex-rng-
+          - amcc-ppc460ex-crypto
+          - amcc-ppc460ex-rng
           - amcc-ppc4xx-crypto
-          - amcc-ppc4xx-pka-
+          - amcc-ppc4xx-pka
           - amcc-sata-460ex
-          - amd
           - amit-jimage
           - aml2-17gp
           - amped
-          - ampedwireless-ally-00x19k-
-          - ampedwireless-ally-r1900k-
-          - ampedwireless-b1200ex-
+          - ampedwireless-ally-00x19k
+          - ampedwireless-ally-r1900k
+          - ampedwireless-b1200ex
           - amplifi
+          - an
           - an-300-ap-i-n
           - an-500-ap-i-ac
           - an-700-ap-i-ac
           - an7581
-          - analogtek-at8563-
+          - analogtek-at8563
           - ap
           - ap-105
           - ap-115
@@ -369,6 +378,7 @@ on:
           - ap121f
           - ap121fe
           - ap143
+          - ap148
           - ap15
           - ap15c
           - ap200
@@ -382,19 +392,20 @@ on:
           - ap7621-001
           - ap7621-nv1
           - ap8220
+          - apalis-eval
+          - apalis-ixora
           - apl26-0ae
           - apl27-0b1
           - apm-bluestone
-          - apm-cpr-apm82181-
-          - apm-ocm-apm82181-
-          - apm-plb-apm82181-
-          - apm-sdr-apm82181-
-          - apm-sdram-apm82181-
-          - apm-uic-apm82181-
-          - apm-uic-apm82181-ibm-uic
+          - apm-cpr-apm82181
+          - apm-ocm-apm82181
+          - apm-plb-apm82181
+          - apm-sdr-apm82181
+          - apm-sdram-apm82181
+          - apm-uic-apm82181
           - appliance
           - apresia
-          - apresia-aplgs120gtss-
+          - apresia-aplgs120gtss
           - apresialightgs120gt-ss
           - aps256
           - aquila
@@ -408,180 +419,234 @@ on:
           - ar7516
           - ar9
           - araknis
-          - araknis-an-300-ap-i-n-
-          - araknis-an-500-ap-i-ac-
-          - araknis-an-700-ap-i-ac-
+          - araknis-an-300-ap-i-n
+          - araknis-an-500-ap-i-ac
+          - araknis-an-700-ap-i-ac
           - arc
           - arcadyan
-          - arcadyan-ar7516-
-          - arcadyan-arv4510pw-
-          - arcadyan-arv4518pwr01-
-          - arcadyan-arv4518pwr01a-
-          - arcadyan-arv4519pw-
-          - arcadyan-arv4520pw-
-          - arcadyan-arv4525pw-
-          - arcadyan-arv452cqw-
-          - arcadyan-arv7506pw11-
-          - arcadyan-arv7510pw22-
-          - arcadyan-arv7518pw-
-          - arcadyan-arv7519pw-
-          - arcadyan-arv7519rw22-
-          - arcadyan-arv7525pw-
-          - arcadyan-arv752dpw-
-          - arcadyan-arv752dpw22-
-          - arcadyan-arv8539pw22-
-          - arcadyan-aw1000-
-          - arcadyan-mozart-
-          - arcadyan-vg3503j-
-          - arcadyan-vgv7510kw22-
-          - arcadyan-vgv7510kw22-brn-
-          - arcadyan-vgv7510kw22-nor-
-          - arcadyan-vgv7519-
-          - arcadyan-vgv7519-brn-
-          - arcadyan-vgv7519-nor-
-          - arcadyan-vrv9510kwac23-
-          - arcadyan-we410443-
-          - arcadyan-we420223-99-
+          - arcadyan-ar7516
+          - arcadyan-arv4510pw
+          - arcadyan-arv4518pwr01
+          - arcadyan-arv4518pwr01a
+          - arcadyan-arv4519pw
+          - arcadyan-arv4520pw
+          - arcadyan-arv4525pw
+          - arcadyan-arv452cqw
+          - arcadyan-arv7506pw11
+          - arcadyan-arv7510pw22
+          - arcadyan-arv7518pw
+          - arcadyan-arv7519pw
+          - arcadyan-arv7519rw22
+          - arcadyan-arv7525pw
+          - arcadyan-arv752dpw
+          - arcadyan-arv752dpw22
+          - arcadyan-arv8539pw22
+          - arcadyan-aw1000
+          - arcadyan-mozart
+          - arcadyan-vg3503j
+          - arcadyan-vgv7510kw22
+          - arcadyan-vgv7510kw22-brn
+          - arcadyan-vgv7510kw22-nor
+          - arcadyan-vgv7519
+          - arcadyan-vgv7519-brn
+          - arcadyan-vgv7519-nor
+          - arcadyan-vrv9510kwac23
+          - arcadyan-we410443
+          - arcadyan-we420223-99
           - archer
+          - archer-c25-v1
+          - archer-c5
+          - archer-c58-v1
+          - archer-c59-v1
+          - archer-c59-v2
+          - archer-c60-v1
+          - archer-c60-v2
+          - archer-c7
+          - archer-c7-v4
+          - archer-c7-v5
           - arcor
-          - arcwireless-freestation5-
+          - arcwireless-freestation5
           - arduino
-          - arduino-yun-
+          - arduino-yun
+          - are
           - areohive-hiveap-330-image
+          - arguments
           - argus
-          - argus-atp-52b-
+          - argus-atp-52b
           - arion
           - arm-armv8-timer
           - arm-cortex-a53
           - arm-gic-v3
-          - arm-pl011-
-          - arm-pl022-
+          - arm-pl011
+          - arm-pl022
           - arm-primecell
           - arm-psci-02
           - arm-psci-10
+          - armada-370-db
+          - armada-370-rd
+          - armada-385-db-ap
+          - armada-385-linksys-caiman
+          - armada-385-linksys-cobra
+          - armada-385-linksys-rango
+          - armada-385-linksys-shelby
+          - armada-385-linksys-venom
+          - armada-385-turris-omnia
+          - armada-388-clearfog
+          - armada-388-clearfog-base
+          - armada-388-clearfog-pro
+          - armada-388-rd
+          - armada-xp-db
+          - armada-xp-gp
+          - armada-xp-linksys-mamba
           - army
           - arris
-          - arris-tr4400-v2-
+          - arris-tr4400-v2
+          - artifact-emmc-bl31-ubootfip
+          - artifact-snand-bl31-ubootfip
           - aruba
-          - aruba-ap-105-
-          - aruba-ap-115-
-          - aruba-ap-175-
+          - aruba-ap-105
+          - aruba-ap-115
+          - aruba-ap-175
           - aruba-ap-303
           - aruba-ap-303h
           - aruba-ap-365
+          - arv4510pw
+          - arv4518pwr01
+          - arv4518pwr01a
+          - arv4519pw
+          - arv4520pw
+          - arv4525pw
+          - arv452cqw
+          - arv7506pw11
           - arv7510pw22
           - arv7518pw
           - arv7519pw
+          - arv7519rw22
+          - arv752dpw
+          - arv752dpw22
+          - arv8539pw22
           - ascii-eq-delim-env
           - asiarf
-          - asiarf-ap7621-001-
-          - asiarf-ap7621-nv1-
-          - asiarf-awapn2403-
-          - asiarf-awm002-evb-
-          - asiarf-awm002-evb-4m-
-          - asiarf-awm002-evb-8m-
+          - asiarf-ap7621-001
+          - asiarf-ap7621-nv1
+          - asiarf-awapn2403
+          - asiarf-awm002-evb
+          - asiarf-awm002-evb-4m
+          - asiarf-awm002-evb-8m
           - askey
-          - askey-rt4230w-rev6-
+          - askey-rt4230w-rev6
           - asl26555
+          - asl26555-16m
+          - asl26555-8m
           - asr3000
           - asrock
-          - asrock-g10-
+          - asrock-g10
           - astoria
           - asus
-          - asus-4g-ax56-
+          - asus-4g-ax56
           - asus-map-ac2200
-          - asus-onhub-
-          - asus-pl-ac56-
-          - asus-rp-ac51-
-          - asus-rp-ac56-
-          - asus-rp-ac66-
-          - asus-rp-ac87-
-          - asus-rp-n53-
-          - asus-rt-ac1200-
-          - asus-rt-ac1200-v2-
+          - asus-onhub
+          - asus-pl-ac56
+          - asus-rp-ac51
+          - asus-rp-ac56
+          - asus-rp-ac66
+          - asus-rp-ac87
+          - asus-rp-n53
+          - asus-rt-ac1200
+          - asus-rt-ac1200-v2
           - asus-rt-ac42u
-          - asus-rt-ac51u-
-          - asus-rt-ac54u-
-          - asus-rt-ac57u-v1-
+          - asus-rt-ac51u
+          - asus-rt-ac54u
+          - asus-rt-ac57u
+          - asus-rt-ac57u-v1
           - asus-rt-ac58u
-          - asus-rt-ac59u-
-          - asus-rt-ac59u-v2-
-          - asus-rt-ac65p-
-          - asus-rt-ac85p-
-          - asus-rt-ax52-
-          - asus-rt-ax53u-
-          - asus-rt-ax54-
-          - asus-rt-ax59u-
-          - asus-rt-ax89x-
-          - asus-rt-g32-b1-
-          - asus-rt-n10-plus-
-          - asus-rt-n10p-v3-
-          - asus-rt-n11p-b1-
-          - asus-rt-n12-vp-b1-
-          - asus-rt-n12p-
-          - asus-rt-n13u-
-          - asus-rt-n14u-
-          - asus-rt-n15-
-          - asus-rt-n56u-
-          - asus-rt-n56u-b1-
-          - asus-tuf-ax4200-
-          - asus-tuf-ax6000-
-          - asus-wl-330n-
-          - asus-wl-330n3g-
-          - asus-zenwifi-bt8-
-          - asus-zenwifi-bt8-ubootmod-
-          - asus-zenwifi-cd6n-
-          - asus-zenwifi-cd6r-
+          - asus-rt-ac59u
+          - asus-rt-ac59u-v2
+          - asus-rt-ac65p
+          - asus-rt-ac85p
+          - asus-rt-ax52
+          - asus-rt-ax53u
+          - asus-rt-ax54
+          - asus-rt-ax59u
+          - asus-rt-ax89x
+          - asus-rt-g32-b1
+          - asus-rt-n10-plus
+          - asus-rt-n10p-v3
+          - asus-rt-n11p-b1
+          - asus-rt-n12-vp-b1
+          - asus-rt-n12p
+          - asus-rt-n13u
+          - asus-rt-n14u
+          - asus-rt-n15
+          - asus-rt-n56u
+          - asus-rt-n56u-b1
+          - asus-tuf-ax4200
+          - asus-tuf-ax6000
+          - asus-wl-330n
+          - asus-wl-330n3g
+          - asus-zenwifi-bt8
+          - asus-zenwifi-bt8-ubootmod
+          - asus-zenwifi-cd6n
+          - asus-zenwifi-cd6r
           - at-24c02
           - at-24c04
+          - at24
           - aterm
           - ath5k-eeprom
           - atheros
-          - atheros-db120-
+          - atheros-db120
           - atmel-24c01
           - atmel-24c02
           - atmel-24c04
           - atmel-24c16
-          - atmel-24c256-at24
+          - atmel-24c256
           - atmel-24c512
           - atmel-24c64
-          - atmel-at25-
+          - atmel-at25
           - atmel-at25160n
+          - atmel-at91sam9g20ek-2mmc
           - atmel-at97sc3203
           - atmel-at97sc3203s
           - atmel-at97sc3204t
           - atmel-atecc508a
+          - atmel-sama5d2-ptc-ek
+          - atmel-sama5d2-xplained
+          - atmel-sama5d27-som1-ek
+          - atmel-sama5d3-xplained
+          - atmel-sama5d4-xplained
+          - atmel-tny-a9263
+          - atmel-usb-a9263
           - atp-52b
           - audi
           - audiocodes
-          - audiocodes-mp-252-
+          - audiocodes-mp-252
           - avm
           - avm-eva-firmware
-          - avm-fritz1750e-
-          - avm-fritz300e-
-          - avm-fritz3370-rev2-
-          - avm-fritz3370-rev2-hynix-
-          - avm-fritz3370-rev2-micron-
-          - avm-fritz3390-
-          - avm-fritz3490-
-          - avm-fritz3490-micron-
-          - avm-fritz4020-
-          - avm-fritz450e-
-          - avm-fritz5490-
-          - avm-fritz5490-micron-
-          - avm-fritz7312-
-          - avm-fritz7320-
-          - avm-fritz7360-v2-
-          - avm-fritz7360sl-
-          - avm-fritz7362sl-
-          - avm-fritz736x-
-          - avm-fritz7412-
-          - avm-fritz7430-
-          - avm-fritz7490-
-          - avm-fritz7490-micron-
+          - avm-fritz1750e
+          - avm-fritz300e
+          - avm-fritz3370-rev2
+          - avm-fritz3370-rev2-hynix
+          - avm-fritz3370-rev2-micron
+          - avm-fritz3390
+          - avm-fritz3490
+          - avm-fritz3490-micron
+          - avm-fritz4020
+          - avm-fritz450e
+          - avm-fritz5490
+          - avm-fritz5490-micron
+          - avm-fritz7312
+          - avm-fritz7320
+          - avm-fritz7360-v2
+          - avm-fritz7360sl
+          - avm-fritz7362sl
+          - avm-fritz736x
+          - avm-fritz7412
+          - avm-fritz7430
+          - avm-fritz7490
+          - avm-fritz7490-micron
           - avm-fritzbox-4040
           - avm-fritzbox-7530
-          - avm-fritzdvbc-
+          - avm-fritzdvbc
           - avm-fritzrepeater-1200
           - avm-fritzrepeater-3000
           - aw1000
@@ -589,6 +654,8 @@ on:
           - awinic-aw9523-pinctrl
           - awk-1137c
           - awm002
+          - awm002-evb-4m
+          - awm002-evb-8m
           - awusfree1
           - ax1800rm
           - ax2004m
@@ -609,51 +676,64 @@ on:
           - ax880
           - ax9000
           - aximcom
-          - aximcom-mr-102n-
+          - aximcom-mr-102n
           - aztech
-          - aztech-hw550-3g-
+          - aztech-hw550-3g
           - b
           - b1
+          - b1-dsl-2740b
           - b1200ex
-          - b1dsl-2740b
+          - b3000
           - b7
           - balin
           - bananapi
-          - bananapi-bpi-r3-mini-
-          - bananapi-bpi-rv2-nand-
-          - bananapi-bpi-rv2-nor-
+          - bananapi-bpi-r2
+          - bananapi-bpi-r3-mini
+          - bananapi-bpi-r4-2g5
+          - bananapi-bpi-rv2-nand
+          - bananapi-bpi-rv2-nor
+          - based
+          - basename
           - bc2
+          - bcm4708
+          - bcm47094-linksys-panamera
           - bdcom
-          - bdcom-wap2100-sk-
+          - bdcom-wap2100-sk
           - beeline
-          - beeline-smartbox-flash-
-          - beeline-smartbox-giga-
-          - beeline-smartbox-pro-
-          - beeline-smartbox-turbo-
-          - beeline-smartbox-turbo-plus-
+          - beeline-smartbox-flash
+          - beeline-smartbox-giga
+          - beeline-smartbox-pro
+          - beeline-smartbox-turbo
+          - beeline-smartbox-turbo-plus
           - belkin
-          - belkin-f5d8235-v1-
-          - belkin-f5d8235-v2-
-          - belkin-f7c027-
-          - belkin-f9j1108-v2-
-          - belkin-f9k1109v1-
-          - belkin-f9k1115-v2-
-          - belkin-rt1800-
+          - belkin-f5d8235-v1
+          - belkin-f5d8235-v2
+          - belkin-f7c027
+          - belkin-f9j1108-v2
+          - belkin-f9k1109v1
+          - belkin-f9k1115-v2
+          - belkin-rt1800
           - bhr-4grv
           - bhr-4grv2
           - bin
+          - binary
           - binusr-is-merged
           - bl-w1200
           - bl100
           - block-device
           - board
+          - board-name-board-name-device-name
+          - board-namefirstword
+          - boarddevice-name
           - bocco
           - bolt
-          - bolt-arion-
-          - bolt-bl100-
+          - bolt-arion
+          - bolt-bl100
           - boot
+          - boot-6x-bootscript-device-name
           - bootdata
           - booting
+          - bootscript-device-name
           - bosch-bme280
           - box
           - bpi-r3
@@ -667,17 +747,17 @@ on:
           - brcm-bcm53128
           - brcm-bcm53134
           - brcm-bcm5325
-          - brcm-bcm63167-
-          - brcm-bcm63168-
-          - brcm-bcm63169-
+          - brcm-bcm63167
+          - brcm-bcm63168
+          - brcm-bcm63169
           - brcm-bcm6318
           - brcm-bcm6318-clocks
-          - brcm-bcm6318-ehci-
+          - brcm-bcm6318-ehci
           - brcm-bcm6318-enetsw
           - brcm-bcm6318-ext-intc
           - brcm-bcm6318-gpio
-          - brcm-bcm6318-gpio-sysctl-
-          - brcm-bcm6318-ohci-
+          - brcm-bcm6318-gpio-sysctl
+          - brcm-bcm6318-ohci
           - brcm-bcm6318-pcie
           - brcm-bcm6318-pinctrl
           - brcm-bcm6318-power-controller
@@ -686,11 +766,11 @@ on:
           - brcm-bcm6318-usbh-phy
           - brcm-bcm63268
           - brcm-bcm63268-clocks
-          - brcm-bcm63268-ehci-
+          - brcm-bcm63268-ehci
           - brcm-bcm63268-enetsw
           - brcm-bcm63268-gpio
-          - brcm-bcm63268-gpio-sysctl-
-          - brcm-bcm63268-ohci-
+          - brcm-bcm63268-gpio-sysctl
+          - brcm-bcm63268-ohci
           - brcm-bcm63268-pinctrl
           - brcm-bcm63268-power-controller
           - brcm-bcm63268-switch
@@ -698,13 +778,13 @@ on:
           - brcm-bcm63268-usbh-phy
           - brcm-bcm6328
           - brcm-bcm6328-clocks
-          - brcm-bcm6328-ehci-
+          - brcm-bcm6328-ehci
           - brcm-bcm6328-enetsw
           - brcm-bcm6328-gpio
-          - brcm-bcm6328-gpio-sysctl-
+          - brcm-bcm6328-gpio-sysctl
           - brcm-bcm6328-hsspi
           - brcm-bcm6328-leds
-          - brcm-bcm6328-ohci-
+          - brcm-bcm6328-ohci
           - brcm-bcm6328-pcie
           - brcm-bcm6328-pinctrl
           - brcm-bcm6328-power-controller
@@ -717,46 +797,46 @@ on:
           - brcm-bcm6348-pci
           - brcm-bcm6358
           - brcm-bcm6358-clocks
-          - brcm-bcm6358-ehci-
+          - brcm-bcm6358-ehci
           - brcm-bcm6358-emac
           - brcm-bcm6358-gpio
-          - brcm-bcm6358-gpio-sysctl-
+          - brcm-bcm6358-gpio-sysctl
           - brcm-bcm6358-iudma
           - brcm-bcm6358-leds
-          - brcm-bcm6358-ohci-
+          - brcm-bcm6358-ohci
           - brcm-bcm6358-pinctrl
           - brcm-bcm6358-spi
           - brcm-bcm6358-usbh-phy
           - brcm-bcm6362
           - brcm-bcm6362-clocks
-          - brcm-bcm6362-ehci-
+          - brcm-bcm6362-ehci
           - brcm-bcm6362-enetsw
           - brcm-bcm6362-gpio
-          - brcm-bcm6362-gpio-sysctl-
-          - brcm-bcm6362-ohci-
+          - brcm-bcm6362-gpio-sysctl
+          - brcm-bcm6362-ohci
           - brcm-bcm6362-pinctrl
           - brcm-bcm6362-power-controller
           - brcm-bcm6362-switch
           - brcm-bcm6362-usbh-phy
           - brcm-bcm6368
           - brcm-bcm6368-clocks
-          - brcm-bcm6368-ehci-
+          - brcm-bcm6368-ehci
           - brcm-bcm6368-enetsw
           - brcm-bcm6368-gpio
-          - brcm-bcm6368-gpio-sysctl-
+          - brcm-bcm6368-gpio-sysctl
           - brcm-bcm6368-mdio-mux
-          - brcm-bcm6368-ohci-
+          - brcm-bcm6368-ohci
           - brcm-bcm6368-pinctrl
           - brcm-bcm6368-rng
           - brcm-bcm6368-switch
           - brcm-bcm6368-usbh-phy
-          - brcm-bcm6369-
+          - brcm-bcm6369
           - brcm-bcm7038-wdt
           - brcm-bcm963xx-imagetag
           - brcm-bcma-sprom
-          - brcm-bmips3300-
-          - brcm-bmips4350-
-          - brcm-nand-bcm6368-
+          - brcm-bmips3300
+          - brcm-bmips4350
+          - brcm-nand-bcm6368
           - brcm-nandcs
           - brcm-ssb-sprom
           - brcm-trx
@@ -768,45 +848,53 @@ on:
           - bsap-1840
           - bsh-g24mb
           - bt
-          - bt-homehub-v2b-
-          - bt-homehub-v3a-
-          - bt-homehub-v5a-
+          - bt-homehub-v2b
+          - bt-homehub-v3a
+          - bt-homehub-v5a
           - bt8
+          - bthomehubv2b
+          - bthomehubv3a
+          - bthomehubv5a
           - buffalo
-          - buffalo-bhr-4grv-
-          - buffalo-bhr-4grv2-
-          - buffalo-ls220de-
-          - buffalo-ls421de-
-          - buffalo-wbmr-300hpd-
-          - buffalo-wbmr-hp-g300h-
-          - buffalo-wcr-1166ds-
-          - buffalo-whr-1166d-
-          - buffalo-whr-300hp2-
-          - buffalo-whr-600d-
-          - buffalo-whr-g300n-
-          - buffalo-whr-g301n-
-          - buffalo-wli-tx4-ag300n-
-          - buffalo-wmr-300-
-          - buffalo-wsr-1166dhp-
-          - buffalo-wsr-2533dhp2-
-          - buffalo-wsr-2533dhpl-
-          - buffalo-wsr-2533dhpl2-
-          - buffalo-wsr-2533dhpls-
-          - buffalo-wsr-3200ax4s-
-          - buffalo-wsr-600dhp-
-          - buffalo-wtr-m2133hp-
-          - buffalo-wxr-2533dhp-
-          - buffalo-wxr-5950ax12-
-          - buffalo-wzr-450hp2-
-          - buffalo-wzr-600dhp-
-          - buffalo-wzr-agl300nh-
-          - buffalo-wzr-hp-ag300h-
-          - buffalo-wzr-hp-g300nh-rb-
-          - buffalo-wzr-hp-g300nh-s-
-          - buffalo-wzr-hp-g302h-a1a0-
-          - buffalo-wzr-hp-g450h-
+          - buffalo-bhr-4grv
+          - buffalo-bhr-4grv2
+          - buffalo-ls220de
+          - buffalo-ls421de
+          - buffalo-trx
+          - buffalo-trx-magic
+          - buffalo-wbmr-300hpd
+          - buffalo-wbmr-hp-g300h
+          - buffalo-wcr-1166ds
+          - buffalo-whr-1166d
+          - buffalo-whr-300hp2
+          - buffalo-whr-600d
+          - buffalo-whr-g300n
+          - buffalo-whr-g301n
+          - buffalo-wli-tx4-ag300n
+          - buffalo-wmr-300
+          - buffalo-wsr-1166dhp
+          - buffalo-wsr-2533dhp2
+          - buffalo-wsr-2533dhpl
+          - buffalo-wsr-2533dhpl2
+          - buffalo-wsr-2533dhpls
+          - buffalo-wsr-3200ax4s
+          - buffalo-wsr-600dhp
+          - buffalo-wtr-m2133hp
+          - buffalo-wxr-2533dhp
+          - buffalo-wxr-5950ax12
+          - buffalo-wzr-450hp2
+          - buffalo-wzr-600dhp
+          - buffalo-wzr-agl300nh
+          - buffalo-wzr-hp-ag300h
+          - buffalo-wzr-hp-g300nh-rb
+          - buffalo-wzr-hp-g300nh-s
+          - buffalo-wzr-hp-g302h-a1a0
+          - buffalo-wzr-hp-g450h
           - bullet
-          - bwvzgrand
+          - bullet-m
+          - bullet-m-xw
+          - bwvz-grand
+          - by
           - c
           - c-75
           - c1
@@ -829,10 +917,12 @@ on:
           - c7
           - c8-668gl
           - c910
+          - ca-eu-ru
           - cache
-          - caeuru
+          - call
           - cambium
-          - cambiumnetworks-xe3-4-
+          - cambiumnetworks-xe3-4
+          - campnano-duo
           - camppro
           - cap
           - cap324
@@ -853,27 +943,28 @@ on:
           - cavium-octeon-3860-pip-interface
           - cavium-octeon-3860-pip-port
           - cavium-octeon-3860-twsi
-          - cavium-octeon-3860-uart-
+          - cavium-octeon-3860-uart
           - cavium-octeon-5750-bootbus-dma
           - cavium-octeon-5750-mix
           - cavium-octeon-6130-mmc
           - cavium-octeon-6130-mmc-slot
-          - cavium-octeon-6335-ehci-
-          - cavium-octeon-6335-ohci-
+          - cavium-octeon-6335-ehci
+          - cavium-octeon-6335-ohci
           - cavium-octeon-6335-uctl
           - cavium-octeon-7130-ahci
           - cavium-octeon-7130-cib
           - cavium-octeon-7130-ocla
           - cavium-octeon-7130-sata-uctl
           - cavium-octeon-7130-usb-uctl
-          - cavium-octeon-7130-xhci-
+          - cavium-octeon-7130-xhci
           - cax1800
+          - cd
           - cd6n
           - cd6r
           - cell
           - cellc-rtl30vw
           - cetron
-          - cetron-ct3003-
+          - cetron-ct3003
           - cf-e110n
           - cf-e120a
           - cf-e130n
@@ -884,8 +975,8 @@ on:
           - cf-e380ac
           - cf-e390ax
           - cf-e393ax
+          - cf-e5-e7
           - cf-e560ac
-          - cf-e5e7
           - cf-ew71
           - cf-ew72
           - cf-wr617ac
@@ -895,80 +986,88 @@ on:
           - cf-wr800n
           - cfi-flash
           - check
-          - checkpoint-v-80-
-          - checkpoint-v-81-
+          - checkpoint-v-80
+          - checkpoint-v-81
           - chipidea-usb2
           - cilab-meshpoint-one
           - cisco
-          - cisco-n821-cpld-
-          - cisco-on100-
-          - cisco-vedge1000-
-          - ciscoviptela
+          - cisco-n821-cpld
+          - cisco-on100
+          - cisco-vedge1000
+          - cisco-viptela
           - cj-hello
           - clearfog
           - cloud
           - cm520-79f
           - cmcc
-          - cmcc-a10-stock-
-          - cmcc-a10-ubootmod-
-          - cmcc-rax3000m-
-          - cmcc-rm2-6-
+          - cmcc-a10
+          - cmcc-a10-stock
+          - cmcc-a10-ubootmod
+          - cmcc-rax3000m
+          - cmcc-rm2-6
           - cn
           - comfast
-          - comfast-cf-e110n-v2-
-          - comfast-cf-e120a-v3-
-          - comfast-cf-e130n-v2-
-          - comfast-cf-e313ac-
-          - comfast-cf-e314n-v2-
-          - comfast-cf-e355ac-v2-
-          - comfast-cf-e375ac-
-          - comfast-cf-e380ac-v2-
-          - comfast-cf-e390ax-
-          - comfast-cf-e393ax-
-          - comfast-cf-e5-
-          - comfast-cf-e560ac-
-          - comfast-cf-ew71-v2-
-          - comfast-cf-ew72-
-          - comfast-cf-ew72-v2-
-          - comfast-cf-wr617ac-
-          - comfast-cf-wr650ac-v1-
-          - comfast-cf-wr650ac-v2-
-          - comfast-cf-wr752ac-v1-
-          - comfast-cf-wr758ac-
-          - comfast-cf-wr758ac-v1-
-          - comfast-cf-wr758ac-v2-
-          - comfast-cf-wr800n-
+          - comfast-cf-e110n-v2
+          - comfast-cf-e120a-v3
+          - comfast-cf-e130n-v2
+          - comfast-cf-e313ac
+          - comfast-cf-e314n-v2
+          - comfast-cf-e355ac-v2
+          - comfast-cf-e375ac
+          - comfast-cf-e380ac-v2
+          - comfast-cf-e390ax
+          - comfast-cf-e393ax
+          - comfast-cf-e5
+          - comfast-cf-e560ac
+          - comfast-cf-ew71-v2
+          - comfast-cf-ew72
+          - comfast-cf-ew72-v2
+          - comfast-cf-wr617ac
+          - comfast-cf-wr650ac-v1
+          - comfast-cf-wr650ac-v2
+          - comfast-cf-wr752ac-v1
+          - comfast-cf-wr758ac
+          - comfast-cf-wr758ac-v1
+          - comfast-cf-wr758ac-v2
+          - comfast-cf-wr800n
           - compatible
           - compex
-          - compex-wpj344-16m-
-          - compex-wpj419-
+          - compex-wpj344-16m
+          - compex-wpj419
           - compex-wpj428
-          - compex-wpj531-16m-
-          - compex-wpj558-16m-
-          - compex-wpj563-
-          - compex-wpq864-
-          - compex-wpq873-
+          - compex-wpj531-16m
+          - compex-wpj558-16m
+          - compex-wpj563
+          - compex-wpq864
+          - compex-wpq873
+          - compressed
           - comtrend
-          - comtrend-ar-5315u-
-          - comtrend-ar-5381u-
-          - comtrend-ar-5387un-
-          - comtrend-vg-8050-
-          - comtrend-vr-3025u-
-          - comtrend-vr-3025un-
-          - comtrend-vr-3032u-
-          - comtrend-wap-5813n-
+          - comtrend-ar-5315u
+          - comtrend-ar-5381u
+          - comtrend-ar-5387un
+          - comtrend-vg-8050
+          - comtrend-vr-3025u
+          - comtrend-vr-3025un
+          - comtrend-vr-3032u
+          - comtrend-wap-5813n
           - confiabits
-          - confiabits-mt7621-v1-
-          - confiabits-mt7981-
+          - confiabits-mt7621-v1
+          - confiabits-mt7981
+          - configdevice-name
           - connect
+          - copyright
           - covr-c1200
           - covr-p2500
           - covr-x1860
+          - cp
           - cpe200
           - cpe210
+          - cpe210-v2
+          - cpe210-v3
           - cpe220
           - cpe46b
           - cpe510
+          - cpe510-v2
           - cpe605
           - cpe610
           - cpe710
@@ -980,53 +1079,58 @@ on:
           - cr6609
           - creativebox
           - crisis
+          - cross-compiletarget-cross
           - cs-qr10
           - cs-w3-wd1200g
           - csr-8811
           - ct3003
           - ctera
-          - ctera-c200-v2-
+          - ctera-c200-v2
           - cudy
-          - cudy-ap3000-v1-
-          - cudy-ap3000outdoor-v1-
-          - cudy-m1200-v1-
-          - cudy-m1300-v2-
-          - cudy-m1800-
-          - cudy-m3000-v1-
-          - cudy-r700-
-          - cudy-re3000-v1-
-          - cudy-tr1200-v1-
-          - cudy-tr3000-256mb-v1-
-          - cudy-tr3000-v1-
-          - cudy-tr3000-v1-ubootmod-
-          - cudy-wr1000-
-          - cudy-wr1300-v1-
-          - cudy-wr1300-v2-
-          - cudy-wr1300-v3-
-          - cudy-wr2100-
-          - cudy-wr3000-v1-
-          - cudy-wr3000e-v1-
-          - cudy-wr3000h-v1-
-          - cudy-wr3000s-v1-
-          - cudy-x6-v1-
-          - cudy-x6-v2-
+          - cudy-ap3000-v1
+          - cudy-ap3000outdoor-v1
+          - cudy-m1200-v1
+          - cudy-m1300-v2
+          - cudy-m1800
+          - cudy-m3000-v1
+          - cudy-r700
+          - cudy-re3000-v1
+          - cudy-tr1200-v1
+          - cudy-tr3000-256mb-v1
+          - cudy-tr3000-v1
+          - cudy-tr3000-v1-ubootmod
+          - cudy-wr1000
+          - cudy-wr1300
+          - cudy-wr1300-v1
+          - cudy-wr1300-v2
+          - cudy-wr1300-v3
+          - cudy-wr2100
+          - cudy-wr3000-v1
+          - cudy-wr3000e-v1
+          - cudy-wr3000h-v1
+          - cudy-wr3000s-v1
+          - cudy-x6
+          - cudy-x6-v1
+          - cudy-x6-v2
+          - cvzp
           - cy-swr1100
           - cybertan-trx
+          - czf
           - d
           - d-link
-          - d-link-dgs-1210-10mp-f-
-          - d-link-dgs-1210-10p-
-          - d-link-dgs-1210-16-
-          - d-link-dgs-1210-20-
-          - d-link-dgs-1210-26-
-          - d-link-dgs-1210-28-
-          - d-link-dgs-1210-28mp-f-
-          - d-link-dgs-1210-28p-f-
-          - d-link-dgs-1210-52-
+          - d-link-dgs-1210-10mp-f
+          - d-link-dgs-1210-10p
+          - d-link-dgs-1210-16
+          - d-link-dgs-1210-20
+          - d-link-dgs-1210-26
+          - d-link-dgs-1210-28
+          - d-link-dgs-1210-28mp-f
+          - d-link-dgs-1210-28p-f
+          - d-link-dgs-1210-52
           - d-team
-          - d-team-newifi-d2-
-          - d-team-pbr-d1-
-          - d-team-pbr-m1-
+          - d-team-newifi-d2
+          - d-team-pbr-d1
+          - d-team-pbr-m1
           - d1
           - d105
           - d2
@@ -1044,6 +1148,7 @@ on:
           - dap
           - dap-1325
           - dap-1330
+          - dap-1330-a1
           - dap-1350
           - dap-1365
           - dap-1522
@@ -1057,6 +1162,7 @@ on:
           - dap-3662
           - dap-x1860
           - data
+          - datakernel
           - davicom-dm9000
           - db
           - db-wrt01
@@ -1065,26 +1171,37 @@ on:
           - dch-m225
           - dcs-930
           - dcs-930l
+          - dcs-930l-b1
           - deco
-          - define
+          - deco-m4r-v1
+          - deco-s4-v2
+          - default
           - dell
-          - dell-apl26-0ae-
-          - dell-apl27-0b1-
+          - dell-apl26-0ae
+          - dell-apl27-0b1
           - denx-fit
           - denx-uimage
           - dev
+          - device
           - device-driversjson
+          - device-dts
+          - device-image
+          - device-name
+          - device-name-emmc
+          - device-name-fititb
+          - device-name-sdmmc
+          - device-name-snand
           - devolo
-          - devolo-dlan-pro-1200plus-ac-
-          - devolo-dvl1200e-
-          - devolo-dvl1200i-
-          - devolo-dvl1750c-
-          - devolo-dvl1750e-
-          - devolo-dvl1750i-
-          - devolo-dvl1750x-
-          - devolo-magic-2-wifi-
+          - devolo-dlan-pro-1200plus-ac
+          - devolo-dvl1200e
+          - devolo-dvl1200i
+          - devolo-dvl1750c
+          - devolo-dvl1750e
+          - devolo-dvl1750i
+          - devolo-dvl1750x
+          - devolo-magic-2-wifi
           - devolo-magic-2-wifi-next
-          - devolo-rac-
+          - devolo-rac
           - dgn1000b
           - dgn3500
           - dgn3500b
@@ -1107,142 +1224,159 @@ on:
           - dir-2640
           - dir-2660
           - dir-300
+          - dir-300-b1
+          - dir-300-b7
           - dir-3040
           - dir-3060
           - dir-320
+          - dir-320-b1
           - dir-505
+          - dir-505-a1
           - dir-510l
           - dir-600
+          - dir-600-b1
+          - dir-600-b2
           - dir-610
+          - dir-610-a1
           - dir-615
+          - dir-615-d
+          - dir-615-e4
+          - dir-615-h1
           - dir-620
+          - dir-620-a1
+          - dir-620-d1
           - dir-629
           - dir-645
           - dir-806a
           - dir-810l
           - dir-825
+          - dir-825-c1
           - dir-835
+          - dir-835-a1
           - dir-842
           - dir-853
           - dir-859
           - dir-860l
+          - dir-860l-b1
           - dir-867
           - dir-869
+          - dir-869-a1
           - dir-878
           - dir-882
           - dir825b1
           - dish
           - dl-wrx36
           - dlan
-          - dlink-aquila-pro-ai-m30-a1-
-          - dlink-aquila-pro-ai-m60-a1-
-          - dlink-covr-c1200-a1-
-          - dlink-covr-p2500-a1-
-          - dlink-covr-x1860-a1-
-          - dlink-dap-1325-a1-
-          - dlink-dap-1330-a1-
-          - dlink-dap-1350-
-          - dlink-dap-1365-a1-
-          - dlink-dap-1522-a1-
-          - dlink-dap-1620-b1-
-          - dlink-dap-1720-a1-
-          - dlink-dap-2230-a1-
+          - dlink-aquila-pro-ai-m30-a1
+          - dlink-aquila-pro-ai-m60-a1
+          - dlink-covr-c1200-a1
+          - dlink-covr-p2500-a1
+          - dlink-covr-x1860-a1
+          - dlink-dap-1325-a1
+          - dlink-dap-1330-a1
+          - dlink-dap-1350
+          - dlink-dap-1365-a1
+          - dlink-dap-1522-a1
+          - dlink-dap-1620-b1
+          - dlink-dap-1720-a1
+          - dlink-dap-2230-a1
           - dlink-dap-2610
-          - dlink-dap-2660-a1-
-          - dlink-dap-2680-a1-
-          - dlink-dap-2695-a1-
-          - dlink-dap-3320-a1-
-          - dlink-dap-3662-a1-
-          - dlink-dap-x1860-a1-
-          - dlink-dch-g020-a1-
-          - dlink-dch-m225-
-          - dlink-dcs-930-
-          - dlink-dcs-930l-b1-
-          - dlink-dir-1935-a1-
-          - dlink-dir-1960-a1-
-          - dlink-dir-2055-a1-
-          - dlink-dir-2150-a1-
-          - dlink-dir-2150-r1-
-          - dlink-dir-2640-a1-
-          - dlink-dir-2660-a1-
-          - dlink-dir-300-b1-
-          - dlink-dir-300-b7-
-          - dlink-dir-3040-a1-
-          - dlink-dir-3060-a1-
-          - dlink-dir-320-b1-
-          - dlink-dir-505-
-          - dlink-dir-510l-
-          - dlink-dir-600-b1-
-          - dlink-dir-610-a1-
-          - dlink-dir-615-d-
-          - dlink-dir-615-e4-
-          - dlink-dir-615-h1-
-          - dlink-dir-620-a1-
-          - dlink-dir-620-d1-
-          - dlink-dir-629-a1-
-          - dlink-dir-645-
-          - dlink-dir-806a-b1-
-          - dlink-dir-810l-
-          - dlink-dir-825-b1-
-          - dlink-dir-825-c1-
-          - dlink-dir-835-a1-
-          - dlink-dir-842-c1-
-          - dlink-dir-842-c2-
-          - dlink-dir-842-c3-
-          - dlink-dir-853-a1-
-          - dlink-dir-853-a3-
-          - dlink-dir-853-r1-
-          - dlink-dir-859-a1-
-          - dlink-dir-859-a3-
-          - dlink-dir-860l-b1-
-          - dlink-dir-867-a1-
-          - dlink-dir-869-a1-
-          - dlink-dir-878-a1-
-          - dlink-dir-878-r1-
-          - dlink-dir-882-a1-
-          - dlink-dir-882-r1-
-          - dlink-dns320l-
-          - dlink-dra-1360-a1-
-          - dlink-dsl-2750b-b1-
-          - dlink-dwr-116-a1-
-          - dlink-dwr-118-a1-
-          - dlink-dwr-118-a2-
-          - dlink-dwr-512-b-
-          - dlink-dwr-921-c1-
-          - dlink-dwr-922-e2-
-          - dlink-dwr-960-
-          - dlink-dwr-961-a1-
-          - dlink-eagle-pro-ai-m32-a1-
-          - dlink-eagle-pro-ai-r32-a1-
+          - dlink-dap-2660-a1
+          - dlink-dap-2680-a1
+          - dlink-dap-2695-a1
+          - dlink-dap-3320-a1
+          - dlink-dap-3662-a1
+          - dlink-dap-x1860-a1
+          - dlink-dch-g020-a1
+          - dlink-dch-m225
+          - dlink-dcs-930
+          - dlink-dcs-930l-b1
+          - dlink-dir-1935-a1
+          - dlink-dir-1960-a1
+          - dlink-dir-2055-a1
+          - dlink-dir-2150-a1
+          - dlink-dir-2150-r1
+          - dlink-dir-2640-a1
+          - dlink-dir-2660-a1
+          - dlink-dir-300-b1
+          - dlink-dir-300-b7
+          - dlink-dir-3040-a1
+          - dlink-dir-3060-a1
+          - dlink-dir-320-b1
+          - dlink-dir-505
+          - dlink-dir-510l
+          - dlink-dir-600-b1
+          - dlink-dir-610-a1
+          - dlink-dir-615-d
+          - dlink-dir-615-e4
+          - dlink-dir-615-h1
+          - dlink-dir-620-a1
+          - dlink-dir-620-d1
+          - dlink-dir-629-a1
+          - dlink-dir-645
+          - dlink-dir-806a-b1
+          - dlink-dir-810l
+          - dlink-dir-825-b1
+          - dlink-dir-825-c1
+          - dlink-dir-835-a1
+          - dlink-dir-842-c1
+          - dlink-dir-842-c2
+          - dlink-dir-842-c3
+          - dlink-dir-853-a1
+          - dlink-dir-853-a3
+          - dlink-dir-853-r1
+          - dlink-dir-859-a1
+          - dlink-dir-859-a3
+          - dlink-dir-860l-b1
+          - dlink-dir-867-a1
+          - dlink-dir-869-a1
+          - dlink-dir-878-a1
+          - dlink-dir-878-r1
+          - dlink-dir-882-a1
+          - dlink-dir-882-r1
+          - dlink-dns320l
+          - dlink-dra-1360-a1
+          - dlink-dsl-2750b-b1
+          - dlink-dwr-116-a1
+          - dlink-dwr-118-a1
+          - dlink-dwr-118-a2
+          - dlink-dwr-512-b
+          - dlink-dwr-921-c1
+          - dlink-dwr-922-e2
+          - dlink-dwr-960
+          - dlink-dwr-961-a1
+          - dlink-eagle-pro-ai-m32-a1
+          - dlink-eagle-pro-ai-r32-a1
           - dm06
           - dm200
           - dm202
           - dm203
           - dna
-          - dna-valokuitu-plus-ex400-
+          - dna-valokuitu-plus-ex400
           - dns-320l
           - domywifi
-          - domywifi-dm202-
-          - domywifi-dm203-
-          - domywifi-dw22d-
-          - domywifi-dw33d-
+          - domywifi-dm202
+          - domywifi-dm203
+          - domywifi-dw22d
+          - domywifi-dw33d
           - dongwon
-          - dongwon-dw02-412h-128m-
-          - dongwon-dw02-412h-64m-
+          - dongwon-dw02-412h-128m
+          - dongwon-dw02-412h-64m
           - dorin
           - dovado
-          - dovado-tiny-ac-
+          - dovado-tiny-ac
           - dr40x9
           - dr531
           - dra-1360
           - dsl
           - dsl-2750b
+          - dtb
           - dts
           - dual-q
-          - dual-q-h721-
+          - dual-q-h721
           - duo
           - duzun
-          - duzun-dm06-
+          - duzun-dm06
           - dvb-c
           - dvk
           - dw02-412h
@@ -1251,16 +1385,18 @@ on:
           - dwr-116
           - dwr-118
           - dwr-512
+          - dwr-512-b
           - dwr-921
           - dwr-922
           - dwr-960
           - dwr-961
           - dynaimage-ap3223
           - dynalink
-          - dynalink-dl-wrx36-
+          - dynalink-dl-wrx36
           - e10
           - e1700
           - e1700ac
+          - e1700ac-v2
           - e2
           - e2600ac
           - e300
@@ -1269,12 +1405,17 @@ on:
           - e5
           - e5400
           - e558
+          - e558-v2
           - e5600
           - e600g
+          - e600g-v2
           - e600gac
+          - e600gac-v2
           - e7350
           - e750a
+          - e750a-v4
           - e750g
+          - e750g-v8
           - e8350
           - e8450
           - ea0326gmp
@@ -1313,7 +1454,7 @@ on:
           - easy50712
           - easy80920
           - easyacc
-          - easyacc-wizard-8800-
+          - easyacc-wizard-8800
           - easybox
           - eax12
           - ec220-g5
@@ -1322,103 +1463,106 @@ on:
           - ecb1750
           - ecb350
           - ecb600
+          - echo
           - echolife
           - ecw5211
           - ecw5410
           - edgecore
-          - edgecore-eap102-
-          - edgecore-eap111-
+          - edgecore-eap102
+          - edgecore-eap111
           - edgecore-ecw5211
-          - edgecore-ecw5410-
+          - edgecore-ecw5410
           - edgecore-oap100
           - edgerouter
           - edgeswitch
           - edimax
-          - edimax-3g-6200n-
-          - edimax-3g-6200nl-
-          - edimax-br-6208ac-v2-
-          - edimax-br-6475nd-
-          - edimax-br-6478ac-v2-
-          - edimax-cax1800-
-          - edimax-ew-7476rpc-
-          - edimax-ew-7478ac-
-          - edimax-ew-7478apc-
-          - edimax-ra21s-
-          - edimax-re23s-
-          - edimax-rg21s-
+          - edimax-3g-6200n
+          - edimax-3g-6200nl
+          - edimax-br-6208ac-v2
+          - edimax-br-6475nd
+          - edimax-br-6478ac-v2
+          - edimax-cax1800
+          - edimax-ew-7476rpc
+          - edimax-ew-7478ac
+          - edimax-ew-7478apc
+          - edimax-ra21s
+          - edimax-re23s
+          - edimax-rg21s
           - edition
           - edpu
+          - eg
           - eg200
           - elecom
-          - elecom-wab-i1750-ps-
-          - elecom-wab-s1167-ps-
-          - elecom-wab-s600-ps-
-          - elecom-wmc-m1267gst2-
-          - elecom-wmc-s1267gs2-
-          - elecom-wmc-x1800gst-
-          - elecom-wrc-1167fs-
-          - elecom-wrc-1167ghbk2-s-
-          - elecom-wrc-1167gs2-b-
-          - elecom-wrc-1167gst2-
-          - elecom-wrc-1750ghbk2-i-
-          - elecom-wrc-1750gs-
-          - elecom-wrc-1750gst2-
-          - elecom-wrc-1750gsv-
-          - elecom-wrc-1900gst-
-          - elecom-wrc-2533gent-
-          - elecom-wrc-2533ghbk-i-
-          - elecom-wrc-2533ghbk2-t-
-          - elecom-wrc-2533gs2-
-          - elecom-wrc-2533gst-
-          - elecom-wrc-2533gst2-
-          - elecom-wrc-300ghbk2-i-
-          - elecom-wrc-x1800gs-
-          - elecom-wrc-x3000gs2-
-          - elecom-wrc-x3000gs3-
-          - elecom-wrc-x3200gst3-
-          - elecom-wrh-300cr-
-          - elecom-wsc-x1800gs-
+          - elecom-wab-i1750-ps
+          - elecom-wab-s1167-ps
+          - elecom-wab-s600-ps
+          - elecom-wmc-m1267gst2
+          - elecom-wmc-s1267gs2
+          - elecom-wmc-x1800gst
+          - elecom-wrc-1167fs
+          - elecom-wrc-1167ghbk2-s
+          - elecom-wrc-1167gs2-b
+          - elecom-wrc-1167gst2
+          - elecom-wrc-1750ghbk2-i
+          - elecom-wrc-1750gs
+          - elecom-wrc-1750gst2
+          - elecom-wrc-1750gsv
+          - elecom-wrc-1900gst
+          - elecom-wrc-2533gent
+          - elecom-wrc-2533ghbk-i
+          - elecom-wrc-2533ghbk2-t
+          - elecom-wrc-2533gs2
+          - elecom-wrc-2533gst
+          - elecom-wrc-2533gst2
+          - elecom-wrc-300ghbk2-i
+          - elecom-wrc-x1800gs
+          - elecom-wrc-x3000gs2
+          - elecom-wrc-x3000gs3
+          - elecom-wrc-x3200gst3
+          - elecom-wrh-300cr
+          - elecom-wsc-x1800gs
           - electronics
           - elisa
           - embedded
-          - embeddedwireless-balin-
-          - embeddedwireless-dorin-
+          - embeddedwireless-balin
+          - embeddedwireless-dorin
           - emd1
           - emg2926-q10a
           - emmc
           - emr3500
           - en7523
           - engenius
-          - engenius-eap1200h-
+          - engenius-eap1200h
           - engenius-eap1300
-          - engenius-eap1750h-
+          - engenius-eap1750h
           - engenius-eap2200
-          - engenius-eap300-v2-
-          - engenius-eap350-v1-
-          - engenius-eap600-
-          - engenius-ecb1200-
-          - engenius-ecb1750-
-          - engenius-ecb350-v1-
-          - engenius-ecb600-
+          - engenius-eap300-v2
+          - engenius-eap350-v1
+          - engenius-eap600
+          - engenius-ecb1200
+          - engenius-ecb1750
+          - engenius-ecb350-v1
+          - engenius-ecb600
           - engenius-emd1
           - engenius-emr3500
-          - engenius-enh202-v1-
-          - engenius-ens1750-
-          - engenius-ens202ext-v1-
+          - engenius-enh202-v1
+          - engenius-ens1750
+          - engenius-ens202ext-v1
           - engenius-ens620ext
-          - engenius-enstationac-v1-
-          - engenius-epg5000-
-          - engenius-epg600-
-          - engenius-esr-9753-
-          - engenius-esr1200-
-          - engenius-esr1750-
-          - engenius-esr600-
-          - engenius-esr600h-
-          - engenius-esr900-
-          - engenius-ews2910p-v1-
-          - engenius-ews2910p-v3-
-          - engenius-ews511ap-
-          - engenius-ews660ap-
+          - engenius-enstationac-v1
+          - engenius-epg5000
+          - engenius-epg600
+          - engenius-esr-9753
+          - engenius-esr1200
+          - engenius-esr1750
+          - engenius-esr600
+          - engenius-esr600h
+          - engenius-esr900
+          - engenius-ews2910p
+          - engenius-ews2910p-v1
+          - engenius-ews2910p-v3
+          - engenius-ews511ap
+          - engenius-ews660ap
           - engineering
           - enh202
           - ens1750
@@ -1426,7 +1570,7 @@ on:
           - ens620ext
           - enstationac
           - enterasys
-          - enterasys-ws-ap3705i-
+          - enterasys-ws-ap3705i
           - enterasys-ws-ap3710i
           - enterasys-ws-ap3715i
           - epg5000
@@ -1441,16 +1585,16 @@ on:
           - esr600h
           - esr900
           - etactica
-          - etactica-eg200-
+          - etactica-eg200
           - etc
           - etg3-r
-          - ethernet-phy-id004d-d072-
-          - ethernet-phy-id004d-d074-
+          - ethernet-phy-id004d-d072
+          - ethernet-phy-id004d-d074
           - ethernet-phy-id004dd034
           - ethernet-phy-id004dd101
-          - ethernet-phy-id0141-0dd1-
-          - ethernet-phy-id01410cb0-
-          - ethernet-phy-id0143bca2-
+          - ethernet-phy-id0141-0dd1
+          - ethernet-phy-id01410cb0
+          - ethernet-phy-id0143bca2
           - ethernet-phy-id03a29461
           - ethernet-phy-id03a29471
           - ethernet-phy-id03a2a411
@@ -1458,10 +1602,10 @@ on:
           - ethernet-phy-ieee8023-c22
           - ethernet-phy-ieee8023-c45
           - etisalat
-          - etisalat-s3-
+          - etisalat-s3
           - eu
+          - eu-ru-jp
           - eup
-          - eurujp
           - evaluation
           - evb
           - everspin-mr25h256
@@ -1476,7 +1620,8 @@ on:
           - ews660ap
           - ex220
           - ex2700
-          - ex3700ex3800
+          - ex3700
+          - ex3700-ex3800
           - ex400
           - ex5601-t0
           - ex5700
@@ -1491,9 +1636,10 @@ on:
           - experiabox
           - extender
           - extra
+          - extract
           - extreme
-          - extreme-ap3935-
-          - extreme-networks-ws-ap3805i-
+          - extreme-ap3935
+          - extreme-networks-ws-ap3805i
           - extreme-networks-ws-ap3825i
           - extreme-networks-ws-ap3915i
           - extreme-networks-ws-ap391x
@@ -1501,8 +1647,10 @@ on:
           - ezviz-cs-w3-wd1200g-eup
           - f
           - f1
-          - f1dsl-2741b
+          - f1-dsl-2741b
           - f5d8235
+          - f5d8235-v1
+          - f5d8235-v2
           - f7c027
           - f9j1108
           - f9k1109
@@ -1516,10 +1664,15 @@ on:
           - fap640
           - fap650
           - fap690
+          - felix
+          - fietkau
+          - filename
+          - files
           - firebox
           - firefly
-          - firefly-firewrt-
+          - firefly-firewrt
           - firewrt
+          - firmware
           - fixed-clock
           - fixed-layout
           - fixed-partitions
@@ -1527,27 +1680,33 @@ on:
           - flex
           - flexhd
           - fon
-          - fon-fon2601-
-          - fon-fonera-20n-
+          - fon-fon2601
+          - fon-fonera-20n
           - fon2601
           - fonera
+          - fonera20n
           - fortigate
           - fortinet
-          - fortinet-fap-220-b-
-          - fortinet-fap-221-b-
-          - fortinet-fap-221-c-
-          - fortinet-fap-421e-
-          - fortinet-fg-30e-
-          - fortinet-fg-50e-
-          - fortinet-fg-51e-
-          - fortinet-fg-52e-
-          - fortinet-fwf-50e-2r-
-          - fortinet-fwf-51e-
+          - fortinet-fap-220-b
+          - fortinet-fap-221-b
+          - fortinet-fap-221-c
+          - fortinet-fap-421e
+          - fortinet-fg-30e
+          - fortinet-fg-50e
+          - fortinet-fg-51e
+          - fortinet-fg-52e
+          - fortinet-fwf-50e-2r
+          - fortinet-fwf-51e
           - fortiwifi
           - foundation
           - fr365
           - freestation5
           - freezio
+          - fritz300e
+          - fritz4020
+          - fritz450e
+          - fritz7320
+          - fritz7360sl
           - fritzbox
           - fritzrepeater
           - fritzwlan
@@ -1555,11 +1714,13 @@ on:
           - fsl-elbc-fcm-nand
           - fsl-etsec-ptp
           - fsl-ifc-nand
-          - fsl-p1020-fcm-nand-
+          - fsl-p1020-fcm-nand
+          - fsl-p2020rdb
           - fsl-t2081qds
           - fst
           - fttdp
           - fttdp8
+          - full
           - g-5hact2hnd
           - g1-c
           - g10
@@ -1568,28 +1729,29 @@ on:
           - gale
           - gateway
           - gatonetworks
-          - gatonetworks-gdsp-
+          - gatonetworks-gdsp
           - gb-pc1
           - gb-pc2
           - gdsp
           - gehua
-          - gehua-ghl-r-001-
+          - gehua-ghl-r-001
           - gemtek
-          - gemtek-wvrtm-127acn-
-          - gemtek-wvrtm-130acn-
+          - gemtek-wvrtm-127acn
+          - gemtek-wvrtm-130acn
           - gen
-          - gen-nand-
+          - gen-nand
           - gen1
           - gen2
           - generic-ehci
           - generic-ohci
           - genexis
-          - genexis-pulse-ex400-
+          - genexis-pulse-ex400
           - gfast
           - ghl-r-001
           - giga
           - gigabit
           - gigaset
+          - gigasx76x
           - gl-a1300
           - gl-ap1300
           - gl-ar150
@@ -1604,6 +1766,7 @@ on:
           - gl-b2200
           - gl-b3000
           - gl-e750
+          - gl-inet
           - gl-mifi
           - gl-mt1300
           - gl-mt2500
@@ -1624,64 +1787,69 @@ on:
           - gl-xe300
           - gl-xe3000
           - glinet
-          - glinet-6408-
-          - glinet-6416-
-          - glinet-gl-a1300-
+          - glinet-6408
+          - glinet-6416
+          - glinet-ax1800
+          - glinet-axt1800
+          - glinet-gl-a1300
           - glinet-gl-ap1300
-          - glinet-gl-ar150-
-          - glinet-gl-ar300m-lite-
-          - glinet-gl-ar300m-nand-
-          - glinet-gl-ar300m-nor-
-          - glinet-gl-ar300m16-
-          - glinet-gl-ar750-
-          - glinet-gl-ar750s-
-          - glinet-gl-ar750s-nor-
-          - glinet-gl-ar750s-nor-nand-
-          - glinet-gl-ax1800-
-          - glinet-gl-axt1800-
+          - glinet-gl-ar150
+          - glinet-gl-ar300m-lite
+          - glinet-gl-ar300m-nand
+          - glinet-gl-ar300m-nor
+          - glinet-gl-ar300m16
+          - glinet-gl-ar750
+          - glinet-gl-ar750s
+          - glinet-gl-ar750s-nor
+          - glinet-gl-ar750s-nor-nand
+          - glinet-gl-ax1800
+          - glinet-gl-axt1800
           - glinet-gl-b1300
-          - glinet-gl-b2200-
-          - glinet-gl-b3000-
-          - glinet-gl-e750-
-          - glinet-gl-mifi-
-          - glinet-gl-mt1300-
-          - glinet-gl-mt2500-
-          - glinet-gl-mt3000-
-          - glinet-gl-mt300a-
-          - glinet-gl-mt300n-
-          - glinet-gl-mt300n-v2-
-          - glinet-gl-mt6000-
-          - glinet-gl-mt750-
-          - glinet-gl-mv1000-
+          - glinet-gl-b2200
+          - glinet-gl-b3000
+          - glinet-gl-e750
+          - glinet-gl-mifi
+          - glinet-gl-mt1300
+          - glinet-gl-mt2500
+          - glinet-gl-mt2500-airoha
+          - glinet-gl-mt3000
+          - glinet-gl-mt300a
+          - glinet-gl-mt300n
+          - glinet-gl-mt300n-v2
+          - glinet-gl-mt6000
+          - glinet-gl-mt750
+          - glinet-gl-mv1000
           - glinet-gl-s1300
-          - glinet-gl-s200-
-          - glinet-gl-s200-nor-
-          - glinet-gl-s200-nor-nand-
-          - glinet-gl-usb150-
-          - glinet-gl-x1200-nor-
-          - glinet-gl-x1200-nor-nand-
-          - glinet-gl-x3000-
-          - glinet-gl-x300b-
-          - glinet-gl-x750-
-          - glinet-gl-xe300-
-          - glinet-gl-xe3000-
-          - glinet-microuter-n300-
-          - glinet-vixmini-
+          - glinet-gl-s200
+          - glinet-gl-s200-nor
+          - glinet-gl-s200-nor-nand
+          - glinet-gl-usb150
+          - glinet-gl-x1200-nor
+          - glinet-gl-x1200-nor-nand
+          - glinet-gl-x3000
+          - glinet-gl-x300b
+          - glinet-gl-x750
+          - glinet-gl-xe300
+          - glinet-gl-xe3000
+          - glinet-microuter-n300
+          - glinet-mt2500-emmc
+          - glinet-mt3000-snand
+          - glinet-vixmini
           - globalscale
-          - globalscale-espressobin-ultra-
-          - globalscale-mochabin-
+          - globalscale-espressobin-ultra
+          - globalscale-mochabin
           - gmt-g761
           - gmt-g781
           - gnubee
-          - gnubee-gb-pc1-
-          - gnubee-gb-pc2-
+          - gnubee-gb-pc1
+          - gnubee-gb-pc2
           - goflex
           - google
-          - google-arkham-
-          - google-gale-v2-
+          - google-arkham
+          - google-gale-v2
           - google-storm-audio
-          - google-whirlwind-sp5-
-          - google-wifi-
+          - google-whirlwind-sp5
+          - google-wifi
           - gpio-beeper
           - gpio-cascade
           - gpio-export
@@ -1694,6 +1862,8 @@ on:
           - gpio-mux
           - gpio-poweroff
           - gpio-restart
+          - gpt-partitions
+          - group0
           - gs108t
           - gs110tpp
           - gs110tup
@@ -1710,12 +1880,13 @@ on:
           - gs310tp
           - gs750e
           - h1
+          - h201l
           - h210l
           - h3c
-          - h3c-magic-nx30-pro-
-          - h3c-tx1800-plus-
-          - h3c-tx1801-plus-
-          - h3c-tx1806-
+          - h3c-magic-nx30-pro
+          - h3c-tx1800-plus
+          - h3c-tx1801-plus
+          - h3c-tx1806
           - h3c-vfs-firmware
           - h500-s
           - h721
@@ -1723,22 +1894,22 @@ on:
           - h8922
           - habanero
           - haier
-          - haier-har-20s2u1-
+          - haier-har-20s2u1
           - hak5
-          - hak5-lan-turtle-
-          - hak5-packet-squirrel-
-          - hak5-wifi-pineapple-mk7-
-          - hak5-wifi-pineapple-nano-
+          - hak5-lan-turtle
+          - hak5-packet-squirrel
+          - hak5-wifi-pineapple-mk7
+          - hak5-wifi-pineapple-nano
           - hame
-          - hame-mpr-a1-
-          - hame-mpr-a2-
-          - hanyang-hyc-g920-
+          - hame-mpr-a1
+          - hame-mpr-a2
+          - hanyang-hyc-g920
           - hap
           - har-20s2u1
           - hasivo
-          - hasivo-s1100w-8xgt-se-
+          - hasivo-s1100w-8xgt-se
           - hauppauge
-          - hauppauge-broadway-
+          - hauppauge-broadway
           - haze
           - hc5611
           - hc5661
@@ -1752,7 +1923,7 @@ on:
           - hd
           - hdrm200
           - head
-          - head-weblink-hdrm200-
+          - head-weblink-hdrm200
           - hewlett-packard
           - hex
           - hg253s
@@ -1764,208 +1935,215 @@ on:
           - hi-link
           - high
           - hilink
-          - hilink-hlk-7621a-evb-
-          - hilink-hlk-7628n-
-          - hilink-hlk-7688a-
-          - hilink-hlk-rm04-
+          - hilink-hlk-7621a-evb
+          - hilink-hlk-7628n
+          - hilink-hlk-7688a
+          - hilink-hlk-rm04
           - hiveap
+          - hiveap-121
           - hiveap-330
           - hiwifi
-          - hiwifi-hc5611-
-          - hiwifi-hc5661-
-          - hiwifi-hc5661a-
-          - hiwifi-hc5761-
-          - hiwifi-hc5761a-
-          - hiwifi-hc5861-
-          - hiwifi-hc5861b-
-          - hiwifi-hc5962-
-          - hiwifi-hc6361-
+          - hiwifi-hc5611
+          - hiwifi-hc5661
+          - hiwifi-hc5661a
+          - hiwifi-hc5761
+          - hiwifi-hc5761a
+          - hiwifi-hc5861
+          - hiwifi-hc5861b
+          - hiwifi-hc5962
+          - hiwifi-hc6361
           - hlk-7621a
           - hlk-7628n
           - hlk-7688a
           - hlk-rm04
           - hnet
-          - hnet-c108-
+          - hnet-c108
           - home
           - homewrk
           - hongdian
-          - hongdian-h8922-v30-
+          - hongdian-h8922-v30
           - hootoo
-          - hootoo-ht-tm02-
-          - hootoo-ht-tm05-
+          - hootoo-ht-tm02
+          - hootoo-ht-tm05
           - hpe
-          - hpe-1920-16g-
-          - hpe-1920-24g-
-          - hpe-1920-24g-poe-180w-
-          - hpe-1920-24g-poe-370w-
-          - hpe-1920-48g-
-          - hpe-1920-48g-poe-
-          - hpe-1920-8g-
-          - hpe-1920-8g-poe-180w-
-          - hpe-1920-8g-poe-65w-
+          - hpe-1920-16g
+          - hpe-1920-24g
+          - hpe-1920-24g-poe-180w
+          - hpe-1920-24g-poe-370w
+          - hpe-1920-48g
+          - hpe-1920-48g-poe
+          - hpe-1920-8g
+          - hpe-1920-8g-poe
+          - hpe-1920-8g-poe-180w
+          - hpe-1920-8g-poe-65w
           - hpe-msm460
           - hpm
           - ht-tm02
           - ht-tm05
           - huasifei
-          - huasifei-wh3000-
-          - huasifei-wh3000-pro-
-          - huasifei-ws1208v2-
+          - huasifei-wh3000
+          - huasifei-wh3000-emmc
+          - huasifei-wh3000-pro
+          - huasifei-ws1208v2
           - huawei
-          - huawei-ap5030dn-
-          - huawei-ap6010dn-
-          - huawei-d105-
-          - huawei-hg253s-v2-
-          - huawei-hg255d-
-          - huawei-hg553-
-          - huawei-hg556a-a-
-          - huawei-hg556a-b-
-          - huawei-hg556a-c-
+          - huawei-ap5030dn
+          - huawei-ap6010dn
+          - huawei-d105
+          - huawei-hg253s-v2
+          - huawei-hg255d
+          - huawei-hg553
+          - huawei-hg556a-a
+          - huawei-hg556a-b
+          - huawei-hg556a-c
           - hub
           - humax
-          - humax-e10-
-          - humax-e2-
+          - humax-e10
+          - humax-e2
           - hw-wdt
           - hw550-3g
           - hyc-g920
           - hynix
+          - i
           - i-o
           - i2c-gpio
           - i2c-gpio-shared
           - iad
           - ibm-cpm
-          - ibm-cpm-apm821xx-
+          - ibm-cpm-apm821xx
           - ibm-cpr-460ex
           - ibm-ebc
-          - ibm-ebc-460ex-
-          - ibm-emac-apm821xx-
+          - ibm-ebc-460ex
+          - ibm-emac-apm821xx
           - ibm-emac4sync
           - ibm-iic
-          - ibm-iic-460ex-
+          - ibm-iic-460ex
           - ibm-l2-cache
-          - ibm-l2-cache-apm82181-
-          - ibm-mcmal-460ex-
+          - ibm-l2-cache-apm82181
+          - ibm-mcmal-460ex
           - ibm-mcmal2
           - ibm-ndfc
           - ibm-ocm
           - ibm-opb
-          - ibm-opb-460ex-
-          - ibm-plb-460ex-
+          - ibm-opb-460ex
+          - ibm-plb-460ex
           - ibm-plb-pciex
-          - ibm-plb-pciex-apm821xx-
+          - ibm-plb-pciex-apm821xx
           - ibm-plb4
           - ibm-ppc4xx-gpio
           - ibm-rgmii
-          - ibm-rgmii-405ex-
+          - ibm-rgmii-405ex
           - ibm-rtc
           - ibm-sdr-460ex
           - ibm-sdram-405gp
-          - ibm-sdram-460ex-
+          - ibm-sdram-460ex
           - ibm-tah
-          - ibm-tah-460ex-
+          - ibm-tah-460ex
           - ibm-uic
           - iei
-          - iei-puzzle-m901-
-          - iei-puzzle-m902-
+          - iei-puzzle-m901
+          - iei-puzzle-m902
           - iei-wt61p803-puzzle
           - iei-wt61p803-puzzle-hwmon
           - iei-wt61p803-puzzle-leds
           - ignitenet
-          - ignitenet-ss-w2-ac2600-
+          - ignitenet-ss-w2-ac2600
           - ii
           - iii
           - iij
-          - iij-sa-w2-
+          - iij-sa-w2
           - iij-seil-firmware
           - il
+          - image
           - imagegeneration
+          - in
           - ina219
           - inaba
-          - inaba-aml2-17gp-
+          - inaba-aml2-17gp
           - inc
+          - included
           - infineon-slb9645tt
-          - infineon-slb9645tt-
+          - info
           - innacomm
-          - innacomm-w3400v6-
+          - innacomm-w3400v6
           - innovation
           - inside-secure-safexcel-eip93ies
           - int
           - intel
           - intel-vrx518
           - inteno
-          - inteno-xg6846-
+          - inteno-xg6846
           - intenso
-          - intenso-memory2move-
+          - intenso-memory2move
           - international
           - invensense-icp201xx
           - inxp-pcf8574a
-          - iodata-bsh-g24mb-
-          - iodata-etg3-r-
-          - iodata-wn-ac1167dgr-
-          - iodata-wn-ac1167gr-
-          - iodata-wn-ac1600dgr-
-          - iodata-wn-ac1600dgr2-
-          - iodata-wn-ac1600dgr3-
-          - iodata-wn-ac733gr3-
-          - iodata-wn-ag300dgr-
-          - iodata-wn-ax1167gr-
-          - iodata-wn-ax1167gr2-
-          - iodata-wn-ax2033gr-
-          - iodata-wn-dax3000gr-
-          - iodata-wn-deax1800gr-
-          - iodata-wn-dx1167r-
-          - iodata-wn-dx1200gr-
-          - iodata-wn-dx2033gr-
-          - iodata-wn-gx300gr-
-          - iodata-wnpr2600g-
-          - iom-ix4-200d-
+          - iodata-bsh-g24mb
+          - iodata-etg3-r
+          - iodata-wn-ac1167dgr
+          - iodata-wn-ac1167gr
+          - iodata-wn-ac1600dgr
+          - iodata-wn-ac1600dgr2
+          - iodata-wn-ac1600dgr3
+          - iodata-wn-ac733gr3
+          - iodata-wn-ag300dgr
+          - iodata-wn-ax1167gr
+          - iodata-wn-ax1167gr2
+          - iodata-wn-ax2033gr
+          - iodata-wn-dax3000gr
+          - iodata-wn-deax1800gr
+          - iodata-wn-dx1167r
+          - iodata-wn-dx1200gr
+          - iodata-wn-dx2033gr
+          - iodata-wn-gx300gr
+          - iodata-wnpr2600g
+          - iom-ix4-200d
           - iomega
           - ip2202
-          - ipq8064ap-148
-          - ipq8064ap161
-          - ipq8064db149
+          - ipq8064-ap-148
+          - ipq8064-ap161
+          - ipq8064-db149
           - iptime
-          - iptime-a1004ns-
-          - iptime-a104ns-
-          - iptime-a3-
-          - iptime-a3002mesh-
-          - iptime-a3004ns-dual-
-          - iptime-a3004t-
-          - iptime-a6004mx-
-          - iptime-a6004ns-m-
-          - iptime-a604m-
-          - iptime-a6ns-m-
-          - iptime-a8004t-
-          - iptime-ax2004m-
-          - iptime-ax3000q-
-          - iptime-ax3000sm-
-          - iptime-nas1-
-          - iptime-nas1dual-
-          - iptime-t5004-
+          - iptime-a1004ns
+          - iptime-a104ns
+          - iptime-a3
+          - iptime-a3002mesh
+          - iptime-a3004ns-dual
+          - iptime-a3004t
+          - iptime-a6004mx
+          - iptime-a6004ns-m
+          - iptime-a604m
+          - iptime-a6ns-m
+          - iptime-a8004t
+          - iptime-ax2004m
+          - iptime-ax3000q
+          - iptime-ax3000sm
+          - iptime-nas1
+          - iptime-nas1dual
+          - iptime-t5004
           - is
           - isil-isl1208
           - isl-isl28022
           - isp
           - issi-is31fl3199
+          - its
           - ix4-200d
           - ja76pf2
           - jalapeno
           - jcg
-          - jcg-jhr-ac876m-
-          - jcg-jhr-n805r-
-          - jcg-jhr-n825r-
-          - jcg-jhr-n926r-
-          - jcg-q20-
-          - jcg-q30-pro-
-          - jcg-y2-
+          - jcg-jhr-ac876m
+          - jcg-jhr-n805r
+          - jcg-jhr-n825r
+          - jcg-jhr-n926r
+          - jcg-q20
+          - jcg-q30-pro
+          - jcg-y2
           - jdcloud
-          - jdcloud-re-cp-02-
-          - jdcloud-re-cp-03-
-          - jdcloud-re-sp-01b-
+          - jdcloud-re-cp-02
+          - jdcloud-re-cp-03
+          - jdcloud-re-sp-01b
           - jedec-flash
           - jedec-jc-424-temp
           - jedec-spi-nor
-          - jedec-spi-nor-
           - jg920a
           - jg921a
           - jg922a
@@ -1980,45 +2158,57 @@ on:
           - jhr-n825r
           - jhr-n926r
           - jjplus
-          - jjplus-ja76pf2-
-          - jjplus-jwap230-
+          - jjplus-ja76pf2
+          - jjplus-jwap230
+          - joowin-jw-wr758ac-v1
+          - joowin-jw-wr758ac-v2
           - jotale
-          - jotale-js76x8-
-          - jotale-js76x8-16m-
-          - jotale-js76x8-32m-
-          - jotale-js76x8-8m-
+          - jotale-js76x8
+          - jotale-js76x8-16m
+          - jotale-js76x8-32m
+          - jotale-js76x8-8m
           - joy-it
-          - joyit-jt-or750i-
+          - joyit-jt-or750i
           - js76x8
+          - json-quote-if
           - jt-or750i
           - jwap230
           - jwnr2010
+          - k
           - k2
           - k2g
           - k2p
           - k2t
+          - kdir-device-name-fit-zimageitb
+          - kdir-loader-device-nameuimage
+          - kdir-tmp-device-namenull
           - keenetic
-          - keenetic-kn-1112-
-          - keenetic-kn-1212-
-          - keenetic-kn-1221-
-          - keenetic-kn-1613-
-          - keenetic-kn-1711-
-          - keenetic-kn-1713-
-          - keenetic-kn-1910-
-          - keenetic-kn-3010-
-          - keenetic-kn-3211-
-          - keenetic-kn-3510-
-          - keenetic-kn-3811-
-          - keenetic-kn-3911-
+          - keenetic-kn-1112
+          - keenetic-kn-1212
+          - keenetic-kn-1221
+          - keenetic-kn-1613
+          - keenetic-kn-1711
+          - keenetic-kn-1713
+          - keenetic-kn-1910
+          - keenetic-kn-3010
+          - keenetic-kn-3211
+          - keenetic-kn-3510
+          - keenetic-kn-3811
+          - keenetic-kn-3911
+          - kernel
+          - kernel-img-in
+          - kernel-img-out
+          - kernel-rootfs
           - kimax
-          - kimax-u25awf-h1-ralink-mt7620a-soc
-          - kimax-u35wf-ralink-mt7620n-soc
+          - kimax-u25awf-h1
+          - kimax-u35wf
           - kinetic-ktd2026
           - kingston
-          - kingston-mlw221-
-          - kingston-mlwg2-
+          - kingston-mlw221
+          - kingston-mlwg2
           - kit
           - kiwi-dvk
+          - kn
           - kn-1112
           - kn-1212
           - kn-1221
@@ -2031,20 +2221,24 @@ on:
           - kn-3510
           - kn-3811
           - kn-3911
+          - kn-rc
+          - kn-rf
           - kndrt31r16
           - kndrt31r19
+          - kng-rc
           - knife
           - koala
           - kpn
           - kroks
-          - kroks-kndrt31r16-
-          - kroks-kndrt31r19-
+          - kroks-kndrt31r16
+          - kroks-kndrt31r19
           - kuwfi
-          - kuwfi-c910-
-          - kuwfi-n650-
+          - kuwfi-c910
+          - kuwfi-n650
           - la
           - lab
           - lan
+          - lan-turtle
           - lantiq
           - lantiq-adsl-arx100
           - lantiq-adsl-ase
@@ -2054,16 +2248,16 @@ on:
           - lantiq-asc
           - lantiq-ase
           - lantiq-ase-pinctrl
-          - lantiq-ase-rcu-
+          - lantiq-ase-rcu
           - lantiq-ase-spi
           - lantiq-ase-usb
           - lantiq-ase-usb2-phy
-          - lantiq-biu-
+          - lantiq-biu
           - lantiq-cgu-xway
           - lantiq-cputemp
           - lantiq-danube
           - lantiq-danube-pinctrl
-          - lantiq-danube-rcu-
+          - lantiq-danube-rcu
           - lantiq-danube-reset
           - lantiq-danube-usb
           - lantiq-danube-usb2-phy
@@ -2072,33 +2266,33 @@ on:
           - lantiq-deu-danube
           - lantiq-deu-xrx200
           - lantiq-dma-xway
-          - lantiq-easy50712-
-          - lantiq-easy80920-
-          - lantiq-easy80920-nand-
-          - lantiq-easy80920-nor-
-          - lantiq-easy88388-
-          - lantiq-easy88444-
-          - lantiq-easy98000-
+          - lantiq-easy50712
+          - lantiq-easy80920
+          - lantiq-easy80920-nand
+          - lantiq-easy80920-nor
+          - lantiq-easy88388
+          - lantiq-easy88444
+          - lantiq-easy98000
           - lantiq-easy98000-addon
           - lantiq-easy98000-cpld-led
-          - lantiq-easy98000-nand-
-          - lantiq-easy98000-nor-
-          - lantiq-easy98000-sflash-
-          - lantiq-easy98020-
-          - lantiq-easy98020-v18-
-          - lantiq-easy98021-
-          - lantiq-easy98035synce-
-          - lantiq-easy98035synce1588-
+          - lantiq-easy98000-nand
+          - lantiq-easy98000-nor
+          - lantiq-easy98000-sflash
+          - lantiq-easy98020
+          - lantiq-easy98020-v18
+          - lantiq-easy98021
+          - lantiq-easy98035synce
+          - lantiq-easy98035synce1588
           - lantiq-ebu-falcon
           - lantiq-ebu-xway
           - lantiq-eiu-xway
           - lantiq-etop-xway
           - lantiq-falcon
           - lantiq-falcon-gpio
-          - lantiq-falcon-mdu-
-          - lantiq-falcon-sfp-
-          - lantiq-falcon-spi-
-          - lantiq-fpi-
+          - lantiq-falcon-mdu
+          - lantiq-falcon-sfp
+          - lantiq-falcon-spi
+          - lantiq-fpi
           - lantiq-gphy-fw
           - lantiq-gpio-mm
           - lantiq-gpio-stp-xway
@@ -2106,32 +2300,34 @@ on:
           - lantiq-gptu-xway
           - lantiq-icu
           - lantiq-lantiq-i2c
-          - lantiq-localbus-
+          - lantiq-localbus
           - lantiq-mei-xrx200
           - lantiq-mei-xway
-          - lantiq-mps-falcon-
+          - lantiq-mps-falcon
           - lantiq-mps-xrx100
           - lantiq-nand-falcon
           - lantiq-nand-xway
           - lantiq-nor
-          - lantiq-onu-asc1-lantiq-pinselect-asc1
-          - lantiq-onu-ntr-lantiq-pinselect-ntr
+          - lantiq-onu-asc1
+          - lantiq-onu-ntr
           - lantiq-pad-falcon
           - lantiq-pci-xway
           - lantiq-pcie-xrx200
           - lantiq-pinctrl-falcon
           - lantiq-pinselect-asc0
+          - lantiq-pinselect-asc1
+          - lantiq-pinselect-ntr
           - lantiq-pmu-xway
           - lantiq-ppe-arx100
           - lantiq-ppe-ase
           - lantiq-ppe-danube
           - lantiq-ppe-xrx200
-          - lantiq-sflash-falcon-
+          - lantiq-sflash-falcon
           - lantiq-spi-lantiq-ssc
-          - lantiq-sram-
+          - lantiq-sram
           - lantiq-status-falcon
           - lantiq-sys1-falcon
-          - lantiq-sysb2-
+          - lantiq-sysb2
           - lantiq-syseth-falcon
           - lantiq-sysgpe-falcon
           - lantiq-usif
@@ -2141,41 +2337,42 @@ on:
           - lantiq-vrx200-pcie-phy
           - lantiq-wdt
           - lantiq-xrx100-pinctrl
-          - lantiq-xrx100-rcu-
-          - lantiq-xrx100-reset-
+          - lantiq-xrx100-rcu
+          - lantiq-xrx100-reset
           - lantiq-xrx100-spi
-          - lantiq-xrx100-spi-
           - lantiq-xrx100-usb2-phy
           - lantiq-xrx100-wdt
-          - lantiq-xrx100-wdt-
-          - lantiq-xrx200-fpi-
-          - lantiq-xrx200-gphy-fw-
+          - lantiq-xrx200-fpi
+          - lantiq-xrx200-gphy-fw
           - lantiq-xrx200-gswip
           - lantiq-xrx200-mdio
           - lantiq-xrx200-net
           - lantiq-xrx200-pinctrl
-          - lantiq-xrx200-rcu-
+          - lantiq-xrx200-rcu
           - lantiq-xrx200-reset
-          - lantiq-xrx200-spi-
+          - lantiq-xrx200-spi
           - lantiq-xrx200-usb
           - lantiq-xrx200-usb2-phy
-          - lantiq-xway-
+          - lantiq-xway
           - lap-120
           - lava
-          - lava-lr-25g001-
+          - lava-lr-25g001
           - layout
           - lb-link
-          - lb-link-bl-w1200-
+          - lb-link-bl-w1200
           - lba-047-ch
+          - lbe-m5
           - lbr20
           - le1
           - legacy
+          - lemaker-bananapi-m2-berry
+          - lemaker-bananapi-m2-ultra
           - lenovo
-          - lenovo-newifi-d1-
-          - lenovo-newifi-y1-
-          - lenovo-newifi-y1s-
+          - lenovo-newifi-d1
+          - lenovo-newifi-y1
+          - lenovo-newifi-y1s
           - letv
-          - letv-lba-047-ch-
+          - letv-lba-047-ch
           - lgs310c
           - lhg
           - lhg-hb
@@ -2184,74 +2381,83 @@ on:
           - lib32
           - lib64
           - librerouter
-          - librerouter-librerouter-v1-
+          - librerouter-librerouter-v1
           - libusr-is-merged
           - lima
           - linkit
+          - linkits7688
+          - linkits7688d
           - linkstation
           - linksys
-          - linksys-armada385-
-          - linksys-audi-
-          - linksys-e1700-
-          - linksys-e4200-v2-
-          - linksys-e5400-
-          - linksys-e5600-
-          - linksys-e7350-
-          - linksys-e8350-v1-
-          - linksys-e8450-
-          - linksys-e8450-ubi-
-          - linksys-ea3500-
-          - linksys-ea4500-
-          - linksys-ea4500-v3-
-          - linksys-ea6350-v4-
+          - linksys-armada385
+          - linksys-audi
+          - linksys-caiman
+          - linksys-cobra
+          - linksys-e1700
+          - linksys-e4200-v2
+          - linksys-e5400
+          - linksys-e5600
+          - linksys-e7350
+          - linksys-e8350-v1
+          - linksys-e8450
+          - linksys-e8450-ubi
+          - linksys-ea3500
+          - linksys-ea4500
+          - linksys-ea4500-v3
+          - linksys-ea6350-v4
           - linksys-ea6350v3
-          - linksys-ea7300-v1-
-          - linksys-ea7300-v2-
-          - linksys-ea7500-v1-
-          - linksys-ea7500-v2-
-          - linksys-ea7500-v3-
-          - linksys-ea8100-v1-
-          - linksys-ea8100-v2-
-          - linksys-ea8300-
-          - linksys-ea8500-
-          - linksys-homewrk-
-          - linksys-lgs310c-
-          - linksys-mr5500-
-          - linksys-mr7350-
-          - linksys-mr7500-
-          - linksys-mr8300-
-          - linksys-mx2000-
-          - linksys-mx4200v1-
-          - linksys-mx4200v2-
-          - linksys-mx4300-
-          - linksys-mx5300-
-          - linksys-mx5500-
-          - linksys-mx8500-
-          - linksys-re6500-
-          - linksys-re7000-
-          - linksys-spnmx56-
-          - linksys-venom-
-          - linksys-viper-
+          - linksys-ea7300-v1
+          - linksys-ea7300-v2
+          - linksys-ea7500-v1
+          - linksys-ea7500-v2
+          - linksys-ea7500-v3
+          - linksys-ea8100-v1
+          - linksys-ea8100-v2
+          - linksys-ea8300
+          - linksys-ea8500
+          - linksys-homewrk
+          - linksys-lgs310c
+          - linksys-mamba
+          - linksys-mr5500
+          - linksys-mr7350
+          - linksys-mr7500
+          - linksys-mr8300
+          - linksys-mx2000
+          - linksys-mx4200v1
+          - linksys-mx4200v2
+          - linksys-mx4300
+          - linksys-mx5300
+          - linksys-mx5500
+          - linksys-mx8500
+          - linksys-rango
+          - linksys-re6500
+          - linksys-re7000
+          - linksys-shelby
+          - linksys-spnmx56
+          - linksys-venom
+          - linksys-viper
           - linksys-whw01
-          - linksys-whw03-
-          - linksys-whw03v2-
-          - linksys-wrt32x-
+          - linksys-whw03
+          - linksys-whw03v2
+          - linksys-wrt32x
           - linux-spidev
           - linux-ubi
           - linux-wdt-gpio
           - lite
-          - lite2lite5
+          - lite2-lite5
           - lite5
           - liteap
           - litebeam
           - live
           - livebox
-          - loader-
+          - loader
+          - loader-name
           - loco
+          - loco-m-xw
           - loewe
-          - loewe-wmdr-143n-
+          - loewe-wmdr-143n
           - longdata
-          - longdata-aps256-
+          - longdata-aps256
           - lostfound
           - lowi
           - lr
@@ -2267,6 +2473,7 @@ on:
           - lte7490-m904
           - luma
           - luma-wrtq-329acn
+          - lvl7
           - lyra
           - lzma
           - m
@@ -2275,6 +2482,7 @@ on:
           - m1300
           - m1800
           - m2
+          - m2m
           - m3
           - m30
           - m300
@@ -2282,80 +2490,89 @@ on:
           - m32
           - m33g
           - m4
+          - m4-4m
+          - m4-8m
           - m4r
           - m5
           - m60
           - mac-base
           - mac1200r
-          - macronix-mx25l6405d-
+          - mac1200rv2
+          - macronix-mx25l6405d
           - magic
           - maginon
-          - maginon-mc-1200ac-
-          - maginon-wlr-755-
+          - maginon-mc-1200ac
+          - maginon-wlr-755
           - mango-dvk
           - map
           - map-2nd
           - map-ac2200
           - mapl-2nd
           - mark
+          - marsboard-a10-marsboard
           - marvell
           - marvell-88e1116
+          - marvell-a385-rd
           - marvell-armada-370-xp
-          - marvell-armada-ap807-quad-
-          - marvell-armada370-
+          - marvell-armada-ap807-quad
+          - marvell-armada370
           - marvell-armada3710
           - marvell-armada3720
-          - marvell-armada3720-
           - marvell-armada380
-          - marvell-armada385-
-          - marvell-armada7040-
-          - marvell-armada8040-
+          - marvell-armada385
+          - marvell-armada7040
+          - marvell-armada8040
+          - marvell-armada8040-clearfog-gt-8k
+          - marvell-armada8040-mcbin
+          - marvell-armada8040-mcbin-doubleshot
+          - marvell-armada8040-mcbin-singleshot
           - marvell-cp115-standalone-pinctrl
           - marvell-kirkwood
-          - marvell-kirkwood-88f6281-
-          - marvell-kirkwood-88f6282-
-          - marvell-kirkwood-88f6702-
+          - marvell-kirkwood-88f6281
+          - marvell-kirkwood-88f6282
+          - marvell-kirkwood-88f6702
           - marvell-mv88e6060
           - marvell-mv88e6085
           - marvell-mv88e6190
           - marvell-mv88e6xxx-mdio-external
           - maxim-max6699
           - maxim-max98357a
-          - maxlinear-gpy211-
+          - maxlinear-gpy211
           - mb130-4g
+          - mbl
           - mc-1200ac
           - mcp3221
           - mdu
           - media
           - mediapack
           - mediatek
-          - mediatek-ap-mt7621a-v60-
+          - mediatek-ap-mt7621a-v60
           - mediatek-eth-mac
           - mediatek-eth-port
           - mediatek-gpio-wifi
-          - mediatek-linkit-smart-7688-
+          - mediatek-linkit-smart-7688
           - mediatek-mt6323-led
           - mediatek-mt7531
           - mediatek-mt76
           - mediatek-mt7620-eth
           - mediatek-mt7620-gsw
           - mediatek-mt7620-i2s
-          - mediatek-mt7620-mmc-
+          - mediatek-mt7620-mmc
           - mediatek-mt7620-pci
           - mediatek-mt7620-usbphy
           - mediatek-mt7621
           - mediatek-mt7621-eth
-          - mediatek-mt7621-eval-board-
+          - mediatek-mt7621-eval-board
           - mediatek-mt7621-gpio
           - mediatek-mt7621-hsdma
           - mediatek-mt7621-i2c
           - mediatek-mt7621-i2s
-          - mediatek-mt7621-memc-
+          - mediatek-mt7621-memc
           - mediatek-mt7621-nfc
           - mediatek-mt7621-pci
           - mediatek-mt7621-pci-phy
           - mediatek-mt7621-soc
-          - mediatek-mt7621-sysc-
+          - mediatek-mt7621-sysc
           - mediatek-mt7621-wdt
           - mediatek-mt7622
           - mediatek-mt7622-mmc
@@ -2364,55 +2581,59 @@ on:
           - mediatek-mt7623
           - mediatek-mt7628-i2s
           - mediatek-mt7628-pwm
-          - mediatek-mt7628-usbphy-
+          - mediatek-mt7628-usbphy
           - mediatek-mt7628-wmac
-          - mediatek-mt7628an-eval-board-
+          - mediatek-mt7628an-eval-board
           - mediatek-mt7628an-soc
           - mediatek-mt7628dan
           - mediatek-mt7629
           - mediatek-mt7915-bluetooth
           - mediatek-mt7981
-          - mediatek-mt7981-rfb-
+          - mediatek-mt7981-rfb
+          - mediatek-mt7981-spim-nor-rfb
+          - mediatek-mt7981-spim-snand-2500wan-gmac2-rfb
+          - mediatek-mt7981-spim-snand-rfb
           - mediatek-mt7981b
           - mediatek-mt7986a
           - mediatek-mt7986a-rfb
           - mediatek-mt7986a-rfb-snand
           - mediatek-mt7986a-rfb-snor
           - mediatek-mt7986b
+          - mediatek-mt7986b-rfb
           - mediatek-mt7988a
           - mediatek-mt7988d
           - mediatek-mt8173-xhci
           - mediatek-mtk-eip93
           - mediatek-rtk-gsw
           - meig
-          - meig-slt866-
+          - meig-slt866
           - memory
           - meraki
-          - meraki-buckminster-
-          - meraki-ikarem-
-          - meraki-mr12-
-          - meraki-mr16-
-          - meraki-mr18-
-          - meraki-mr24-
+          - meraki-buckminster
+          - meraki-ikarem
+          - meraki-mr12
+          - meraki-mr16
+          - meraki-mr18
+          - meraki-mr24
           - meraki-mr33
-          - meraki-mr42-
-          - meraki-mr52-
+          - meraki-mr42
+          - meraki-mr52
           - meraki-mr74
-          - meraki-mx60-
+          - meraki-mx60
           - mercury
-          - mercury-mac1200r-v2-
-          - mercury-mw4530r-v1-
+          - mercury-mac1200r-v2
+          - mercury-mw4530r-v1
           - mercusys
-          - mercusys-mb130-4g-v1-
-          - mercusys-mr70x-v1-
-          - mercusys-mr80x-v3-
-          - mercusys-mr90x-v1-
-          - mercusys-mr90x-v1-ubi-
+          - mercusys-mb130-4g-v1
+          - mercusys-mr70x-v1
+          - mercusys-mr80x-v3
+          - mercusys-mr90x-v1
+          - mercusys-mr90x-v1-ubi
           - mesh
           - meshpointone
           - methode
-          - methode-edpu-
-          - methode-udpu-
+          - methode-edpu
+          - methode-udpu
           - mf18a
           - mf269
           - mf281
@@ -2432,13 +2653,15 @@ on:
           - microchip-mcp3021
           - microchip-mcp3221
           - microchip-mcp7941x
-          - microchip-sst39vf040
+          - microchip-sama5d2-icp
+          - microchip-sama5d27-wlsom1-ek
+          - microchip-sama7g5ek
           - microchip-tc654
           - microchip-tcn75
           - microduino
-          - microduino-microwrt-
+          - microduino-microwrt
           - micron
-          - micron-n25q128a11-
+          - micron-n25q128a11
           - microuter-n300
           - microwrt
           - mikrotik
@@ -2448,41 +2671,44 @@ on:
           - mikrotik-hap-ac3
           - mikrotik-hap-ac3-lte6-kit
           - mikrotik-lhgg-60ad
-          - mikrotik-ltap-2hnd-
+          - mikrotik-ltap-2hnd
           - mikrotik-minor
           - mikrotik-rb4xx-cpld
           - mikrotik-rb4xx-gpio
           - mikrotik-rb4xx-nand
           - mikrotik-rb4xx-spi
-          - mikrotik-rb5009-
+          - mikrotik-rb5009
+          - mikrotik-rb750gr3
           - mikrotik-rb91x-nand
-          - mikrotik-routerboard-2011uias-2hnd-
-          - mikrotik-routerboard-493g-
-          - mikrotik-routerboard-750-r2-
-          - mikrotik-routerboard-750gr3-
-          - mikrotik-routerboard-760igs-
-          - mikrotik-routerboard-911-lite-
-          - mikrotik-routerboard-911g-5hpacd-
-          - mikrotik-routerboard-911g-xhpnd-
-          - mikrotik-routerboard-912uag-2hpnd-
-          - mikrotik-routerboard-921gs-5hpacd-15s-
-          - mikrotik-routerboard-922uags-5hpacd-
-          - mikrotik-routerboard-951g-2hnd-
-          - mikrotik-routerboard-951ui-2hnd-
-          - mikrotik-routerboard-951ui-2nd-
-          - mikrotik-routerboard-952ui-5ac2nd-
-          - mikrotik-routerboard-962uigs-5hact2hnt-
-          - mikrotik-routerboard-lhg-2nd-
-          - mikrotik-routerboard-lhg-5nd-
-          - mikrotik-routerboard-lhg-hb-
-          - mikrotik-routerboard-m11g-
-          - mikrotik-routerboard-m33g-
-          - mikrotik-routerboard-map-2nd-
-          - mikrotik-routerboard-mapl-2nd-
-          - mikrotik-routerboard-sxt-5nd-r2-
-          - mikrotik-routerboard-wap-2nd-
-          - mikrotik-routerboard-wap-g-5hact2hnd-
-          - mikrotik-routerboard-wapr-2nd-
+          - mikrotik-rbm11g
+          - mikrotik-rbm33g
+          - mikrotik-routerboard-2011uias-2hnd
+          - mikrotik-routerboard-493g
+          - mikrotik-routerboard-750-r2
+          - mikrotik-routerboard-750gr3
+          - mikrotik-routerboard-760igs
+          - mikrotik-routerboard-911-lite
+          - mikrotik-routerboard-911g-5hpacd
+          - mikrotik-routerboard-911g-xhpnd
+          - mikrotik-routerboard-912uag-2hpnd
+          - mikrotik-routerboard-921gs-5hpacd-15s
+          - mikrotik-routerboard-922uags-5hpacd
+          - mikrotik-routerboard-951g-2hnd
+          - mikrotik-routerboard-951ui-2hnd
+          - mikrotik-routerboard-951ui-2nd
+          - mikrotik-routerboard-952ui-5ac2nd
+          - mikrotik-routerboard-962uigs-5hact2hnt
+          - mikrotik-routerboard-lhg-2nd
+          - mikrotik-routerboard-lhg-5nd
+          - mikrotik-routerboard-lhg-hb
+          - mikrotik-routerboard-m11g
+          - mikrotik-routerboard-m33g
+          - mikrotik-routerboard-map-2nd
+          - mikrotik-routerboard-mapl-2nd
+          - mikrotik-routerboard-sxt-5nd-r2
+          - mikrotik-routerboard-wap-2nd
+          - mikrotik-routerboard-wap-g-5hact2hnd
+          - mikrotik-routerboard-wapr-2nd
           - mikrotik-routerboot-nvmem
           - mikrotik-routerboot-partitions
           - mikrotik-sxtsq-5-ac
@@ -2490,7 +2716,8 @@ on:
           - mikrotik-wap-ac-lte
           - mikrotik-wap-r-ac
           - minew
-          - minew-g1-c-
+          - minew-g1-c
+          - minew-g1c
           - mini
           - miniembplug
           - miniembwifi
@@ -2502,8 +2729,12 @@ on:
           - mips-mips4kc
           - mips-mips4kec
           - mips-mips74kc
+          - mir3g
+          - mirabox
           - mirror
           - miwifi
+          - miwifi-mini
+          - miwifi-nano
           - mlw221
           - mlwg2
           - mmc-card
@@ -2518,24 +2749,28 @@ on:
           - modem
           - mofi
           - mofi3500-3gn
+          - mofi5500
           - mofi5500-5gxelte
-          - mofinetwork-mofi3500-3gn-
-          - mofinetwork-mofi5500-5gxelte-
+          - mofinetwork-mofi3500-3gn
+          - mofinetwork-mofi5500-5gxelte
           - motorola
-          - motorola-mwr03-
+          - motorola-mwr03
           - move
           - moxa
-          - moxa-awk-1137c-
+          - moxa-awk-1137c
           - mozart
           - mp-252
           - mpr-a1
           - mpr-a2
           - mqmaker
-          - mqmaker-witi-
+          - mqmaker-witi
+          - mqmaker-witi-256m
+          - mqmaker-witi-512m
           - mr-102n
           - mr12
           - mr16
           - mr1750
+          - mr1750v2
           - mr18
           - mr200
           - mr24
@@ -2544,6 +2779,7 @@ on:
           - mr52
           - mr5500
           - mr600
+          - mr600v2
           - mr70x
           - mr7350
           - mr74
@@ -2551,21 +2787,29 @@ on:
           - mr80x
           - mr8300
           - mr900
+          - mr900v2
           - mr90x
-          - ms20002110
+          - ms2000-2110
           - msg1500
           - msm460
           - mstc-boot
           - mt7530
           - mt7610e
           - mt7620a
+          - mt7620a-mt7530
+          - mt7620a-mt7610e
+          - mt7620a-v22sg
           - mt7621
+          - mt7621-dm2-t-mb5eu-v01-nor
+          - mt7621-rfb-ax-nor
           - mt7622-mt7531
+          - mt7628
           - mt7628an
           - mt7981
           - mt7986a
+          - mt7988-bl31-uboot
           - mtc
-          - mtc-wr1201-
+          - mtc-wr1201
           - mtd-concat
           - mti-cpu-interrupt-controller
           - mti-gic
@@ -2576,23 +2820,26 @@ on:
           - mti-mips-cpc
           - mtk-mt7620-nand
           - mts
-          - mts-wg430223-
+          - mts-wg430223
           - mw4530r
           - mwr03
           - mx2000
-          - mx25l6405d-jedec-spi-nor
-          - mx25u25635f-
+          - mx25l6405d
+          - mx25u25635f
           - mx4200v1
           - mx4200v2
           - mx4300
           - mx5300
           - mx5500
-          - mx60mx60w
+          - mx60-mx60w
           - mx8500
-          - mxicy-mx25l8005-
+          - mxicy-mx25l8005
           - my
           - mybook
           - mycloud
+          - mynet-n600
+          - mynet-n750
+          - mynet-rext
           - mzk-750dhp
           - mzk-dp150n
           - mzk-ex300np
@@ -2611,12 +2858,20 @@ on:
           - na502
           - na502s
           - na930
+          - name
+          - names
           - nand
           - nano
           - nanobeam
           - nanobridge
           - nanohd
+          - nanopi-neo-plus2
+          - nanopi-neo2
+          - nanopi-r1s-h5
+          - nanopi-r4s-rk3399
           - nanostation
+          - nanostation-m
+          - nanostation-m-xw
           - nas
           - nas1
           - nas1dual
@@ -2626,172 +2881,181 @@ on:
           - national-lm92
           - national-lp5521
           - national-lp5523
+          - nbdnbdname
           - nbg-419n
+          - nbg-419n2
           - nbg6616
           - nbg6617
           - nbg6716
           - nbg6817
           - nbg7815
-          - ncp-hg100cellular
+          - ncp-hg100-cellular
           - ncs601w
           - nec
-          - nec-wf1200cr-
-          - nec-wg1200cr-
-          - nec-wg1400hp-
-          - nec-wg1800hp-
-          - nec-wg1800hp2-
-          - nec-wg2200hp-
-          - nec-wg2600hp-
-          - nec-wg2600hp3-
-          - nec-wg600hp-
-          - nec-wg800hp-
-          - nec-wr8750n-
-          - nec-wr9500n-
+          - nec-wf1200cr
+          - nec-wg1200cr
+          - nec-wg1400hp
+          - nec-wg1800hp
+          - nec-wg1800hp2
+          - nec-wg2200hp
+          - nec-wg2600hp
+          - nec-wg2600hp3
+          - nec-wg600hp
+          - nec-wg800hp
+          - nec-wr8750n
+          - nec-wr9500n
+          - needed
           - net
           - netcore
-          - netcore-n60-
-          - netcore-n60-pro-
-          - netcore-nw5212-
-          - netcore-nw718-
+          - netcore-n60
+          - netcore-n60-pro
+          - netcore-nw5212
+          - netcore-nw718
           - netfaster
           - netgear
-          - netgear-d7800-
-          - netgear-dgn1000b-
-          - netgear-dgn3500-
-          - netgear-dgn3500b-
-          - netgear-dgnd3700-v1-
-          - netgear-dgnd3700-v2-
-          - netgear-dgnd3800b-
-          - netgear-dm200-
-          - netgear-eax12-
-          - netgear-evg2000-
-          - netgear-ex2700-
-          - netgear-ex3700-
+          - netgear-d7800
+          - netgear-dgn1000b
+          - netgear-dgn3500
+          - netgear-dgn3500b
+          - netgear-dgnd3700-v1
+          - netgear-dgnd3700-v2
+          - netgear-dgnd3800b
+          - netgear-dm200
+          - netgear-eax12
+          - netgear-evg2000
+          - netgear-ex2700
+          - netgear-ex3700
           - netgear-ex6100v2
-          - netgear-ex6120-
-          - netgear-ex6130-
-          - netgear-ex6150-
+          - netgear-ex6120
+          - netgear-ex6130
+          - netgear-ex6150
           - netgear-ex6150v2
           - netgear-ex61x0v2
-          - netgear-ex6250-v2-
-          - netgear-ex7300-
-          - netgear-ex7300-v2-
-          - netgear-gs108t-v3-
-          - netgear-gs110tpp-v1-
-          - netgear-gs110tup-v1-
-          - netgear-gs308t-v1-
-          - netgear-gs310tp-v1-
-          - netgear-gs750e-
-          - netgear-jwnr2010-v5-
+          - netgear-ex6250-v2
+          - netgear-ex6400
+          - netgear-ex7300
+          - netgear-ex7300-v2
+          - netgear-gs108t-v3
+          - netgear-gs110tpp-v1
+          - netgear-gs110tup-v1
+          - netgear-gs308t-v1
+          - netgear-gs310tp-v1
+          - netgear-gs750e
+          - netgear-jwnr2010-v5
           - netgear-lbr20
-          - netgear-pgzng1-
-          - netgear-pr2000-
-          - netgear-r6020-
-          - netgear-r6080-
-          - netgear-r6100-
-          - netgear-r6120-
-          - netgear-r6220-
-          - netgear-r6260-
-          - netgear-r6350-
-          - netgear-r6700-v2-
-          - netgear-r6800-
-          - netgear-r6850-
-          - netgear-r6900-v2-
-          - netgear-r7200-
-          - netgear-r7450-
-          - netgear-r7500-
-          - netgear-r7500v2-
-          - netgear-r7800-
-          - netgear-rax120v2-
+          - netgear-pgzng1
+          - netgear-pr2000
+          - netgear-r6020
+          - netgear-r6080
+          - netgear-r6100
+          - netgear-r6120
+          - netgear-r6220
+          - netgear-r6260
+          - netgear-r6350
+          - netgear-r6700-v2
+          - netgear-r6800
+          - netgear-r6850
+          - netgear-r6900-v2
+          - netgear-r7200
+          - netgear-r7450
+          - netgear-r7500
+          - netgear-r7500v2
+          - netgear-r7800
+          - netgear-rax120v2
           - netgear-rbr40
           - netgear-rbr50
           - netgear-rbs40
           - netgear-rbs50
           - netgear-srr60
           - netgear-srs60
-          - netgear-stora-
-          - netgear-sxr80-
-          - netgear-sxs80-
-          - netgear-wac104-
-          - netgear-wac124-
+          - netgear-stora
+          - netgear-sxr80
+          - netgear-sxs80
+          - netgear-wac104
+          - netgear-wac124
           - netgear-wac510
-          - netgear-wax202-
-          - netgear-wax206-
-          - netgear-wax214-
-          - netgear-wax214v2-
-          - netgear-wax218-
-          - netgear-wax220-
-          - netgear-wax610-
-          - netgear-wax610y-
-          - netgear-wax620-
-          - netgear-wax630-
-          - netgear-wn3000rp-v3-
-          - netgear-wn3100rp-v2-
-          - netgear-wnce2001-
-          - netgear-wndap360-
-          - netgear-wndap620-
-          - netgear-wndap660-
-          - netgear-wndr3700-
-          - netgear-wndr3700-v2-
-          - netgear-wndr3700-v4-
-          - netgear-wndr3700-v5-
-          - netgear-wndr3800-
-          - netgear-wndr3800ch-
-          - netgear-wndr4300-
-          - netgear-wndr4300-v2-
-          - netgear-wndr4300sw-
-          - netgear-wndr4300tn-
-          - netgear-wndr4500-v3-
-          - netgear-wndr4700-
-          - netgear-wndrmac-v1-
-          - netgear-wndrmac-v2-
-          - netgear-wnr1000-v2-
-          - netgear-wnr2000-v3-
-          - netgear-wnr2200-16m-
-          - netgear-wnr2200-8m-
-          - netgear-wnr612-v2-
-          - netgear-xr450-
-          - netgear-xr500-
+          - netgear-wax202
+          - netgear-wax206
+          - netgear-wax214
+          - netgear-wax214v2
+          - netgear-wax218
+          - netgear-wax220
+          - netgear-wax610
+          - netgear-wax610y
+          - netgear-wax620
+          - netgear-wax630
+          - netgear-wn3000rp-v3
+          - netgear-wn3100rp-v2
+          - netgear-wnce2001
+          - netgear-wndap360
+          - netgear-wndap620
+          - netgear-wndap660
+          - netgear-wndr3700
+          - netgear-wndr3700-v2
+          - netgear-wndr3700-v4
+          - netgear-wndr3700-v5
+          - netgear-wndr3700v2
+          - netgear-wndr3800
+          - netgear-wndr3800ch
+          - netgear-wndr4300
+          - netgear-wndr4300-v2
+          - netgear-wndr4300sw
+          - netgear-wndr4300tn
+          - netgear-wndr4500-v3
+          - netgear-wndr4700
+          - netgear-wndrmac-v1
+          - netgear-wndrmac-v2
+          - netgear-wnr1000-v2
+          - netgear-wnr2000-v3
+          - netgear-wnr2200-16m
+          - netgear-wnr2200-8m
+          - netgear-wnr612-v2
+          - netgear-xr450
+          - netgear-xr500
           - netis
-          - netis-n6-
-          - netis-nx31-
-          - netis-wf2770-
-          - netis-wf2881-
+          - netis-n6
+          - netis-nx31
+          - netis-wf2770
+          - netis-wf2881
           - network
           - networks
           - newer
           - newifi
+          - newifi-d1
           - nexaira
-          - nexaira-bc2-
+          - nexaira-bc2
           - next
           - nexx
-          - nexx-wt1520-
-          - nexx-wt1520-4m-
-          - nexx-wt1520-8m-
-          - nexx-wt3020-
-          - nexx-wt3020-4m-
-          - nexx-wt3020-8m-
+          - nexx-wt1520
+          - nexx-wt1520-4m
+          - nexx-wt1520-8m
+          - nexx-wt3020
+          - nexx-wt3020-4m
+          - nexx-wt3020-8m
           - nighthawk
-          - nixcore-x1-
-          - nixcore-x1-16m-
-          - nixcore-x1-8m-
+          - nixcore-x1
+          - nixcore-x1-16m
+          - nixcore-x1-8m
           - nixcorex1
           - nokia
-          - nokia-ac400i-
-          - nokia-ea0326gmp-
+          - nokia-ac400i
+          - nokia-ea0326gmp
           - nor
-          - nornand
+          - nor-nand
+          - not
+          - notdir
           - nr7101
           - nradio
-          - nradio-c8-668gl-
+          - nradio-c8-668gl
           - ns16550
           - ns16550a
-          - ns16750-
+          - ns16750
           - ns8250
           - nsa310b
           - nt082c
           - nucom
-          - nucom-r5010unv2-
+          - nucom-r5010unv2
+          - numeric-owner
           - nuvoton-nct7802
           - nvmem-cells
           - nvmem-rmem
@@ -2818,89 +3082,108 @@ on:
           - nxp-pcf2129
           - nxp-pcf8563
           - nxp-pcf8574
+          - o
+          - o-format
           - o2
           - oap-100
+          - objcopy
           - observa
-          - observa-vh4032n-
+          - observa-vh4032n
           - ocedo
-          - ocedo-koala-
+          - ocedo-koala
           - ocedo-panda
-          - ocedo-raccoon-
-          - ocedo-ursus-
-          - ohyeah-oy-0001-
+          - ocedo-raccoon
+          - ocedo-ursus
+          - of
+          - offset
+          - ohyeah-oy-0001
           - older
           - olimex
-          - olimex-rt5350f-olinuxino-
-          - olimex-rt5350f-olinuxino-evb-
+          - olimex-a13-olinuxino
+          - olimex-rt5350f-olinuxino
+          - olimex-rt5350f-olinuxino-evb
           - om2p
           - om2p-hs
+          - om2p-hsv2
+          - om2p-hsv3
+          - om2p-hsv4
           - om2p-lc
+          - om2pv2
+          - om2pv4
           - om5p
           - om5p-ac
+          - om5p-acv2
           - om5p-an
           - omega
           - omega2
+          - omega2p
           - omni
           - omnima
-          - omnima-hpm-
-          - omnima-miniembplug-
-          - omnima-miniembwifi-
+          - omnima-hpm
+          - omnima-miniembplug
+          - omnima-miniembwifi
           - on
-          - on-n150r-
+          - on-n150r
           - on100
           - one
           - onhub
           - onie-tlv-layout
           - onion
-          - onion-omega-
-          - onion-omega2-
-          - onion-omega2p-
+          - onion-omega
+          - onion-omega2
+          - onion-omega2p
           - op
+          - openblocks-ax3-4
           - openembed
-          - openembed-som7981-
+          - openembed-som7981
           - openfi
-          - openfi-5pro-
+          - openfi-5pro
           - openmesh
-          - openmesh-a40-
+          - openmesh-a40
           - openmesh-a42
-          - openmesh-a60-
+          - openmesh-a60
           - openmesh-a62
-          - openmesh-mr1750-v1-
-          - openmesh-mr1750-v2-
-          - openmesh-mr600-v1-
-          - openmesh-mr600-v2-
-          - openmesh-mr900-v1-
-          - openmesh-mr900-v2-
-          - openmesh-om2p-hs-v1-
-          - openmesh-om2p-hs-v2-
-          - openmesh-om2p-hs-v3-
-          - openmesh-om2p-hs-v4-
-          - openmesh-om2p-lc-
-          - openmesh-om2p-v1-
-          - openmesh-om2p-v2-
-          - openmesh-om2p-v4-
-          - openmesh-om5p-
-          - openmesh-om5p-ac-v1-
-          - openmesh-om5p-ac-v2-
-          - openmesh-om5p-an-
+          - openmesh-mr1750-v1
+          - openmesh-mr1750-v2
+          - openmesh-mr600-v1
+          - openmesh-mr600-v2
+          - openmesh-mr900-v1
+          - openmesh-mr900-v2
+          - openmesh-om2p-hs-v1
+          - openmesh-om2p-hs-v2
+          - openmesh-om2p-hs-v3
+          - openmesh-om2p-hs-v4
+          - openmesh-om2p-lc
+          - openmesh-om2p-v1
+          - openmesh-om2p-v2
+          - openmesh-om2p-v4
+          - openmesh-om5p
+          - openmesh-om5p-ac-v1
+          - openmesh-om5p-ac-v2
+          - openmesh-om5p-an
           - openreach
           - openwrt
           - openwrt-elf
-          - openwrt-one-
+          - openwrt-one
           - openwrt-uimage
-          - openwrt-uimage-
           - operating-points-v2
           - opt
           - or
           - orange
           - oraybox
-          - oraybox-x1-
-          - oraybox-x3a-
+          - oraybox-x1
+          - oraybox-x3a
+          - order
           - outdoor
+          - output
+          - owner0
           - oy-0001
           - p-2601hn-fx
           - p-2812hnu-f1
           - p-2812hnu-f3
+          - p2601hnfx
+          - p2812hnuf1
+          - p2812hnuf3
           - p2w-r619ac-128m
           - p2w-r619ac-64m
           - pa1200
@@ -2908,16 +3191,18 @@ on:
           - pa300
           - pa300e
           - packet
+          - packet-squirrel
+          - pad-to
           - pakedge
           - pakedge-wr-1
           - palmbus
           - panasonic
-          - panasonic-m16eg-pn28160k-
-          - panasonic-m24eg-pn28240k-
-          - panasonic-m48eg-pn28480k-
-          - panasonic-m8eg-pn28080k-
+          - panasonic-m16eg-pn28160k
+          - panasonic-m24eg-pn28240k
+          - panasonic-m48eg-pn28480k
+          - panasonic-m8eg-pn28080k
           - panda
-          - partition
+          - part-name
           - pbr-d1
           - pbr-m1
           - pci0-0
@@ -2949,90 +3234,95 @@ on:
           - pci1814-3592
           - pci1814-5592
           - pci1912-0015
-          - pcs-cap324-
-          - pcs-cr3000-
-          - pcs-cr5000-
+          - pcs-cap324
+          - pcs-cr3000
+          - pcs-cr5000
           - pericom-pt7c43390
           - petatel
-          - petatel-psr-680w-
+          - petatel-psr-680w
           - pgzng1
           - phicomm
-          - phicomm-k2-v224-
-          - phicomm-k2-v225-
-          - phicomm-k2g-
-          - phicomm-k2p-
-          - phicomm-k2t-
-          - phicomm-psg1208-
-          - phicomm-psg1218-
-          - phicomm-psg1218b-
-          - phy
+          - phicomm-k2-v224
+          - phicomm-k2-v225
+          - phicomm-k2g
+          - phicomm-k2p
+          - phicomm-k2t
+          - phicomm-psg1208
+          - phicomm-psg1218
+          - phicomm-psg1218a
+          - phicomm-psg1218b
           - pi-wifi4
           - picostation
           - pinconf-single
           - pinctrl-single
+          - pine64-rockpro64-v21
           - pineapple
           - pirelli
           - pisen
-          - pisen-ts-d084-
-          - pisen-wmb001n-
-          - pisen-wmm003n-
+          - pisen-ts-d084
+          - pisen-wmb001n
+          - pisen-wmm003n
           - pl-ac56
           - planex
-          - planex-cs-qr10-
-          - planex-db-wrt01-
-          - planex-mzk-750dhp-
-          - planex-mzk-dp150n-
-          - planex-mzk-ex300np-
-          - planex-mzk-ex750np-
-          - planex-mzk-w300nh2-
-          - planex-mzk-wdpr-
-          - planex-vr500-
+          - planex-cs-qr10
+          - planex-db-wrt01
+          - planex-mzk-750dhp
+          - planex-mzk-dp150n
+          - planex-mzk-ex300np
+          - planex-mzk-ex750np
+          - planex-mzk-w300nh2
+          - planex-mzk-wdpr
+          - planex-vr500
           - plasma
           - plasmacloud-pa1200
           - plasmacloud-pa2200
-          - plasmacloud-pa300-
-          - plasmacloud-pa300e-
+          - plasmacloud-pa300
+          - plasmacloud-pa300e
           - platform
           - platforms
           - plus
-          - pm25lv512-
+          - pm25lv512
           - pn28080k
           - pn28160k
           - pn28240k
           - pn28480k
           - point
           - poray
-          - poray-ip2202-
-          - poray-m3-
-          - poray-m4-
-          - poray-m4-4m-
-          - poray-m4-8m-
-          - poray-x5-
-          - poray-x8-
+          - poray-ip2202
+          - poray-m3
+          - poray-m4
+          - poray-m4-4m
+          - poray-m4-8m
+          - poray-x5
+          - poray-x8
           - power
           - powerbeam
           - powerbridge
           - powercloud
           - powerpc-apm82181
           - ppc4xx-pka
-          - ppc4xx-pka-
-          - ppc4xx-rng-
+          - ppc4xx-rng
           - ppc4xx-trng
           - pps-gpio
           - pqi
-          - pqi-air-pen-
+          - pqi-air-pen
           - pr2000
           - predator
+          - prefixed
+          - prepended
           - prg
           - pro
           - proc
+          - profiles
           - prolink
-          - prolink-pwh2004-
+          - prolink-pwh2004
           - prpl
-          - prpl-haze-
+          - prpl-haze
           - psb
           - psg1208
           - psg1218
+          - psg1218a
+          - psg1218b
           - psr-680w
           - pulse
           - puzzle-m901
@@ -3042,20 +3332,22 @@ on:
           - pwm-fan
           - pwm-leds
           - px-4885
+          - px-4885-4m
+          - px-4885-8m
           - q20
           - q30
           - q7
-          - qca-ap143-16m-
-          - qca-ap143-8m-
+          - qca-ap143-16m
+          - qca-ap143-8m
           - qca-ar7100
           - qca-ar7100-cpu-intc
           - qca-ar7100-ddr-controller
-          - qca-ar7100-ehci-
-          - qca-ar7100-eth-
+          - qca-ar7100-ehci
+          - qca-ar7100-eth
           - qca-ar7100-gpio
           - qca-ar7100-misc-intc
           - qca-ar7100-pci
-          - qca-ar7100-pll-
+          - qca-ar7100-pll
           - qca-ar7100-reset
           - qca-ar7100-spi
           - qca-ar7100-usb-phy
@@ -3064,33 +3356,33 @@ on:
           - qca-ar7200-usb-phy
           - qca-ar7240
           - qca-ar7240-ddr-controller
-          - qca-ar7240-eth-
-          - qca-ar7240-gpio-
+          - qca-ar7240-eth
+          - qca-ar7240-gpio
           - qca-ar7240-mdio
           - qca-ar7240-misc-intc
-          - qca-ar7240-pll-
-          - qca-ar7240-reset-
-          - qca-ar7240-spi-
+          - qca-ar7240-pll
+          - qca-ar7240-reset
+          - qca-ar7240-spi
           - qca-ar7240sw
           - qca-ar7241
-          - qca-ar7241-eth-
+          - qca-ar7241-eth
           - qca-ar7242
-          - qca-ar7242-eth-
+          - qca-ar7242-eth
           - qca-ar8229
           - qca-ar8236
           - qca-ar8327
-          - qca-ar9130-eth-
+          - qca-ar9130-eth
           - qca-ar9130-wifi
           - qca-ar9132
-          - qca-ar9132-cpu-intc-
-          - qca-ar9132-ddr-controller-
-          - qca-ar9132-gpio-
-          - qca-ar9132-misc-intc-
-          - qca-ar9132-pll-
-          - qca-ar9132-reset-
-          - qca-ar9132-spi-
+          - qca-ar9132-cpu-intc
+          - qca-ar9132-ddr-controller
+          - qca-ar9132-gpio
+          - qca-ar9132-misc-intc
+          - qca-ar9132-pll
+          - qca-ar9132-reset
+          - qca-ar9132-spi
           - qca-ar9330
-          - qca-ar9330-eth-
+          - qca-ar9330-eth
           - qca-ar9330-gmac
           - qca-ar9330-mdio
           - qca-ar9330-pll
@@ -3098,66 +3390,65 @@ on:
           - qca-ar9330-wifi
           - qca-ar9331
           - qca-ar9340
-          - qca-ar9340-ddr-controller-
-          - qca-ar9340-eth-
+          - qca-ar9340-ddr-controller
+          - qca-ar9340-eth
           - qca-ar9340-gmac
           - qca-ar9340-gpio
           - qca-ar9340-intc
           - qca-ar9340-mdio
-          - qca-ar9340-pll-
-          - qca-ar9340-reset-
-          - qca-ar9340-usb-phy-
-          - qca-ar9340-wdt-
+          - qca-ar9340-pll
+          - qca-ar9340-reset
+          - qca-ar9340-usb-phy
+          - qca-ar9340-wdt
           - qca-ar9340-wifi
           - qca-ar9341
           - qca-ar9342
           - qca-ar9344
           - qca-ar934x-nand
           - qca-ar934x-spi
-          - qca-ath79-eth-
+          - qca-ath79-eth
           - qca-ath79-mdio
           - qca-qca4024
           - qca-qca8327
           - qca-qca8334
           - qca-qca8337
           - qca-qca9530
-          - qca-qca9530-ddr-controller-
-          - qca-qca9530-eth-
-          - qca-qca9530-gpio-
-          - qca-qca9530-pll-
-          - qca-qca9530-reset-
-          - qca-qca9530-wdt-
+          - qca-qca9530-ddr-controller
+          - qca-qca9530-eth
+          - qca-qca9530-gpio
+          - qca-qca9530-pll
+          - qca-qca9530-reset
+          - qca-qca9530-wdt
           - qca-qca9530-wifi
           - qca-qca9531
           - qca-qca9533
           - qca-qca9550
-          - qca-qca9550-
-          - qca-qca9550-ddr-controller-
-          - qca-qca9550-eth-
+          - qca-qca9550-ddr-controller
+          - qca-qca9550-eth
           - qca-qca9550-gmac
-          - qca-qca9550-gpio-
-          - qca-qca9550-pll-
-          - qca-qca9550-reset-
-          - qca-qca9550-usb-phy-
+          - qca-qca9550-gpio
+          - qca-qca9550-pll
+          - qca-qca9550-reset
+          - qca-qca9550-usb-phy
           - qca-qca9550-wifi
           - qca-qca9556
           - qca-qca9557
           - qca-qca9558
           - qca-qca9560
-          - qca-qca9560-ddr-controller-
-          - qca-qca9560-eth-
+          - qca-qca9560-ddr-controller
+          - qca-qca9560-eth
           - qca-qca9560-gmac
-          - qca-qca9560-gpio-
-          - qca-qca9560-pll-
-          - qca-qca9560-reset-
-          - qca-qca9560-usb-phy-
+          - qca-qca9560-gpio
+          - qca-qca9560-pll
+          - qca-qca9560-reset
+          - qca-qca9560-usb-phy
           - qca-qca9560-wifi
           - qca-qca9561
           - qca-qca9563
-          - qca-qcn5500-
+          - qca-qcn5500
           - qca-tp9343
           - qcom-ar7240-pci
-          - qcom-ar9340-pci-
+          - qcom-ar9340-pci
           - qcom-ath10k
           - qcom-cpr3-ipq807x-npu-regulator
           - qcom-cpr4-ipq6018-apss-regulator
@@ -3171,18 +3462,17 @@ on:
           - qcom-ipq4019
           - qcom-ipq5018
           - qcom-ipq6018
-          - qcom-ipq6018-cp01-
-          - qcom-ipq6018-nand-
-          - qcom-ipq8062-
+          - qcom-ipq6018-cp01
+          - qcom-ipq6018-nand
+          - qcom-ipq8062
           - qcom-ipq8064
-          - qcom-ipq8064-ap148-
-          - qcom-ipq8064-ap161-
-          - qcom-ipq8064-db149-
-          - qcom-ipq8065-
+          - qcom-ipq8064-ap148
+          - qcom-ipq8064-ap161
+          - qcom-ipq8064-db149
+          - qcom-ipq8065
           - qcom-ipq8068
           - qcom-ipq806x-storm
           - qcom-ipq8074
-          - qcom-ipq8074-
           - qcom-ipq8074-hk09
           - qcom-ipq807x-apm
           - qcom-ipq9574
@@ -3192,44 +3482,60 @@ on:
           - qcom-pcie-ipq4019-lantiq-hack
           - qcom-qca-gcnt
           - qcom-qca8075-package
-          - qcom-qca9550-pci-
+          - qcom-qca9550-pci
           - qcom-rpm-mp5496-regulators
           - qcom-smem-part
           - qcom-tcsr
-          - qcom-tcsr-
-          - qcom-tcsr-ipq8064-
+          - qcom-tcsr-ipq8064
           - qihoo
-          - qihoo-360t7-
-          - qihoo-360v6-
+          - qihoo-360t7
+          - qihoo-360v6
           - qihoo-c301
           - qnap
-          - qnap-301w-
+          - qnap-301w
           - quad-e4g
           - qualcomm
           - qxwlan
-          - qxwlan-e1700ac-v2-16m-
-          - qxwlan-e1700ac-v2-8m-
+          - qxwlan-e1700ac-v2-16m
+          - qxwlan-e1700ac-v2-8m
           - qxwlan-e2600ac-c1
           - qxwlan-e2600ac-c2
-          - qxwlan-e558-v2-16m-
-          - qxwlan-e558-v2-8m-
-          - qxwlan-e600g-v2-16m-
-          - qxwlan-e600g-v2-8m-
-          - qxwlan-e600gac-v2-16m-
-          - qxwlan-e600gac-v2-8m-
-          - qxwlan-e750a-v4-16m-
-          - qxwlan-e750a-v4-8m-
-          - qxwlan-e750g-v8-16m-
-          - qxwlan-e750g-v8-8m-
+          - qxwlan-e558-v2-16m
+          - qxwlan-e558-v2-8m
+          - qxwlan-e600g-v2-16m
+          - qxwlan-e600g-v2-8m
+          - qxwlan-e600gac-v2-16m
+          - qxwlan-e600gac-v2-8m
+          - qxwlan-e750a-v4-16m
+          - qxwlan-e750a-v4-8m
+          - qxwlan-e750g-v8-16m
+          - qxwlan-e750g-v8-8m
           - r
           - r1
+          - r10
           - r1000h
+          - r103
+          - r13
+          - r15
           - r2
+          - r22
+          - r23
+          - r30
+          - r31
           - r32
+          - r36
           - r36a
           - r36m-e4g
+          - r37
+          - r3g
+          - r46
+          - r47
+          - r49
           - r500
           - r5010unv2
+          - r51
+          - r53
+          - r59
           - r6020
           - r6080
           - r6100
@@ -3237,6 +3543,7 @@ on:
           - r619ac
           - r6220
           - r6260
+          - r63
           - r6350
           - r6700
           - r6800
@@ -3251,28 +3558,35 @@ on:
           - ra21s
           - ra75
           - raccoon
+          - radxa-cm3-io-rk3566
+          - radxa-e25-rk3568
+          - radxa-rock3a
+          - radxa-rockpi4
+          - radxa-rockpi4a
+          - radxa-rockpis
+          - radxa-zero-3-rk3566
           - raisecom
-          - raisecom-msg1500-x-00-
+          - raisecom-msg1500-x-00
           - rak633
           - rakwireless
-          - rakwireless-rak633-
+          - rakwireless-rak633
           - ralink
           - ralink-cevt-systick
           - ralink-mt7620-sdhci
-          - ralink-mt7620-sysc-
-          - ralink-mt7620a-evb-
-          - ralink-mt7620a-memc-
-          - ralink-mt7620a-mt7530-evb-
-          - ralink-mt7620a-mt7610e-evb-
+          - ralink-mt7620-sysc
+          - ralink-mt7620a-evb
+          - ralink-mt7620a-memc
+          - ralink-mt7620a-mt7530-evb
+          - ralink-mt7620a-mt7610e-evb
           - ralink-mt7620a-pcm
           - ralink-mt7620a-soc
-          - ralink-mt7620a-systick-
-          - ralink-mt7620a-uart-
-          - ralink-mt7620a-v22sg-evb-
+          - ralink-mt7620a-systick
+          - ralink-mt7620a-uart
+          - ralink-mt7620a-v22sg-evb
           - ralink-mt7620n-soc
           - ralink-mt7621-spi
-          - ralink-mt7628-sysc-
-          - ralink-mt7688-sysc-
+          - ralink-mt7628-sysc
+          - ralink-mt7688-sysc
           - ralink-rt2880-eth
           - ralink-rt2880-gpio
           - ralink-rt2880-i2c
@@ -3281,9 +3595,9 @@ on:
           - ralink-rt2880-pinmux
           - ralink-rt2880-soc
           - ralink-rt2880-spi
-          - ralink-rt2880-sysc-
+          - ralink-rt2880-sysc
           - ralink-rt2880-timer
-          - ralink-rt2880-uart-
+          - ralink-rt2880-uart
           - ralink-rt2880-wdt
           - ralink-rt2880-wmac
           - ralink-rt288x-pci
@@ -3291,51 +3605,85 @@ on:
           - ralink-rt3050-eth
           - ralink-rt3050-i2s
           - ralink-rt3050-memc
-          - ralink-rt3050-otg-
+          - ralink-rt3050-otg
           - ralink-rt3050-soc
-          - ralink-rt3050-soc-
-          - ralink-rt3050-sysc-
-          - ralink-rt3050-wmac-
+          - ralink-rt3050-sysc
+          - ralink-rt3050-wmac
           - ralink-rt3052-soc
-          - ralink-rt3052-soc-
-          - ralink-rt3052-sysc-
-          - ralink-rt3052-uart-
+          - ralink-rt3052-sysc
+          - ralink-rt3052-uart
           - ralink-rt305x-gdma
           - ralink-rt3350-soc
           - ralink-rt3352-i2s
           - ralink-rt3352-soc
-          - ralink-rt3352-sysc-
+          - ralink-rt3352-sysc
           - ralink-rt3352-usbphy
-          - ralink-rt3352-wmac-
-          - ralink-rt3662-soc-
+          - ralink-rt3352-wmac
+          - ralink-rt3662-soc
           - ralink-rt3883-eth
           - ralink-rt3883-gdma
           - ralink-rt3883-i2s
-          - ralink-rt3883-memc-
+          - ralink-rt3883-memc
           - ralink-rt3883-pci
           - ralink-rt3883-soc
-          - ralink-rt3883-sysc-
-          - ralink-rt3883-uart-
-          - ralink-rt3883-wmac-
+          - ralink-rt3883-sysc
+          - ralink-rt3883-uart
+          - ralink-rt3883-wmac
           - ralink-rt5350-eth
-          - ralink-rt5350-memc-
+          - ralink-rt5350-memc
           - ralink-rt5350-pcm
           - ralink-rt5350-soc
-          - ralink-rt5350-sysc-
-          - ralink-rt5350-systick-
-          - ralink-rt5350-wmac-
-          - ralink-rt7620-wmac-
-          - ralink-v11st-fe-
-          - ralink-v22rw-2x2-
+          - ralink-rt5350-sysc
+          - ralink-rt5350-systick
+          - ralink-rt5350-wmac
+          - ralink-rt7620-wmac
+          - ralink-v11st-fe
+          - ralink-v22rw-2x2
           - ram
           - rambutan
           - ramoops
           - range
+          - raspberrypi-2-model-b
+          - raspberrypi-2-model-b-rev2
+          - raspberrypi-3-model-a-plus
+          - raspberrypi-3-model-b
+          - raspberrypi-3-model-b-plus
+          - raspberrypi-4-compute-module
+          - raspberrypi-4-model-b
+          - raspberrypi-400
+          - raspberrypi-5-model-b
+          - raspberrypi-model-a
+          - raspberrypi-model-a-plus
+          - raspberrypi-model-b
+          - raspberrypi-model-b-plus
+          - raspberrypi-model-b-rev2
+          - raspberrypi-model-zero
+          - raspberrypi-model-zero-2
+          - raspberrypi-model-zero-2-w
+          - raspberrypi-model-zero-w
           - ravpower
-          - ravpower-rp-wd009-
-          - ravpower-rp-wd03-
+          - ravpower-rp-wd009
+          - ravpower-rp-wd03
+          - ravpower-wd03
           - rax120v2
           - rax3000m
+          - rb-2011il
+          - rb-2011ils
+          - rb-2011l
+          - rb-493g
+          - rb-750-r2
+          - rb-911-2hn
+          - rb-911-5hn
+          - rb-912uag-2hpnd
+          - rb-921gs-5hpacd-r2
+          - rb-922uags-5hpacd
+          - rb-951g-2hnd
+          - rb-951ui-2hnd
+          - rb-951ui-2nd
+          - rb-952ui-5ac2nd
+          - rb-962uigs-5hact2hnt
+          - rb-sxt5n
+          - rb-wapg-5hact2hnd
           - rb5009
           - rbr40
           - rbr50
@@ -3353,6 +3701,7 @@ on:
           - re3000
           - re305
           - re350
+          - re350-v1
           - re350k
           - re355
           - re365
@@ -3364,7 +3713,6 @@ on:
           - re6500
           - re7000
           - readmemd
-          - really
           - realtek-i2c-mux-rtl9300
           - realtek-otto-gpio
           - realtek-otto-timer
@@ -3377,53 +3725,55 @@ on:
           - realtek-rtl8367b
           - realtek-rtl8380-aux-mdio
           - realtek-rtl8380-clock
-          - realtek-rtl8380-gpio-
-          - realtek-rtl8380-intc-
+          - realtek-rtl8380-gpio
+          - realtek-rtl8380-intc
           - realtek-rtl8380-soc
           - realtek-rtl8380-spi
           - realtek-rtl8380-thermal
-          - realtek-rtl8380-timer-
+          - realtek-rtl8380-timer
           - realtek-rtl8380-wdt
           - realtek-rtl8382-soc
-          - realtek-rtl8382-soc-
           - realtek-rtl838x-eth
           - realtek-rtl838x-mdio
           - realtek-rtl838x-soc
           - realtek-rtl8390-aux-mdio
           - realtek-rtl8390-clock
-          - realtek-rtl8390-gpio-
-          - realtek-rtl8390-intc-
+          - realtek-rtl8390-gpio
+          - realtek-rtl8390-intc
           - realtek-rtl8390-thermal
-          - realtek-rtl8390-timer-
+          - realtek-rtl8390-timer
           - realtek-rtl8390-wdt
           - realtek-rtl8393-soc
           - realtek-rtl839x-soc
           - realtek-rtl83xx-switch
           - realtek-rtl9300-aux-mdio
-          - realtek-rtl9300-gpio-
+          - realtek-rtl9300-gpio
           - realtek-rtl9300-i2c
-          - realtek-rtl9300-intc-
+          - realtek-rtl9300-intc
           - realtek-rtl9300-leds
           - realtek-rtl9300-thermal
           - realtek-rtl9300-wdt
-          - realtek-rtl9302-i2c-mux-
+          - realtek-rtl9302-i2c-mux
           - realtek-rtl930x-soc
-          - realtek-rtl930x-timer-
-          - realtek-rtl9310-gpio-
+          - realtek-rtl930x-timer
+          - realtek-rtl9310-gpio
           - realtek-rtl9310-wdt
-          - realtek-rtl931x-timer-
+          - realtek-rtl931x-timer
+          - recovery-device-name
           - red
           - redboot-fis
           - redmi
-          - redmi-ax6-
+          - redmi-ax6
           - reference
           - regulator-fixed
           - regulator-gpio
           - regulator-output
+          - rename-section
           - renesas-da14531
           - renkforce
-          - renkforce-ws-wn530hp3-a-
+          - renkforce-ws-wn530hp3-a
           - repeater
+          - required
           - reset-leds
           - rev
           - rev1
@@ -3431,7 +3781,7 @@ on:
           - revb
           - revm
           - reyee
-          - reyee-ax3200-e5-
+          - reyee-ax3200-e5
           - rfb
           - rg-ew1200g
           - rg-ew3200gx
@@ -3444,21 +3794,28 @@ on:
           - riscv-pmu
           - riscv-timer
           - rm2-6
+          - rme-eg200
+          - roc-cc-rk3328
+          - rock-pi-4-rk3399
+          - rock5a-rk3588s
+          - rock5b-rk3588
           - rocket
+          - rocket-m
           - root
+          - rootfs-lib
           - rosinson
-          - rosinson-wr818-
+          - rosinson-wr818
           - rostelecom
-          - rostelecom-rt-fe-1a-
-          - rostelecom-rt-fl-1-
-          - rostelecom-rt-sf-1-
-          - rostelecom-s1010-
+          - rostelecom-rt-fe-1a
+          - rostelecom-rt-fl-1
+          - rostelecom-rt-sf-1
+          - rostelecom-s1010
           - router
           - routerboard
           - routerich
-          - routerich-ax3000-
-          - routerich-ax3000-ubootmod-
-          - routerich-ax3000-v1-
+          - routerich-ax3000
+          - routerich-ax3000-ubootmod
+          - routerich-ax3000-v1
           - routerstation
           - rp-ac51
           - rp-ac56
@@ -3484,10 +3841,14 @@ on:
           - rt-fe-1a
           - rt-fl-1
           - rt-g32
+          - rt-g32-b1
+          - rt-loader
           - rt-n10
+          - rt-n10-plus
           - rt-n10p
           - rt-n11p
           - rt-n12
+          - rt-n12p
           - rt-n13u
           - rt-n14u
           - rt-n15
@@ -3501,27 +3862,27 @@ on:
           - rtl8366rb
           - rtl8366s
           - ruckus
-          - ruckus-gd11-
-          - ruckus-r500-
-          - ruckus-zf7025-
-          - ruckus-zf7321-
-          - ruckus-zf7341-
-          - ruckus-zf7351-
-          - ruckus-zf7363-
-          - ruckus-zf7372-
+          - ruckus-gd11
+          - ruckus-r500
+          - ruckus-zf7025
+          - ruckus-zf7321
+          - ruckus-zf7341
+          - ruckus-zf7351
+          - ruckus-zf7363
+          - ruckus-zf7372
           - ruijie
-          - ruijie-rg-ew1200g-pro-v11-
-          - ruijie-rg-ew3200gx-pro-
-          - ruijie-rg-x60-pro-
+          - ruijie-rg-ew1200g-pro-v11
+          - ruijie-rg-ew3200gx-pro
+          - ruijie-rg-x60-pro
           - run
           - rut200
           - rut230
           - rut241
           - rut300
           - rut5xx
-          - rut951rut901
+          - rut951-rut901
           - rut955
-          - rut956rut906
+          - rut956-rut906
           - rutx10
           - rutx50
           - s
@@ -3529,19 +3890,19 @@ on:
           - s1100w-8xgt-se
           - s12
           - s1500nbn
-          - s25fl064k-
+          - s25fl064k
           - s3
           - s4
           - sa-w2
-          - sagem-fast-3864-op-
+          - sagem-fast-3864-op
           - sagemcom
           - samknows
-          - samknows-whitebox-v8-
+          - samknows-whitebox-v8
           - samsung
-          - samsung-cy-swr1100-
-          - samsung-wam250-
+          - samsung-cy-swr1100
+          - samsung-wam250
           - sanlinking
-          - sanlinking-d240-
+          - sanlinking-d240
           - sap-g3200u3
           - sax1v1k
           - sbin
@@ -3555,23 +3916,24 @@ on:
           - sdg-8733a
           - sdg-8734
           - seagate
-          - seagate-goflexhome-
+          - seagate-goflexhome
           - seama
           - security
+          - sed
           - semtech-sx1502q
           - semtech-sx1503q
           - semtech-sx9512
           - senao
           - sercomm
-          - sercomm-ad1018-
-          - sercomm-h500-s-lowi-
-          - sercomm-h500-s-vfes-
+          - sercomm-ad1018
+          - sercomm-h500-s-lowi
+          - sercomm-h500-s-vfes
           - sercomm-msp430-leds
-          - sercomm-na502-
-          - sercomm-na502s-
-          - sercomm-na930-
-          - sercomm-sc-partitions-
-          - sercomm-shg2500-
+          - sercomm-na502
+          - sercomm-na502s
+          - sercomm-na930
+          - sercomm-sc-partitions
+          - sercomm-shg2500
           - sercomm-wfi
           - series
           - sf19a2890
@@ -3583,16 +3945,16 @@ on:
           - sg2452p
           - shg2500
           - siemens
-          - siemens-gigaset-sx76x-
-          - siemens-ws-ap3610-
+          - siemens-gigaset-sx76x
+          - siemens-ws-ap3610
           - siflower
           - siflower-brom-sysm
           - siflower-cpu-sysm
-          - siflower-ethsys-
+          - siflower-ethsys
           - siflower-sf19a2890
           - siflower-sf19a2890-clk
-          - siflower-sf19a2890-evb-
-          - siflower-sf19a2890-gmac-
+          - siflower-sf19a2890-evb
+          - siflower-sf19a2890-gmac
           - siflower-sf19a2890-gpio
           - siflower-sf19a2890-periph-clk
           - siflower-sf19a2890-periph-reset
@@ -3602,10 +3964,10 @@ on:
           - siflower-sf19a2890-usb-phy
           - siflower-sf21-dpns
           - siflower-sf21-pcie
-          - siflower-sf21-pcie-phy-
+          - siflower-sf21-pcie-phy
           - siflower-sf21-qspi
           - siflower-sf21-reset
-          - siflower-sf21-topcrm-
+          - siflower-sf21-topcrm
           - siflower-sf21-usb-phy
           - siflower-sf21-xgmac
           - siflower-sf21-xgmac-dma
@@ -3617,44 +3979,43 @@ on:
           - silabs-proslic-spi
           - silabs-si3210
           - sim
-          - sim-simax1800t-
+          - sim-simax1800t
           - simax1800t
           - simple-audio-card
           - simple-bus
           - simple-mfd
-          - simple-mfd-
+          - sinovoip-rk3568-bpi-r2pro
           - sitecom
-          - sitecom-wl-351-
-          - sitecom-wlr-4100-v1-002-
-          - sitecom-wlr-6000-
-          - sitecom-wlr-7100-
-          - sitecom-wlr-8100-
+          - sitecom-wl-351
+          - sitecom-wlr-4100-v1-002
+          - sitecom-wlr-6000
+          - sitecom-wlr-7100
+          - sitecom-wlr-8100
+          - sk-wb8
           - sks8300-8x
           - skspruce
-          - skspruce-wia3300-20-
+          - skspruce-wia3300-20
           - skw92a
           - skylab
-          - skylab-skw92a-
+          - skylab-skw92a
           - skyline
-          - skyline-sl-r7205-
+          - skyline-sl-r7205
           - sl
           - sl-r7205
           - slt866
           - smart
           - smartbox
           - smartrg
-          - smartrg-sdg-841-t6-
-          - smartrg-sdg-8612-
-          - smartrg-sdg-8614-
-          - smartrg-sdg-8622-
-          - smartrg-sdg-8632-
-          - smartrg-sdg-8733-
-          - smartrg-sdg-8733a-
-          - smartrg-sdg-8734-
-          - smartrg-sr505n-
+          - smartrg-sdg-841-t6
+          - smartrg-sdg-8612
+          - smartrg-sdg-8614
+          - smartrg-sdg-8622
+          - smartrg-sdg-8632
+          - smartrg-sdg-8733
+          - smartrg-sdg-8733a
+          - smartrg-sdg-8734
+          - smartrg-sr505n
           - smc7908a-isp
-          - smc7908a-isp-
-          - smem
           - snap
           - snps-designware-i2c
           - snps-dma-spear1340
@@ -3668,39 +4029,38 @@ on:
           - snr-cpe-me2-lite
           - snr-cpe-me2-sfp
           - snr-cpe-w4n
-          - snr-cpe-w4n-mt-
-          - snr-snr-cpe-ax2-
-          - snr-snr-cpe-me1-
-          - snr-snr-cpe-me2-lite-
-          - snr-snr-cpe-me2-sfp-
+          - snr-cpe-w4n-mt
+          - snr-snr-cpe-ax2
+          - snr-snr-cpe-me1
+          - snr-snr-cpe-me2-lite
+          - snr-snr-cpe-me2-sfp
           - soc
           - solidrun
-          - solidrun-clearfog-pro-
+          - solidrun-clearfog-pro
           - som7981
           - sonicpoint
           - sonix-sn8f25e21
           - sony
           - sony-ncp-hg100-cellular
           - sophos
-          - sophos-ap100-
-          - sophos-ap100c-
-          - sophos-ap15-
-          - sophos-ap15c-
-          - sophos-ap55-
-          - sophos-ap55c-
+          - sophos-ap100
+          - sophos-ap100c
+          - sophos-ap15
+          - sophos-ap15c
+          - sophos-ap55
+          - sophos-ap55c
           - sophos-red-15w-rev1
-          - spansion-s25fl129p0-
+          - sortname
+          - spansion-s25fl129p0
           - spansion-s25fl129p1
           - sparklan
-          - sparklan-wcr-150gn-
+          - sparklan-wcr-150gn
           - spectrum
-          - spectrum-sax1v1k-
+          - spectrum-sax1v1k
           - speedport
           - spi-flash
           - spi-gpio
           - spi-nand
-          - spi-nand-
-          - spi-nand-spinand-mt29f
           - spidev
           - spinand-mt29f
           - spnmx56
@@ -3716,8 +4076,9 @@ on:
           - stock
           - stora
           - storylink
-          - storylink-sap-g3200u3-
+          - storylink-sap-g3200u3
           - sunspot
+          - supported-devices
           - sw
           - swconfig-port
           - swiss
@@ -3733,11 +4094,10 @@ on:
           - sxtsq
           - sync-logs
           - synce
-          - synce1588
+          - synce-1588
           - synopsys-dwc3
           - sys
           - syscon
-          - syscon-
           - syscon-reboot
           - systems
           - t-mb5eu-v01
@@ -3746,58 +4106,66 @@ on:
           - t1200h
           - t1600g-28ts
           - t5004
-          - table
           - talon
           - tama
-          - tama-w06-
+          - tama-w06
+          - tar
           - tcg-tpm-tis-i2c
           - td-w8968
           - td-w8970
           - td-w8980
+          - tdw8970
+          - tdw8980
           - technologies
-          - technologies-
-          - tel-x1pro-qcom-ipq4019
+          - tel-x1pro
           - telco
-          - telco-electronics-x1-
-          - telco-t1-
+          - telco-electronics-tel-t1
+          - telco-electronics-x1
+          - telco-t1
           - telenor
           - teltonika
-          - teltonika-rut200-
-          - teltonika-rut230-v1-
-          - teltonika-rut241-
-          - teltonika-rut300-
-          - teltonika-rut30x-
-          - teltonika-rut5xx-
-          - teltonika-rut955-
-          - teltonika-rut955-h7v3c0-
-          - teltonika-rut9x1-
-          - teltonika-rut9x6-
-          - teltonika-rut9xx-
+          - teltonika-rut200
+          - teltonika-rut230-v1
+          - teltonika-rut241
+          - teltonika-rut300
+          - teltonika-rut30x
+          - teltonika-rut5xx
+          - teltonika-rut955
+          - teltonika-rut955-h7v3c0
+          - teltonika-rut9x1
+          - teltonika-rut9x6
+          - teltonika-rut9xx
           - teltonika-rutx10
           - teltonika-rutx50
+          - ten64-mtd
           - tenbay
-          - tenbay-t-mb5eu-v01-
-          - tenbay-wr3000k-
+          - tenbay-t-mb5eu-v01
+          - tenbay-wr3000k
           - tenda
-          - tenda-3g150b-
-          - tenda-3g300m-
-          - tenda-w150m-
-          - tenda-w306r-v2-
+          - tenda-3g150b
+          - tenda-3g300m
+          - tenda-w150m
+          - tenda-w306r-v2
           - teton
           - tew-638apb
+          - tew-638apb-v2
           - tew-673gru
           - tew-691gr
           - tew-692gr
+          - tew-714tru
           - tew-810dr
           - tew-823dru
           - tew714tru
           - tha-103ac
+          - the
           - thead-c900-aclint-mswi
           - thead-c900-aclint-mtimer
           - thead-c900-aclint-sswi
           - thead-c900-plic
+          - this
+          - through
           - thunder
-          - thunder-timecloud-
+          - thunder-timecloud
           - ti
           - ti-74244
           - ti-74273
@@ -3817,303 +4185,347 @@ on:
           - ti-tps23861
           - timecloud
           - tiny
+          - tiny-ac
           - tl-mr10u
           - tl-mr3020
           - tl-mr3040
+          - tl-mr3040-v2
           - tl-mr3220
           - tl-mr3420
+          - tl-mr3420-v2
           - tl-mr6400
           - tl-st1008f
           - tl-wa1201
           - tl-wa701nd
           - tl-wa730re
           - tl-wa801nd
+          - tl-wa801nd-v3
           - tl-wa830re
           - tl-wa850re
+          - tl-wa850re-v2
           - tl-wa860re
           - tl-wa901nd
+          - tl-wa901nd-v2
+          - tl-wa901nd-v3
+          - tl-wa901nd-v4
+          - tl-wa901nd-v5
           - tl-wdr3500
           - tl-wdr3600
           - tl-wdr4300
           - tl-wdr4310
           - tl-wdr4900
+          - tl-wdr4900-v1
+          - tl-wdr4900-v2
           - tl-wdr6500
+          - tl-wdr6500-v2
           - tl-wdr7500
           - tl-wpa8630
           - tl-wpa8631p
           - tl-wr1043n
+          - tl-wr1043n-v5
           - tl-wr1043nd
+          - tl-wr1043nd-v2
+          - tl-wr1043nd-v4
           - tl-wr1045nd
-          - tl-wr2543nnd
+          - tl-wr2543n
+          - tl-wr2543n-nd
           - tl-wr703n
           - tl-wr710n
           - tl-wr740n
-          - tl-wr741nnd
+          - tl-wr741n-nd
+          - tl-wr741nd
+          - tl-wr741nd-v4
           - tl-wr743nd
           - tl-wr802n
+          - tl-wr802n-v1
+          - tl-wr802n-v2
           - tl-wr810n
+          - tl-wr810n-v2
           - tl-wr840n
+          - tl-wr840n-v4
+          - tl-wr840n-v5
           - tl-wr841hp
           - tl-wr841n
-          - tl-wr841nnd
+          - tl-wr841n-nd
+          - tl-wr841n-v11
+          - tl-wr841n-v13
+          - tl-wr841n-v7
+          - tl-wr841n-v8
+          - tl-wr841n-v9
           - tl-wr842n
-          - tl-wr842nnd
+          - tl-wr842n-nd
+          - tl-wr842n-v2
+          - tl-wr842n-v3
           - tl-wr850n
           - tl-wr902ac
+          - tl-wr902ac-v1
           - tl-wr940n
+          - tl-wr940n-v4
+          - tl-wr940n-v6
           - tl-wr941hp
           - tl-wr941n
+          - tl-wr941n-nd
           - tl-wr941nd
-          - tl-wr941nnd
+          - tl-wr941nd-v5
+          - tl-wr941nd-v6
           - tl-xdr4288
           - tl-xdr6086
           - tl-xdr6088
           - tl-xtr8488
-          - tlc59208f
           - tlt-stm32v1
           - tmp
+          - tmp-word
+          - tmptar-model
+          - to
           - totolink
-          - totolink-a3-
-          - totolink-a7000r-
-          - totolink-a8000ru-
-          - totolink-lr1200-
-          - totolink-x5000r-
+          - totolink-a3
+          - totolink-a7000r
+          - totolink-a8000ru
+          - totolink-lr1200
+          - totolink-x5000r
           - tozed
-          - tozed-zlt-s12-pro-
+          - tozed-zlt-s12-pro
           - tp-link
-          - tp-link-td-w8968-v3-
-          - tplink-ad7200-
-          - tplink-archer-a6-v3-
-          - tplink-archer-a7-v5-
-          - tplink-archer-a9-v6-
-          - tplink-archer-ax23-v1-
-          - tplink-archer-ax80-v1-
-          - tplink-archer-c2-v1-
-          - tplink-archer-c2-v3-
-          - tplink-archer-c20-v1-
-          - tplink-archer-c20-v4-
-          - tplink-archer-c20-v5-
-          - tplink-archer-c20i-
-          - tplink-archer-c25-v1-
-          - tplink-archer-c5-v1-
-          - tplink-archer-c5-v4-
-          - tplink-archer-c50-v1-
-          - tplink-archer-c50-v3-
-          - tplink-archer-c50-v4-
-          - tplink-archer-c50-v6-
-          - tplink-archer-c58-v1-
-          - tplink-archer-c59-v1-
-          - tplink-archer-c59-v2-
-          - tplink-archer-c5x-
-          - tplink-archer-c6-v2-
-          - tplink-archer-c6-v2-us-
-          - tplink-archer-c6-v3-
-          - tplink-archer-c60-v1-
-          - tplink-archer-c60-v2-
-          - tplink-archer-c60-v3-
-          - tplink-archer-c6u-v1-
-          - tplink-archer-c7-v1-
-          - tplink-archer-c7-v2-
-          - tplink-archer-c7-v4-
-          - tplink-archer-c7-v5-
-          - tplink-archer-d50-v1-
-          - tplink-archer-d7-v1-
-          - tplink-archer-d7b-v1-
-          - tplink-archer-mr200-
-          - tplink-archer-mr200-v5-
-          - tplink-archer-mr200-v6-
-          - tplink-c2600-
-          - tplink-cpe210-v1-
-          - tplink-cpe210-v2-
-          - tplink-cpe210-v3-
-          - tplink-cpe220-v2-
-          - tplink-cpe220-v3-
-          - tplink-cpe510-v1-
-          - tplink-cpe510-v2-
-          - tplink-cpe510-v3-
-          - tplink-cpe605-v1-
-          - tplink-cpe610-v1-
-          - tplink-cpe610-v2-
-          - tplink-cpe710-v1-
-          - tplink-cpe710-v2-
-          - tplink-deco-m4r-v1-
-          - tplink-deco-m4r-v4-
-          - tplink-deco-s4-v2-
-          - tplink-deco-x80-5g-
-          - tplink-eap225-outdoor-v1-
-          - tplink-eap225-outdoor-v3-
-          - tplink-eap225-v1-
-          - tplink-eap225-v3-
-          - tplink-eap225-v4-
-          - tplink-eap225-v5-
-          - tplink-eap225-wall-v2-
-          - tplink-eap235-wall-v1-
-          - tplink-eap245-v1-
-          - tplink-eap245-v3-
-          - tplink-eap610-outdoor-
-          - tplink-eap613-v1-
-          - tplink-eap615-wall-v1-
-          - tplink-eap620hd-v1-
-          - tplink-eap623od-hd-v1-
-          - tplink-eap625-outdoor-hd-v1-
-          - tplink-eap660hd-v1-
-          - tplink-ec220-g5-v2-
-          - tplink-ec330-g5u-v1-
-          - tplink-er605-v2-
-          - tplink-ex220-v1-
-          - tplink-ex220-v2-
+          - tp-link-td-w8968-v3
+          - tplink-ad7200
+          - tplink-archer-a6-v3
+          - tplink-archer-a7-v5
+          - tplink-archer-a9-v6
+          - tplink-archer-ax23-v1
+          - tplink-archer-ax80-v1
+          - tplink-archer-c2-v1
+          - tplink-archer-c2-v3
+          - tplink-archer-c20-v1
+          - tplink-archer-c20-v4
+          - tplink-archer-c20-v5
+          - tplink-archer-c20i
+          - tplink-archer-c25-v1
+          - tplink-archer-c5-v1
+          - tplink-archer-c5-v4
+          - tplink-archer-c50-v1
+          - tplink-archer-c50-v3
+          - tplink-archer-c50-v4
+          - tplink-archer-c50-v6
+          - tplink-archer-c58-v1
+          - tplink-archer-c59-v1
+          - tplink-archer-c59-v2
+          - tplink-archer-c5x
+          - tplink-archer-c6-v2
+          - tplink-archer-c6-v2-us
+          - tplink-archer-c6-v3
+          - tplink-archer-c60-v1
+          - tplink-archer-c60-v2
+          - tplink-archer-c60-v3
+          - tplink-archer-c6u-v1
+          - tplink-archer-c7-v1
+          - tplink-archer-c7-v2
+          - tplink-archer-c7-v4
+          - tplink-archer-c7-v5
+          - tplink-archer-d50-v1
+          - tplink-archer-d7-v1
+          - tplink-archer-d7b-v1
+          - tplink-archer-mr200
+          - tplink-archer-mr200-v5
+          - tplink-archer-mr200-v6
+          - tplink-c2-v1
+          - tplink-c20-v1
+          - tplink-c20-v4
+          - tplink-c2600
+          - tplink-c50-v3
+          - tplink-c50-v4
+          - tplink-cpe210-v1
+          - tplink-cpe210-v2
+          - tplink-cpe210-v3
+          - tplink-cpe220-v2
+          - tplink-cpe220-v3
+          - tplink-cpe510-v1
+          - tplink-cpe510-v2
+          - tplink-cpe510-v3
+          - tplink-cpe605-v1
+          - tplink-cpe610-v1
+          - tplink-cpe610-v2
+          - tplink-cpe710-v1
+          - tplink-cpe710-v2
+          - tplink-deco-m4r-v1
+          - tplink-deco-m4r-v4
+          - tplink-deco-s4-v2
+          - tplink-deco-x80-5g
+          - tplink-eap225-outdoor-v1
+          - tplink-eap225-outdoor-v3
+          - tplink-eap225-v1
+          - tplink-eap225-v3
+          - tplink-eap225-v4
+          - tplink-eap225-v5
+          - tplink-eap225-wall-v2
+          - tplink-eap235-wall-v1
+          - tplink-eap245-v1
+          - tplink-eap245-v3
+          - tplink-eap610-outdoor
+          - tplink-eap613-v1
+          - tplink-eap615-wall-v1
+          - tplink-eap620hd-v1
+          - tplink-eap623od-hd-v1
+          - tplink-eap625-outdoor-hd-v1
+          - tplink-eap660hd-v1
+          - tplink-ec220-g5-v2
+          - tplink-ec330-g5u-v1
+          - tplink-er605-v2
+          - tplink-ex220-v1
+          - tplink-ex220-v2
           - tplink-firmware
-          - tplink-fr365-v1-
-          - tplink-mr600-v2-eu-
-          - tplink-onhub-
-          - tplink-re200-v1-
-          - tplink-re200-v2-
-          - tplink-re200-v3-
-          - tplink-re200-v4-
-          - tplink-re205-v3-
-          - tplink-re210-v1-
-          - tplink-re220-v2-
-          - tplink-re305-v1-
-          - tplink-re305-v3-
-          - tplink-re350-v1-
-          - tplink-re350k-v1-
-          - tplink-re355-v1-
-          - tplink-re365-v1-
-          - tplink-re450-v1-
-          - tplink-re450-v2-
-          - tplink-re450-v3-
-          - tplink-re455-v1-
-          - tplink-re500-v1-
-          - tplink-re6000xd-
-          - tplink-re650-v1-
-          - tplink-re650-v2-
-          - tplink-sg2008p-v1-
-          - tplink-sg2210p-v3-
-          - tplink-sg2452p-v4-
-          - tplink-t1600g-28ts-v3-
-          - tplink-tdw8970-
-          - tplink-tdw8980-
-          - tplink-tdw89x0-
-          - tplink-tl-mr10u-
-          - tplink-tl-mr3020-v1-
-          - tplink-tl-mr3020-v3-
-          - tplink-tl-mr3040-v2-
-          - tplink-tl-mr3220-v1-
-          - tplink-tl-mr3420-v1-
-          - tplink-tl-mr3420-v2-
-          - tplink-tl-mr3420-v3-
-          - tplink-tl-mr3420-v5-
-          - tplink-tl-mr6400-v1-
-          - tplink-tl-mr6400-v4-
-          - tplink-tl-mr6400-v5-
-          - tplink-tl-st1008f-v2-
-          - tplink-tl-wa1201-v2-
-          - tplink-tl-wa701nd-v1-
-          - tplink-tl-wa730re-v1-
-          - tplink-tl-wa801nd-v1-
-          - tplink-tl-wa801nd-v3-
-          - tplink-tl-wa801nd-v4-
-          - tplink-tl-wa801nd-v5-
-          - tplink-tl-wa830re-v1-
-          - tplink-tl-wa850re-v1-
-          - tplink-tl-wa850re-v2-
-          - tplink-tl-wa860re-v1-
-          - tplink-tl-wa901nd-v1-
-          - tplink-tl-wa901nd-v2-
-          - tplink-tl-wa901nd-v3-
-          - tplink-tl-wa901nd-v4-
-          - tplink-tl-wa901nd-v5-
-          - tplink-tl-wdr3500-v1-
-          - tplink-tl-wdr3600-v1-
-          - tplink-tl-wdr4300-v1-
-          - tplink-tl-wdr4300-v1-il-
-          - tplink-tl-wdr4310-v1-
+          - tplink-fr365-v1
+          - tplink-mr600-v2-eu
+          - tplink-onhub
+          - tplink-re200-v1
+          - tplink-re200-v2
+          - tplink-re200-v3
+          - tplink-re200-v4
+          - tplink-re205-v3
+          - tplink-re210-v1
+          - tplink-re220-v2
+          - tplink-re305-v1
+          - tplink-re305-v3
+          - tplink-re350-v1
+          - tplink-re350k-v1
+          - tplink-re355-v1
+          - tplink-re365-v1
+          - tplink-re450-v1
+          - tplink-re450-v2
+          - tplink-re450-v3
+          - tplink-re455-v1
+          - tplink-re500-v1
+          - tplink-re6000xd
+          - tplink-re650-v1
+          - tplink-re650-v2
+          - tplink-sg2008p-v1
+          - tplink-sg2210p-v3
+          - tplink-sg2452p-v4
+          - tplink-t1600g-28ts-v3
+          - tplink-tdw8970
+          - tplink-tdw8980
+          - tplink-tdw89x0
+          - tplink-tl-mr10u
+          - tplink-tl-mr3020-v1
+          - tplink-tl-mr3020-v3
+          - tplink-tl-mr3040-v2
+          - tplink-tl-mr3220-v1
+          - tplink-tl-mr3420-v1
+          - tplink-tl-mr3420-v2
+          - tplink-tl-mr3420-v3
+          - tplink-tl-mr3420-v5
+          - tplink-tl-mr6400-v1
+          - tplink-tl-mr6400-v4
+          - tplink-tl-mr6400-v5
+          - tplink-tl-st1008f-v2
+          - tplink-tl-wa1201-v2
+          - tplink-tl-wa701nd-v1
+          - tplink-tl-wa730re-v1
+          - tplink-tl-wa801nd-v1
+          - tplink-tl-wa801nd-v3
+          - tplink-tl-wa801nd-v4
+          - tplink-tl-wa801nd-v5
+          - tplink-tl-wa830re-v1
+          - tplink-tl-wa850re-v1
+          - tplink-tl-wa850re-v2
+          - tplink-tl-wa860re-v1
+          - tplink-tl-wa901nd-v1
+          - tplink-tl-wa901nd-v2
+          - tplink-tl-wa901nd-v3
+          - tplink-tl-wa901nd-v4
+          - tplink-tl-wa901nd-v5
+          - tplink-tl-wdr3500-v1
+          - tplink-tl-wdr3600-v1
+          - tplink-tl-wdr4300-v1
+          - tplink-tl-wdr4300-v1-il
+          - tplink-tl-wdr4310-v1
           - tplink-tl-wdr4900-v1
-          - tplink-tl-wdr4900-v2-
-          - tplink-tl-wdr6500-v2-
-          - tplink-tl-wdr7500-v3-
-          - tplink-tl-wpa8630-v1-
-          - tplink-tl-wpa8630p-v2-int-
-          - tplink-tl-wpa8630p-v20-eu-
-          - tplink-tl-wpa8630p-v21-eu-
-          - tplink-tl-wpa8631p-v3-
-          - tplink-tl-wr1043n-v5-
-          - tplink-tl-wr1043nd-v1-
-          - tplink-tl-wr1043nd-v2-
-          - tplink-tl-wr1043nd-v3-
-          - tplink-tl-wr1043nd-v4-
-          - tplink-tl-wr1045nd-v2-
-          - tplink-tl-wr2543-v1-
-          - tplink-tl-wr703n-
-          - tplink-tl-wr710n-v1-
-          - tplink-tl-wr710n-v21-
-          - tplink-tl-wr740n-v1-
-          - tplink-tl-wr740n-v3-
-          - tplink-tl-wr740n-v4-
-          - tplink-tl-wr740n-v5-
-          - tplink-tl-wr741-v1-
-          - tplink-tl-wr741n-v4-
-          - tplink-tl-wr741nd-v4-
-          - tplink-tl-wr743nd-v1-
-          - tplink-tl-wr802n-v1-
-          - tplink-tl-wr802n-v2-
-          - tplink-tl-wr802n-v4-
-          - tplink-tl-wr810n-v1-
-          - tplink-tl-wr810n-v2-
-          - tplink-tl-wr840n-v4-
-          - tplink-tl-wr840n-v5-
-          - tplink-tl-wr841-v10-
-          - tplink-tl-wr841-v11-
-          - tplink-tl-wr841-v12-
-          - tplink-tl-wr841-v5-
-          - tplink-tl-wr841-v7-
-          - tplink-tl-wr841-v8-
-          - tplink-tl-wr841-v9-
-          - tplink-tl-wr841hp-v2-
-          - tplink-tl-wr841hp-v3-
-          - tplink-tl-wr841n-v13-
-          - tplink-tl-wr841n-v14-
-          - tplink-tl-wr842n-v1-
-          - tplink-tl-wr842n-v2-
-          - tplink-tl-wr842n-v3-
-          - tplink-tl-wr842n-v5-
-          - tplink-tl-wr850n-v2-
-          - tplink-tl-wr902ac-v1-
-          - tplink-tl-wr902ac-v3-
-          - tplink-tl-wr902ac-v4-
-          - tplink-tl-wr940n-v3-
-          - tplink-tl-wr940n-v4-
-          - tplink-tl-wr940n-v6-
-          - tplink-tl-wr941-v2-
-          - tplink-tl-wr941-v4-
-          - tplink-tl-wr941hp-v1-
-          - tplink-tl-wr941n-v7-cn-
-          - tplink-tl-wr941nd-v5-
-          - tplink-tl-wr941nd-v6-
-          - tplink-tl-xdr4288-
-          - tplink-tl-xdr6086-
-          - tplink-tl-xdr6088-
-          - tplink-tl-xtr8488-
-          - tplink-vr200-
-          - tplink-vr200v-
-          - tplink-vr2600v-
-          - tplink-wbs210-v1-
-          - tplink-wbs210-v2-
-          - tplink-wbs510-v1-
-          - tplink-wbs510-v2-
+          - tplink-tl-wdr4900-v2
+          - tplink-tl-wdr6500-v2
+          - tplink-tl-wdr7500-v3
+          - tplink-tl-wpa8630-v1
+          - tplink-tl-wpa8630p-v2-eu
+          - tplink-tl-wpa8630p-v2-int
+          - tplink-tl-wpa8630p-v20-eu
+          - tplink-tl-wpa8630p-v21-eu
+          - tplink-tl-wpa8631p-v3
+          - tplink-tl-wr1043n-v5
+          - tplink-tl-wr1043nd-v1
+          - tplink-tl-wr1043nd-v2
+          - tplink-tl-wr1043nd-v3
+          - tplink-tl-wr1043nd-v4
+          - tplink-tl-wr1045nd-v2
+          - tplink-tl-wr2543-v1
+          - tplink-tl-wr703n
+          - tplink-tl-wr710n-v1
+          - tplink-tl-wr710n-v21
+          - tplink-tl-wr740n-v1
+          - tplink-tl-wr740n-v3
+          - tplink-tl-wr740n-v4
+          - tplink-tl-wr740n-v5
+          - tplink-tl-wr741-v1
+          - tplink-tl-wr741n-v4
+          - tplink-tl-wr741nd-v4
+          - tplink-tl-wr743nd-v1
+          - tplink-tl-wr802n-v1
+          - tplink-tl-wr802n-v2
+          - tplink-tl-wr802n-v4
+          - tplink-tl-wr810n-v1
+          - tplink-tl-wr810n-v2
+          - tplink-tl-wr840n-v4
+          - tplink-tl-wr840n-v5
+          - tplink-tl-wr841-v10
+          - tplink-tl-wr841-v11
+          - tplink-tl-wr841-v12
+          - tplink-tl-wr841-v5
+          - tplink-tl-wr841-v7
+          - tplink-tl-wr841-v8
+          - tplink-tl-wr841-v9
+          - tplink-tl-wr841hp-v2
+          - tplink-tl-wr841hp-v3
+          - tplink-tl-wr841n-v13
+          - tplink-tl-wr841n-v14
+          - tplink-tl-wr842n-v1
+          - tplink-tl-wr842n-v2
+          - tplink-tl-wr842n-v3
+          - tplink-tl-wr842n-v5
+          - tplink-tl-wr850n-v2
+          - tplink-tl-wr902ac-v1
+          - tplink-tl-wr902ac-v3
+          - tplink-tl-wr902ac-v4
+          - tplink-tl-wr940n-v3
+          - tplink-tl-wr940n-v4
+          - tplink-tl-wr940n-v6
+          - tplink-tl-wr941-v2
+          - tplink-tl-wr941-v4
+          - tplink-tl-wr941hp-v1
+          - tplink-tl-wr941n-v7-cn
+          - tplink-tl-wr941nd-v5
+          - tplink-tl-wr941nd-v6
+          - tplink-tl-xdr4288
+          - tplink-tl-xdr6086
+          - tplink-tl-xdr6088
+          - tplink-tl-xtr8488
+          - tplink-vr200
+          - tplink-vr200v
+          - tplink-vr2600v
+          - tplink-wbs210-v1
+          - tplink-wbs210-v2
+          - tplink-wbs510-v1
+          - tplink-wbs510-v2
           - tpm-tpm-i2c-atmel
           - tr1200
           - tr3000
           - tr4400
+          - traverse-ten64
           - trendnet
-          - trendnet-tew-638apb-v2-
-          - trendnet-tew-673gru-
-          - trendnet-tew-691gr-
-          - trendnet-tew-692gr-
-          - trendnet-tew-714tru-
-          - trendnet-tew-810dr-
-          - trendnet-tew-823dru-
-          - trendnet-tha103ac-
+          - trendnet-tew-638apb-v2
+          - trendnet-tew-673gru
+          - trendnet-tew-691gr
+          - trendnet-tew-692gr
+          - trendnet-tew-714tru
+          - trendnet-tew-810dr
+          - trendnet-tew-823dru
+          - trendnet-tha103ac
           - ts-d084
           - tube-2hq
           - tube-e4g
@@ -4125,6 +4537,7 @@ on:
           - tx1801
           - tx1806
           - typ
+          - type
           - u-boot
           - u-boot-dont-touch-spi-nand
           - u-boot-dummy-partitions
@@ -4137,110 +4550,132 @@ on:
           - u4019
           - u7621-01
           - u7621-06
+          - u7621-06-256m-16m
           - u7623-02
           - u7628-01
+          - u7628-01-128m-16m
           - u7981-01
+          - uap-pro
           - ubi
           - ubiquiti
-          - ubnt-aircube-ac-
-          - ubnt-aircube-isp-
-          - ubnt-airrouter-
-          - ubnt-amplifi-router-hd-
-          - ubnt-bullet-ac-
-          - ubnt-bullet-m-ar7240-
-          - ubnt-bullet-m-ar7241-
-          - ubnt-bullet-m-xw-
-          - ubnt-edgerouter-4-
-          - ubnt-edgerouter-6p-
-          - ubnt-edgerouter-e300-
-          - ubnt-edgerouter-x-
-          - ubnt-edgerouter-x-sfp-
-          - ubnt-edgeswitch-5xp-
-          - ubnt-edgeswitch-8xp-
-          - ubnt-erlite-
-          - ubnt-lap-120-
+          - ubiquiti-edgerouterx
+          - ubiquiti-edgerouterx-sfp
+          - ubnt-acb-isp
+          - ubnt-aircube-ac
+          - ubnt-aircube-isp
+          - ubnt-airrouter
+          - ubnt-amplifi-router-hd
+          - ubnt-bullet-ac
+          - ubnt-bullet-m
+          - ubnt-bullet-m-ar7240
+          - ubnt-bullet-m-ar7241
+          - ubnt-bullet-m-xw
+          - ubnt-edgerouter-4
+          - ubnt-edgerouter-6p
+          - ubnt-edgerouter-e300
+          - ubnt-edgerouter-x
+          - ubnt-edgerouter-x-sfp
+          - ubnt-edgeswitch-5xp
+          - ubnt-edgeswitch-8xp
+          - ubnt-erlite
+          - ubnt-erx
+          - ubnt-erx-sfp
+          - ubnt-lap-120
           - ubnt-ledbar
-          - ubnt-litebeam-ac-gen2-
-          - ubnt-litebeam-m5-xw-
-          - ubnt-nanobeam-ac-
-          - ubnt-nanobeam-ac-gen2-
-          - ubnt-nanobeam-ac-xc-
-          - ubnt-nanobridge-m-
-          - ubnt-nanostation-ac-loco-
-          - ubnt-nanostation-ac-ubnt-wa-
-          - ubnt-nanostation-loco-m-
-          - ubnt-nanostation-loco-m-xw-
-          - ubnt-nanostation-m-
-          - ubnt-nanostation-m-xw-
-          - ubnt-picostation-m-
-          - ubnt-powerbeam-5ac-500-
-          - ubnt-powerbeam-5ac-gen2-
-          - ubnt-powerbeam-m2-xw-
-          - ubnt-powerbeam-m5-xw-
-          - ubnt-powerbridge-m-
-          - ubnt-rocket-5ac-lite-
-          - ubnt-rocket-m-
-          - ubnt-routerstation-
-          - ubnt-routerstation-pro-
-          - ubnt-uk-ultra-
-          - ubnt-unifi-
-          - ubnt-unifi-6-lite-
-          - ubnt-unifi-6-lr-v1-
-          - ubnt-unifi-6-lr-v1-ubootmod-
-          - ubnt-unifi-6-lr-v2-
-          - ubnt-unifi-6-lr-v2-ubootmod-
-          - ubnt-unifi-6-lr-v3-
-          - ubnt-unifi-6-lr-v3-ubootmod-
-          - ubnt-unifi-6-plus-
-          - ubnt-unifi-ac-hd-
-          - ubnt-unifi-ap-outdoor-plus-
+          - ubnt-litebeam-ac-gen2
+          - ubnt-litebeam-m5-xw
+          - ubnt-nanobeam-ac
+          - ubnt-nanobeam-ac-gen2
+          - ubnt-nanobeam-ac-xc
+          - ubnt-nanobeam-m5-xw
+          - ubnt-nanobridge-m
+          - ubnt-nanostation-ac
+          - ubnt-nanostation-ac-loco
+          - ubnt-nanostation-loco-m
+          - ubnt-nanostation-loco-m-xw
+          - ubnt-nanostation-m
+          - ubnt-nanostation-m-xw
+          - ubnt-picostation-m
+          - ubnt-powerbeam-5ac-500
+          - ubnt-powerbeam-5ac-gen2
+          - ubnt-powerbeam-m2-xw
+          - ubnt-powerbeam-m5-xw
+          - ubnt-powerbridge-m
+          - ubnt-rocket-5ac-lite
+          - ubnt-rocket-m
+          - ubnt-routerstation
+          - ubnt-routerstation-pro
+          - ubnt-uk-ultra
+          - ubnt-unifi
+          - ubnt-unifi-6-lite
+          - ubnt-unifi-6-lr
+          - ubnt-unifi-6-lr-ubootmod
+          - ubnt-unifi-6-lr-v1
+          - ubnt-unifi-6-lr-v1-ubootmod
+          - ubnt-unifi-6-lr-v2
+          - ubnt-unifi-6-lr-v2-ubootmod
+          - ubnt-unifi-6-lr-v3
+          - ubnt-unifi-6-lr-v3-ubootmod
+          - ubnt-unifi-6-plus
+          - ubnt-unifi-ac-hd
+          - ubnt-unifi-ap
+          - ubnt-unifi-ap-outdoor-plus
           - ubnt-unifi-ap-pro
-          - ubnt-unifi-flexhd-
-          - ubnt-unifi-nanohd-
-          - ubnt-unifiac-lite-
-          - ubnt-unifiac-lr-
-          - ubnt-unifiac-mesh-
-          - ubnt-unifiac-mesh-pro-
-          - ubnt-unifiac-pro-
+          - ubnt-unifi-flexhd
+          - ubnt-unifi-nanohd
+          - ubnt-unifiac-lite
+          - ubnt-unifiac-lr
+          - ubnt-unifiac-mesh
+          - ubnt-unifiac-mesh-pro
+          - ubnt-unifiac-pro
           - ubnt-usg
-          - ubnt-usw-flex-
-          - ubnt-wa-
-          - ubnt-xc-
-          - ubnt-xm-
-          - ubnt-xw-
+          - ubnt-usw-flex
+          - ubnt-wa
+          - ubnt-xc
+          - ubnt-xm
+          - ubnt-xw
+          - uboot
+          - uboot-envtxt
           - ubootmod
           - udpu
           - ultra
           - unbranded
-          - unbranded-a5-v11-
-          - unbranded-wr512-3gn-
-          - unbranded-wr512-3gn-4m-
-          - unbranded-wr512-3gn-8m-
-          - unbranded-xdx-rn502j-
+          - unbranded-a5-v11
+          - unbranded-wr512-3gn
+          - unbranded-wr512-3gn-4m
+          - unbranded-wr512-3gn-8m
+          - unbranded-xdx-rn502j
           - unielec
-          - unielec-u4019-32m-unielec-u4019-qcom-ipq4019
-          - unielec-u4019-qcom-ipq4019
-          - unielec-u7621-01-
-          - unielec-u7621-01-16m-
-          - unielec-u7621-06-
-          - unielec-u7621-06-16m-
-          - unielec-u7621-06-32m-
-          - unielec-u7621-06-64m-
-          - unielec-u7623-02-
-          - unielec-u7623-02-emmc-512m-
-          - unielec-u7628-01-
-          - unielec-u7628-01-16m-
-          - unielec-u7981-01-emmc-
-          - unielec-u7981-01-nand-
+          - unielec-u4019
+          - unielec-u4019-32m
+          - unielec-u7621-01
+          - unielec-u7621-01-16m
+          - unielec-u7621-06
+          - unielec-u7621-06-16m
+          - unielec-u7621-06-256m-16m
+          - unielec-u7621-06-32m
+          - unielec-u7621-06-512m-64m
+          - unielec-u7621-06-64m
+          - unielec-u7623-02
+          - unielec-u7623-02-emmc-512m
+          - unielec-u7628-01
+          - unielec-u7628-01-128m-16m
+          - unielec-u7628-01-16m
+          - unielec-u7981-01-emmc
+          - unielec-u7981-01-nand
           - unifi
+          - unifi-outdoor-plus
+          - unifiac-lite
+          - unifiac-pro
           - unknown-gca230718
           - upvel
-          - upvel-ur-326n4g-
-          - upvel-ur-336un-
+          - upvel-ur-326n4g
+          - upvel-ur-336un
           - ur-326n4g
           - ur-336un
           - ursus
           - us
+          - us-tw
           - usb-a-connector
           - usb-ehci
           - usb-nop-xceiv
@@ -4249,31 +4684,31 @@ on:
           - usb1bc7-1900
           - usb424-2514
           - usr
-          - ustw
           - v-80
           - v-81
           - v1
+          - v1-v2
           - v10
           - v11
           - v11st-fe
           - v12
           - v13
-          - v1315
+          - v13-15
           - v14
           - v18
-          - v1v2
           - v2
+          - v2-v3
           - v20
           - v21
           - v224
           - v225
+          - v22rw-2x2
           - v22sg
-          - v2v3
           - v3
           - v30
           - v4
           - v5
-          - v5v6
+          - v5-v6
           - v6
           - v7
           - v8
@@ -4284,33 +4719,43 @@ on:
           - vdsl
           - vedge
           - velop
+          - ventana
           - vero
           - version
+          - version-code
           - vfes
           - vg-8050
+          - vg3503j
+          - vgv7510kw22brn
+          - vgv7510kw22nor
+          - vgv7519brn
+          - vgv7519nor
           - vh4032n
           - vimin
-          - vimin-vm-s100-0800ms-
+          - vimin-vm-s100-0800ms
           - vinax
           - viper
           - virtual-leds
           - virtual-mdio-gpio
-          - vitesse-vsc8504-
-          - vitesse-vsc8514-
+          - vitesse-vsc8504
+          - vitesse-vsc8514
           - viva
           - vixmini
           - vm-s100-0800ms
           - vocore
-          - vocore-vocore-
-          - vocore-vocore-16m-
-          - vocore-vocore-8m-
-          - vocore-vocore2-
-          - vocore-vocore2-lite-
+          - vocore-16m
+          - vocore-8m
+          - vocore-vocore
+          - vocore-vocore-16m
+          - vocore-vocore-8m
+          - vocore-vocore2
+          - vocore-vocore2-lite
           - vocore2
           - vocore2-lite
+          - vocore2lite
           - vodafone
           - vonets
-          - vonets-var11n-300-
+          - vonets-var11n-300
           - vp
           - vr-3025u
           - vr-3025un
@@ -4324,10 +4769,11 @@ on:
           - w06
           - w150m
           - w25q128
-          - w25q128-
           - w2914ns
+          - w2914nsv2
           - w303v
           - w306r
+          - w306r-v20
           - w3400v6
           - w501v
           - w502u
@@ -4343,12 +4789,11 @@ on:
           - wac510
           - wallys
           - wallys-dr40x9
-          - wallys-dr531-
+          - wallys-dr531
           - wallystech
           - wam250
-          - wan
           - wansview
-          - wansview-ncs601w-
+          - wansview-ncs601w
           - wap
           - wap-2nd
           - wap-5813n
@@ -4356,32 +4801,32 @@ on:
           - wap6805
           - wapr-2nd
           - watchguard
-          - watchguard-ap100-
-          - watchguard-ap200-
-          - watchguard-ap300-
-          - watchguard-firebox-m300-
+          - watchguard-ap100
+          - watchguard-ap200
+          - watchguard-ap300
+          - watchguard-firebox-m300
           - watchguard-firebox-t10
           - wav-221
           - wav-281
           - wave2
           - wavlink
-          - wavlink-wl-wn530hg4-
-          - wavlink-wl-wn531a3-
-          - wavlink-wl-wn531a6-
-          - wavlink-wl-wn531g3-
-          - wavlink-wl-wn533a8-
-          - wavlink-wl-wn535k1-
-          - wavlink-wl-wn570ha1-
-          - wavlink-wl-wn570ha2-
-          - wavlink-wl-wn573hx1-
-          - wavlink-wl-wn573hx3-
-          - wavlink-wl-wn575a3-
-          - wavlink-wl-wn576a2-
-          - wavlink-wl-wn577a2-
-          - wavlink-wl-wn578a2-
-          - wavlink-wl-wn579x3-
-          - wavlink-wl-wn586x3-
-          - wavlink-ws-wn572hp3-4g-
+          - wavlink-wl-wn530hg4
+          - wavlink-wl-wn531a3
+          - wavlink-wl-wn531a6
+          - wavlink-wl-wn531g3
+          - wavlink-wl-wn533a8
+          - wavlink-wl-wn535k1
+          - wavlink-wl-wn570ha1
+          - wavlink-wl-wn570ha2
+          - wavlink-wl-wn573hx1
+          - wavlink-wl-wn573hx3
+          - wavlink-wl-wn575a3
+          - wavlink-wl-wn576a2
+          - wavlink-wl-wn577a2
+          - wavlink-wl-wn578a2
+          - wavlink-wl-wn579x3
+          - wavlink-wl-wn586x3
+          - wavlink-ws-wn572hp3-4g
           - wax202
           - wax206
           - wax214
@@ -4393,29 +4838,33 @@ on:
           - wax620
           - wax630
           - wb2000
+          - wbmr
           - wbmr-300hpd
           - wbmr-hp-g300h
+          - wbmr300
           - wbs210
           - wbs510
           - wcr-1166ds
           - wcr-150gn
           - wd
-          - wd-cloud-mirror-gen2-
-          - wd-mbl-gpio-
-          - wd-mybooklive-
-          - wd-mynet-n600-
-          - wd-mynet-n750-
-          - wd-mynet-wifi-rangeextender-
+          - wd-cloud-mirror-gen2
+          - wd-mbl-gpio
+          - wd-mybooklive
+          - wd-mybooklive-duo
+          - wd-mynet-n600
+          - wd-mynet-n750
+          - wd-mynet-wifi-rangeextender
           - wd-r1802u
           - wd323
+          - we1026-5g-16m
           - we410443
           - we420223-99
           - weblink
           - western
           - wevo
-          - wevo-11acnas-
-          - wevo-air-duo-
-          - wevo-w2914ns-v2-
+          - wevo-11acnas
+          - wevo-air-duo
+          - wevo-w2914ns-v2
           - wf1200cr
           - wf2770
           - wf2881
@@ -4430,6 +4879,7 @@ on:
           - wg600hp
           - wg800hp
           - wh3000
+          - which
           - whitebox
           - whr-1166d
           - whr-300hp2
@@ -4442,30 +4892,32 @@ on:
           - wi-stor
           - wia3300-20
           - widora-neo
-          - widora-neo-
-          - widora-neo-16m-
-          - widora-neo-32m-
+          - widora-neo-16m
+          - widora-neo-32m
           - wifi
+          - wifi-pineapple-mk7
+          - wifi-pineapple-nano
           - wifire
-          - wifire-s1500-nbn-
-          - winbond-w25q128-
+          - wifire-s1500-nbn
+          - winbond-w25q128
           - winbond-w83793
           - winchannel
-          - winchannel-wb2000-
+          - winchannel-wb2000
           - winstars
-          - winstars-ws-wn536p3-
-          - winstars-ws-wn583a6-
-          - wippies-
+          - winstars-ws-wn536p3
+          - winstars-ws-wn583a6
+          - wippies
           - wire
           - wireless
           - with
           - witi
           - wizard
+          - wizard8800
           - wizfi630a
           - wizfi630s
           - wiznet
-          - wiznet-wizfi630a-
-          - wiznet-wizfi630s-
+          - wiznet-wizfi630a
+          - wiznet-wizfi630s
           - wl-330n
           - wl-330n3g
           - wl-351
@@ -4494,6 +4946,7 @@ on:
           - wlr-6000
           - wlr-7100
           - wlr-8100
+          - wlr8100
           - wmb001n
           - wmc-m1267gst2
           - wmc-s1267gs2
@@ -4504,7 +4957,7 @@ on:
           - wn-ac1167dgr
           - wn-ac1167gr
           - wn-ac1600dgr
-          - wn-ac1600dgr2dgr3
+          - wn-ac1600dgr2-dgr3
           - wn-ac733gr3
           - wn-ag300dgr
           - wn-ax1167gr
@@ -4517,27 +4970,33 @@ on:
           - wn-dx2033gr
           - wn-gx300gr
           - wn3000rp
+          - wn3000rpv3
           - wn3100rp
           - wnce2001
           - wndap360
           - wndap620
           - wndap660
           - wndr3700
+          - wndr3700v5
           - wndr3800
           - wndr3800ch
           - wndr4300
           - wndr4300sw
           - wndr4300tn
           - wndr4500
-          - wndr4700wndr4720
+          - wndr4700
+          - wndr4700-wndr4720
           - wndrmac
           - wnpr2600g
           - wnr1000
+          - wnr1000-v2
           - wnr2000
+          - wnr2000-v3
           - wnr2200
           - wnr612
+          - wnr612-v2
           - wodesys
-          - wodesys-wd-r1802u-
+          - wodesys-wd-r1802u
           - worldsemi-ws2812b
           - wpa8630p
           - wpj344
@@ -4561,6 +5020,8 @@ on:
           - wr3000s
           - wr30u
           - wr512-3gn
+          - wr512-3gn-4m
+          - wr512-3gn-8m
           - wr6202
           - wr818
           - wr8750n
@@ -4569,7 +5030,7 @@ on:
           - wrc-1167ghbk2-s
           - wrc-1167gs2-b
           - wrc-1167gst2
-          - wrc-1750ghbk2-ic
+          - wrc-1750ghbk2-i-c
           - wrc-1750gs
           - wrc-1750gst2
           - wrc-1750gsv
@@ -4590,10 +5051,10 @@ on:
           - wrh-300cr
           - wrt32x
           - wrtnode
-          - wrtnode-wrtnode-
-          - wrtnode-wrtnode2-
-          - wrtnode-wrtnode2p-
-          - wrtnode-wrtnode2r-
+          - wrtnode-wrtnode
+          - wrtnode-wrtnode2
+          - wrtnode-wrtnode2p
+          - wrtnode-wrtnode2r
           - wrtnode2p
           - wrtnode2r
           - wrtq-329acn
@@ -4612,27 +5073,36 @@ on:
           - ws1208v2
           - wsc-x1800gs
           - wsm20
+          - wsr-1166
           - wsr-1166dhp
           - wsr-2533dhp2
           - wsr-2533dhpl
           - wsr-2533dhpl2
           - wsr-2533dhpls
           - wsr-3200ax4s
+          - wsr-600
           - wsr-600dhp
           - wt1520
+          - wt1520-4m
+          - wt1520-8m
           - wt3020
+          - wt3020-4m
+          - wt3020-8m
           - wtr-m2133hp
           - wvrtm-127acn
           - wvrtm-130acn
           - wxr-2533dhp
           - wxr-5950ax12
-          - wzr-450hp2wzr-450hp2d
+          - wzr-450hp2
+          - wzr-450hp2-wzr-450hp2d
           - wzr-600dhp
           - wzr-agl300nh
           - wzr-hp-ag300h
           - wzr-hp-g300nh
+          - wzr-hp-g300nh2
           - wzr-hp-g302h
-          - wzr-hp-g450hwzr-450hp
+          - wzr-hp-g450h
+          - wzr-hp-g450h-wzr-450hp
           - x
           - x00
           - x1
@@ -4650,53 +5120,60 @@ on:
           - xd3200
           - xd4200
           - xdx-rn502j
+          - xdxrn502j
           - xe3-4
           - xg6846
           - xgs1210-12
           - xgs1250-12
           - xiaomi
-          - xiaomi-aiot-ac2350-
-          - xiaomi-ax3600-
-          - xiaomi-ax6000-
-          - xiaomi-ax9000-
-          - xiaomi-mi-ra75-
-          - xiaomi-mi-router-3-pro-
-          - xiaomi-mi-router-3g-
-          - xiaomi-mi-router-3g-v2-
-          - xiaomi-mi-router-4-
-          - xiaomi-mi-router-4a-100m-
-          - xiaomi-mi-router-4a-100m-intl-
-          - xiaomi-mi-router-4a-100m-intl-v2-
-          - xiaomi-mi-router-4a-gigabit-
-          - xiaomi-mi-router-4a-gigabit-v2-
-          - xiaomi-mi-router-4c-
-          - xiaomi-mi-router-4q-
-          - xiaomi-mi-router-ac2100-
-          - xiaomi-mi-router-ax3000t-
-          - xiaomi-mi-router-ax3000t-ubootmod-
-          - xiaomi-mi-router-cr6606-
-          - xiaomi-mi-router-cr6608-
-          - xiaomi-mi-router-cr6609-
-          - xiaomi-mi-router-wr30u-stock-
-          - xiaomi-mi-router-wr30u-ubootmod-
-          - xiaomi-miwifi-3a-
-          - xiaomi-miwifi-3c-
-          - xiaomi-miwifi-mini-
-          - xiaomi-miwifi-nano-
-          - xiaomi-redmi-router-ac2100-
-          - xiaomi-redmi-router-ax6000-stock-
-          - xiaomi-redmi-router-ax6000-ubootmod-
-          - xiaomi-redmi-router-ax6s-
+          - xiaomi-aiot-ac2350
+          - xiaomi-ax3600
+          - xiaomi-ax6000
+          - xiaomi-ax9000
+          - xiaomi-mi-ra75
+          - xiaomi-mi-router-3-pro
+          - xiaomi-mi-router-3g
+          - xiaomi-mi-router-3g-v2
+          - xiaomi-mi-router-4
+          - xiaomi-mi-router-4a-100m
+          - xiaomi-mi-router-4a-100m-intl
+          - xiaomi-mi-router-4a-100m-intl-v2
+          - xiaomi-mi-router-4a-gigabit
+          - xiaomi-mi-router-4a-gigabit-v2
+          - xiaomi-mi-router-4c
+          - xiaomi-mi-router-4q
+          - xiaomi-mi-router-ac2100
+          - xiaomi-mi-router-ax3000t
+          - xiaomi-mi-router-ax3000t-ubootmod
+          - xiaomi-mi-router-cr6606
+          - xiaomi-mi-router-cr6608
+          - xiaomi-mi-router-cr6609
+          - xiaomi-mi-router-wr30u-stock
+          - xiaomi-mi-router-wr30u-ubootmod
+          - xiaomi-mir3g
+          - xiaomi-mir3g-v2
+          - xiaomi-mir3p
+          - xiaomi-mir4a-100m
+          - xiaomi-mir4a-100m-intl
+          - xiaomi-mira75
+          - xiaomi-miwifi-3a
+          - xiaomi-miwifi-3c
+          - xiaomi-miwifi-mini
+          - xiaomi-miwifi-nano
+          - xiaomi-redmi-router-ac2100
+          - xiaomi-redmi-router-ax6000-stock
+          - xiaomi-redmi-router-ax6000-ubootmod
+          - xiaomi-redmi-router-ax6s
           - xiaoyu
-          - xiaoyu-xy-c5-
+          - xiaoyu-xy-c5
           - xikestor
-          - xikestor-sks8300-8x-
+          - xikestor-sks8300-8x
           - xm
           - xr450
           - xr500
           - xw
           - xy-c5
-          - xzwifi-creativebox-v1-
+          - xzwifi-creativebox-v1
           - y1
           - y1s
           - y2
@@ -4704,37 +5181,38 @@ on:
           - yk-l1c
           - yk-l2
           - youhua
-          - youhua-wr1200js-
+          - youhua-wr1200js
           - youku
-          - youku-x2-
-          - youku-yk-l1-
-          - youku-yk-l1c-
-          - youku-yk-l2-
+          - youku-x2
+          - youku-yk-l1
+          - youku-yk-l1c
+          - youku-yk-l2
+          - youku-yk1
           - yukai
-          - yukai-bocco-
+          - yukai-bocco
           - yun
           - yuncore
-          - yuncore-a770-
-          - yuncore-a782-
-          - yuncore-a930-
-          - yuncore-ax820-
-          - yuncore-ax830-
-          - yuncore-ax835-
-          - yuncore-ax880-
-          - yuncore-cpe200-
-          - yuncore-cpe830-
-          - yuncore-fap640-
-          - yuncore-fap650-
-          - yuncore-fap690-
-          - yuncore-g720-
-          - yuncore-m300-
-          - yuncore-xd3200-
-          - yuncore-xd4200-
-          - yuncorekuwfi
+          - yuncore-a770
+          - yuncore-a782
+          - yuncore-a930
+          - yuncore-ax820
+          - yuncore-ax830
+          - yuncore-ax835
+          - yuncore-ax880
+          - yuncore-cpe200
+          - yuncore-cpe830
+          - yuncore-fap640
+          - yuncore-fap650
+          - yuncore-fap690
+          - yuncore-g720
+          - yuncore-kuwfi
+          - yuncore-m300
+          - yuncore-xd3200
+          - yuncore-xd4200
           - yyets
           - yyets-le1
           - z-router
-          - z-router-zr-2660-
+          - z-router-zr-2660
           - z8102ax
           - zbt
           - zbt-ape522ii
@@ -4748,146 +5226,158 @@ on:
           - zbt-we2426-b
           - zbt-we3526
           - zbt-we826
+          - zbt-we826-16m
+          - zbt-we826-32m
           - zbt-we826-e
           - zbt-wg1602
           - zbt-wg1602-v04
           - zbt-wg1608
           - zbt-wg2626
           - zbt-wg3526
+          - zbt-wg3526-16m
+          - zbt-wg3526-32m
           - zbt-wr8305rt
           - zbt-z800ax
           - zbt-z8102ax
           - zbt-z8103ax
           - zbtlink
-          - zbtlink-zbt-ape522ii-
-          - zbtlink-zbt-cpe102-
-          - zbtlink-zbt-wa05-
-          - zbtlink-zbt-wd323-
-          - zbtlink-zbt-we1026-
-          - zbtlink-zbt-we1026-5g-
-          - zbtlink-zbt-we1026-5g-16m-
-          - zbtlink-zbt-we1026-h-
-          - zbtlink-zbt-we1026-h-32m-
-          - zbtlink-zbt-we1226-
-          - zbtlink-zbt-we1326-
-          - zbtlink-zbt-we2026-
-          - zbtlink-zbt-we2426-b-
-          - zbtlink-zbt-we3526-
-          - zbtlink-zbt-we826-
-          - zbtlink-zbt-we826-16m-
-          - zbtlink-zbt-we826-32m-
-          - zbtlink-zbt-we826-e-
-          - zbtlink-zbt-wg1602-
-          - zbtlink-zbt-wg1602-16m-
-          - zbtlink-zbt-wg1602-v04-
-          - zbtlink-zbt-wg1602-v04-16m-
-          - zbtlink-zbt-wg1602-v04-32m-
-          - zbtlink-zbt-wg1608-
-          - zbtlink-zbt-wg1608-16m-
-          - zbtlink-zbt-wg1608-32m-
-          - zbtlink-zbt-wg2626-
-          - zbtlink-zbt-wg3526-
-          - zbtlink-zbt-wg3526-16m-
-          - zbtlink-zbt-wg3526-32m-
-          - zbtlink-zbt-wr8305rt-
-          - zbtlink-zbt-z800ax-
-          - zbtlink-zbt-z8102ax-
-          - zbtlink-zbt-z8102ax-v2-
-          - zbtlink-zbt-z8103ax-
+          - zbtlink-we1026-5g-16m
+          - zbtlink-zbt-ape522ii
+          - zbtlink-zbt-cpe102
+          - zbtlink-zbt-wa05
+          - zbtlink-zbt-wd323
+          - zbtlink-zbt-we1026
+          - zbtlink-zbt-we1026-5g
+          - zbtlink-zbt-we1026-5g-16m
+          - zbtlink-zbt-we1026-h
+          - zbtlink-zbt-we1026-h-32m
+          - zbtlink-zbt-we1226
+          - zbtlink-zbt-we1326
+          - zbtlink-zbt-we2026
+          - zbtlink-zbt-we2426-b
+          - zbtlink-zbt-we3526
+          - zbtlink-zbt-we826
+          - zbtlink-zbt-we826-16m
+          - zbtlink-zbt-we826-32m
+          - zbtlink-zbt-we826-e
+          - zbtlink-zbt-wg1602
+          - zbtlink-zbt-wg1602-16m
+          - zbtlink-zbt-wg1602-v04
+          - zbtlink-zbt-wg1602-v04-16m
+          - zbtlink-zbt-wg1602-v04-32m
+          - zbtlink-zbt-wg1608
+          - zbtlink-zbt-wg1608-16m
+          - zbtlink-zbt-wg1608-32m
+          - zbtlink-zbt-wg2626
+          - zbtlink-zbt-wg3526
+          - zbtlink-zbt-wg3526-16m
+          - zbtlink-zbt-wg3526-32m
+          - zbtlink-zbt-wr8305rt
+          - zbtlink-zbt-z800ax
+          - zbtlink-zbt-z8102ax
+          - zbtlink-zbt-z8102ax-v2
+          - zbtlink-zbt-z8103ax
           - zenwifi
           - ziking
-          - ziking-cpe46b-
+          - ziking-cpe46b
           - zio
-          - zio-freezio-
+          - zio-freezio
           - zl5900v2
           - zlt
           - zoneflex
           - zorlik
-          - zorlik-zl5900v2-
+          - zorlik-zl5900v2
           - zr-2660
           - zte
-          - zte-h201l-
+          - zte-h201l
           - zte-mf18a
-          - zte-mf269-
-          - zte-mf281-
-          - zte-mf282-
+          - zte-mf269
+          - zte-mf281
+          - zte-mf282
           - zte-mf282plus
-          - zte-mf283plus-
-          - zte-mf286-
-          - zte-mf286a-
-          - zte-mf286c-
+          - zte-mf283plus
+          - zte-mf286
+          - zte-mf286a
+          - zte-mf286c
           - zte-mf286d
-          - zte-mf286r-
+          - zte-mf286r
           - zte-mf287
           - zte-mf287plus
           - zte-mf287pro
           - zte-mf289f
-          - zte-q7-
+          - zte-q7
           - zyxel
-          - zyxel-emg2926-q10a-
-          - zyxel-ex5601-t0-stock-
-          - zyxel-ex5601-t0-ubootmod-
-          - zyxel-ex5700-telenor-
-          - zyxel-gs1900-10hp-
-          - zyxel-gs1900-16-
-          - zyxel-gs1900-24-v1-
-          - zyxel-gs1900-24e-
-          - zyxel-gs1900-24ep-
-          - zyxel-gs1900-24hp-v1-
-          - zyxel-gs1900-24hp-v2-
-          - zyxel-gs1900-48-
-          - zyxel-gs1900-8-v1-
-          - zyxel-gs1900-8-v2-
-          - zyxel-gs1900-8hp-v1-
-          - zyxel-gs1900-8hp-v2-
-          - zyxel-keenetic-
-          - zyxel-keenetic-4g-b-
-          - zyxel-keenetic-extra-ii-
-          - zyxel-keenetic-lite-b-
-          - zyxel-keenetic-lite-iii-a-
-          - zyxel-keenetic-omni-
-          - zyxel-keenetic-omni-ii-
-          - zyxel-keenetic-start-
-          - zyxel-keenetic-viva-
-          - zyxel-lte3301-plus-
-          - zyxel-lte5398-m904-
-          - zyxel-lte7490-m904-
-          - zyxel-nbg-419n-
-          - zyxel-nbg-419n-v2-
-          - zyxel-nbg6616-
+          - zyxel-emg2926-q10a
+          - zyxel-ex5601-t0-stock
+          - zyxel-ex5601-t0-ubootmod
+          - zyxel-ex5700-telenor
+          - zyxel-gs1900-10hp
+          - zyxel-gs1900-16
+          - zyxel-gs1900-24-v1
+          - zyxel-gs1900-24e
+          - zyxel-gs1900-24ep
+          - zyxel-gs1900-24hp-v1
+          - zyxel-gs1900-24hp-v2
+          - zyxel-gs1900-48
+          - zyxel-gs1900-8
+          - zyxel-gs1900-8-v1
+          - zyxel-gs1900-8-v2
+          - zyxel-gs1900-8hp-v1
+          - zyxel-gs1900-8hp-v2
+          - zyxel-keenetic
+          - zyxel-keenetic-4g-b
+          - zyxel-keenetic-extra-ii
+          - zyxel-keenetic-lite-b
+          - zyxel-keenetic-lite-iii-a
+          - zyxel-keenetic-omni
+          - zyxel-keenetic-omni-ii
+          - zyxel-keenetic-start
+          - zyxel-keenetic-viva
+          - zyxel-lte3301-plus
+          - zyxel-lte5398-m904
+          - zyxel-lte7490-m904
+          - zyxel-nbg-419n
+          - zyxel-nbg-419n-v2
+          - zyxel-nbg6616
           - zyxel-nbg6617
-          - zyxel-nbg6716-
-          - zyxel-nbg6817-
-          - zyxel-nbg7815-
-          - zyxel-nr7101-
-          - zyxel-nsa310-
-          - zyxel-nsa310b-
-          - zyxel-nwa1100-nh-
-          - zyxel-nwa1121-ni-
-          - zyxel-nwa1123-ac-
-          - zyxel-nwa1123-ni-
-          - zyxel-nwa50ax-
-          - zyxel-nwa50ax-pro-
-          - zyxel-nwa55axe-
-          - zyxel-p-2601hn-
-          - zyxel-p-2812hnu-
-          - zyxel-p-2812hnu-f1-
-          - zyxel-p-2812hnu-f3-
-          - zyxel-wap6805-
+          - zyxel-nbg6716
+          - zyxel-nbg6817
+          - zyxel-nbg7815
+          - zyxel-nr7101
+          - zyxel-nsa310
+          - zyxel-nsa310b
+          - zyxel-nwa1100-nh
+          - zyxel-nwa1121-ni
+          - zyxel-nwa1123-ac
+          - zyxel-nwa1123-ni
+          - zyxel-nwa50ax
+          - zyxel-nwa50ax-pro
+          - zyxel-nwa55axe
+          - zyxel-p-2601hn
+          - zyxel-p-2812hnu
+          - zyxel-p-2812hnu-f1
+          - zyxel-p-2812hnu-f3
+          - zyxel-wap6805
           - zyxel-wre6606
-          - zyxel-wsm20-
-          - zyxel-xgs1210-12-
-          - zyxel-xgs1250-12-
+          - zyxel-wsm20
+          - zyxel-xgs1210-12
+          - zyxel-xgs1250-12
 
       chip:
         type: choice
         description: 芯片型号（仅芯片模式）
         required: false
         options:
-          - dts
-          - files
-          - files612
-          - files66
+          - arm
+          - ath79
+          - mediatek
+          - mips
+          - mt2500
+          - mt3000
+          - mt6000
+          - riscv
+          - rockchip
+          - x86
 
       source_branch:
         type: choice
