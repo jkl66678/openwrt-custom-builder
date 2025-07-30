@@ -1,6 +1,10 @@
 #!/bin/bash
 set -uo pipefail
 
+# 确保中文显示正常（设置UTF-8编码）
+export LC_ALL=en_US.UTF-8
+export LANG=en_US.UTF-8
+
 # ==============================================
 # 基础配置与初始化
 # ==============================================
@@ -17,7 +21,7 @@ TMP_BATCH_DIR="$LOG_DIR/device_batches"              # 设备文件批处理目�
 mkdir -p "$LOG_DIR" "$TMP_BATCH_DIR" || { echo "❌ 无法创建日志目录" >&2; exit 1; }
 > "$SYNC_LOG"  # 清空日志
 
-# 日志函数
+# 日志函数（确保中文正常输出）
 log() {
     local timestamp=$(date +"%Y-%m-%d %H:%M:%S")
     echo "[$timestamp] $1" | tee -a "$SYNC_LOG"
@@ -141,7 +145,6 @@ extract_devices() {
                                       sed -E 's/compatible[[:space:]]*=[[:space:]]*["'\'']//; s/["'\''],?[[:space:]]*/ /g')
                     device_names="$model $compatible"
                     vendor=$(echo "$compatible" | awk -F ',' '{print $1}' | head -n1)
-                    chip=$(芯片型号提取
                     chip=$(echo "$compatible" | grep -oE '[a-z0-9]+,[a-z0-9-]+' | awk -F ',' '{print $2}' | head -n1)
                     ;;
 
@@ -206,7 +209,7 @@ extract_devices() {
 # 4. 提取芯片信息
 # ==============================================
 extract_chips() {
-    log "🔍 开始提取取芯片信息..."
+    log "🔍 开始提取芯片信息..."
     jq -r '.devices[].chip' "$OUTPUT_JSON" | sort | uniq | grep -v '^$' > "$LOG_DIR/all_chips.tmp"
     local chip_count_total=$(wc -l < "$LOG_DIR/all_chips.tmp")
     
