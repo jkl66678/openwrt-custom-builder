@@ -1,0 +1,9 @@
+{
+  "features": [
+    "ipv6+accel",
+    "ipv6-only",
+    "accel-only",
+    "none",
+    "ipv6+accel+qos"  // 可手动添加新功能
+  ]
+}
