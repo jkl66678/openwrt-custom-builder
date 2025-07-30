@@ -10,12 +10,12 @@ export LANG=en_US.UTF-8
 # ==============================================
 WORK_DIR=$(pwd)
 LOG_DIR="$WORK_DIR/sync-logs"
-OUTPUT_JSON="$WORK_DIR/device-drivers.json"
+OUTPUTPUT_JSON="$WORK_DIR/device-drivers.json"
 SYNC_LOG="$LOG_DIR/sync-detail.log"
 PKG_REPO="https://git.openwrt.org/feed/packages.git"  # 驱动包仓库
-TMP_SRC=$(mktemp -d)                                 # 主源码临时目录
-TMP_PKGS=$(mktemp -d)                                # 驱动包临时目录
-TMP_BATCH_DIR="$LOG_DIR/device_batches"              # 设备文件批处理目录
+TMP_SRC=$(mktemp -d -t openwrt-src-XXXXXX)            # 主源码临时目录（带前缀）
+TMP_PKGS=$(mktemp -d -t openwrt-pkgs-XXXXXX)          # 驱动包临时目录（带前缀）
+TMP_BATCH_DIR="$LOG_DIR/device_batches"               # 设备文件批处理目录
 
 # 创建必要目录
 mkdir -p "$LOG_DIR" "$TMP_BATCH_DIR" || { echo "❌ 无法创建日志目录" >&2; exit 1; }
@@ -30,6 +30,7 @@ log() {
 # 临时资源清理函数
 cleanup() {
     log "🔧 开始清理临时资源..."
+    # 安全删除临时目录（仅删除脚本创建的带前缀目录）
     rm -rf "$TMP_SRC" "$TMP_PKGS" "$TMP_BATCH_DIR" "$LOG_DIR"/*.tmp
     log "✅ 临时资源清理完成"
 }
@@ -237,16 +238,19 @@ extract_chips() {
 }
 
 # ==============================================
-# 5. 匹配驱动程序
+# 5. 匹配驱动程序（修复：扩展搜索路径）
 # ==============================================
 match_drivers() {
     log "🔍 开始匹配驱动程序..."
     local DRIVER_TMP="$LOG_DIR/driver_metadata.tmp"
     > "$DRIVER_TMP"
 
-    # 解析驱动包元数据
+    # 解析驱动包元数据（修复：扩展搜索路径）
     log "ℹ️ 解析驱动包元数据（可能需要几分钟）..."
-    find "$TMP_PKGS/kernel" -name "Makefile" -type f | grep -v -E 'doc|tools|examples' | while read -r pkg_makefile; do
+    # 搜索多个可能包含驱动的目录
+    find "$TMP_PKGS" \( -path "$TMP_PKGS/kernel" -o -path "$TMP_PKGS/net" -o \
+         -path "$TMP_PKGS/wireless" -o -path "$TMP_PKGS/utils" \) \
+         -name "Makefile" -type f | grep -v -E 'doc|tools|examples|test' | while read -r pkg_makefile; do
         # 提取驱动名称
         local pkg_name=$(grep -E '^PKG_NAME:=' "$pkg_makefile" 2>> "$SYNC_LOG" | sed -E 's/PKG_NAME:=//')
         [ -z "$pkg_name" ] && continue
@@ -330,7 +334,7 @@ match_drivers() {
 generate_core_features() {
     log "🔍 自动生成核心功能配置..."
     local core_features_file="configs/core-features.json"
-    local tmp_features=$(mktemp)
+    local tmp_features=$(mktemp -t openwrt-features-XXXXXX)
     mkdir -p "$(dirname "$core_features_file")"
     
     # 从源码提取网络功能关键词
@@ -391,11 +395,12 @@ EOF
 }
 
 # ==============================================
-# 7. 自动生成主题+优化配置（theme-optimizations.json）
+# 7. 自动生成主题+优化配置（修复JSON语法和临时文件）
 # ==============================================
 discover_themes() {
-    local themes_dir=$(mktemp -d)
-    local theme_list=$(mktemp)
+    # 修复：使用带前缀的临时文件，避免冲突
+    local themes_dir=$(mktemp -d -t openwrt-themes-XXXXXX)
+    local theme_list=$(mktemp -t openwrt-theme-list-XXXXXX)
     
     # 主流主题仓库
     local theme_repos=(
@@ -426,7 +431,9 @@ discover_themes() {
     # 去重
     sort -u "$theme_list" > "$theme_list.uniq"
     echo "$theme_list.uniq"
-    rm -rf "$themes_dir"
+    
+    # 清理当前函数创建的临时文件
+    rm -rf "$themes_dir" "$theme_list"
 }
 
 generate_theme_optimizations() {
@@ -435,8 +442,11 @@ generate_theme_optimizations() {
     local theme_list_path=$(discover_themes)
     mkdir -p "$(dirname "$theme_opt_file")"
     
-    # 检测GCC支持的优化级别
-    local gcc_opts=$(gcc --help=optimizers 2>/dev/null | grep -oE '-O[0-9s]' | sort | uniq | sed 's/-O//')
+    # 检测GCC支持的优化级别（修复：正确提取优化选项）
+    local gcc_opts=$(gcc --help=optimizers 2>/dev/null | 
+                    grep -oE '--param=O[0-9s]| -O[0-9s]' |  # 只匹配带空格或--param=前缀的-O选项
+                    grep -oE 'O[0-9s]' |  # 提取O+数字/s
+                    sort | uniq)
     
     # 从设备提取支持的架构
     local architectures=$(jq -r '.devices[].kernel_target' "$OUTPUT_JSON" | 
@@ -452,7 +462,7 @@ generate_theme_optimizations() {
         done
     fi
     
-    # 生成JSON
+    # 生成JSON（修复：确保字符串正确加引号）
     echo '{"themes": [' > "$theme_opt_file"
     local first=1
     
@@ -469,28 +479,37 @@ generate_theme_optimizations() {
             "argon") theme_opts="O2 O3";;   # 热门主题支持更高优化
         esac
         
+        # 修复：将数组元素用双引号包裹
+        local arch_array=$(echo "$theme_arches" | tr ' ' '\n' | grep -v '^$' | awk '{print "\""$1"\""}' | tr '\n' ',' | sed 's/,$//')
+        local opts_array=$(echo "$theme_opts" | tr ' ' '\n' | grep -v '^$' | awk '{print "\""$1"\""}' | tr '\n' ',' | sed 's/,$//')
+        
         # 写入JSON
         [ $first -eq 0 ] && echo "," >> "$theme_opt_file"
         first=0
         
         echo "  {" >> "$theme_opt_file"
         echo "    \"name\": \"$theme\"," >> "$theme_opt_file"
-        echo "    \"architectures\": [\"$(echo $theme_arches | tr ' ' '","')\"]," >> "$theme_opt_file"
-        echo "    \"opts\": [\"$(echo $theme_opts | tr ' ' '","')\"]" >> "$theme_opt_file"
+        echo "    \"architectures\": [$arch_array]," >> "$theme_opt_file"
+        echo "    \"opts\": [$opts_array]" >> "$theme_opt_file"
         echo "  }" >> "$theme_opt_file"
     done < "$theme_list_path"
     
     echo ']}' >> "$theme_opt_file"
-    log "✅ 主题+优化配置生成完成，共 $(jq '.themes | length' "$theme_opt_file") 个主题"
-    rm -f "$theme_list_path" "$(dirname "$theme_list_path")"
+    # 验证生成的JSON有效性
+    if ! jq . "$theme_opt_file" &> /dev/null; then
+        log "⚠️ 主题配置JSON格式语法错误，尝试检查修正手动检查 $theme_opt_file"
+    fi
+    local theme_count=$(jq '.themes | length' "$theme_opt_file" 2>/dev/null || echo 0)
+    log "✅ 主题+优化配置生成完成，共 $theme_count 个主题"
+    rm -f "$theme_list_path"  # 只删除临时文件（仅文件，不删除目录）
 }
 
 # ==============================================
 # 8. 同步源码分支（供工作流使用）
 # ==============================================
 sync_source_branches() {
-    log "🔍 同步最新源码分支..."
-    local branches_file="$LOG_DIR/source_branches.tmp"
+    log "🔍 同步步最新源码分支..."
+    local branchesches_file="$LOG_DIR/source_branches.tmp"
     > "$branches_file"
 
     # OpenWrt官方分支
@@ -501,12 +520,12 @@ sync_source_branches() {
 
     # ImmortalWrt分支
     log "ℹ️ 获取ImmortalWrt分支..."
-    git ls-remote --heads https://github.com/immortalwrt/immortalwrt.git 2>> "$SYNC_LOG" | 
+    git ls-remote --heads https https://github.com/immortalwrt/immortalwrt.git 2>> "$SYNC_LOG" | 
         grep -E 'openwrt-[0-9]+\.[0-9]+|master' | 
         sed -E 's/.*refs\/heads\///; s/^/immortalwrt-/g' >> "$branches_file"
 
     # 去重排序
-    sort -u "$branches_file" | sort -r > "$branches_file.tmp" && mv "$branches_file.tmp" "$branches_file"
+    sort -u "$branches_file" | sort -r > "$branches_file.tmp" && mv mv "$branches_file.tmp" "$branches_file"
     log "✅ 源码分支同步完成，共 $(wc -l < "$branches_file") 个"
 }
 
@@ -538,5 +557,6 @@ log "📊 设备总数：$(jq '.devices | length' "$OUTPUT_JSON")"
 log "📊 芯片总数：$(jq '.chips | length' "$OUTPUT_JSON")"
 log "📊 驱动总数：$(jq '.drivers | length' "$OUTPUT_JSON")"
 log "📊 核心功能数：$(jq '.features | length' "configs/core-features.json")"
-log "📊 主题数：$(jq '.themes | length' "configs/theme-optimizations.json")"
+log "📊 主题数：$(jq '.themes | length' "configs/theme-optimizations.json" 2>/dev/null || echo 0)"
 log "========================================="
+    
