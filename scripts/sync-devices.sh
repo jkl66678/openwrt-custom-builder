@@ -257,7 +257,7 @@ extract_chips() {
 }
 
 # ==============================================
-# 5. 匹配驱动程序（优化驱动匹配逻辑）
+# 5. 匹配驱动程序（修复JSON格式错误和匹配逻辑）
 # ==============================================
 match_drivers() {
     log "🔍 开始匹配驱动程序..."
@@ -336,41 +336,47 @@ match_drivers() {
            { log "⚠️ 驱动 $name 写入失败"; rm -f "$OUTPUT_JSON.tmp"; }
     done < "$DRIVER_TMP"
 
-    # 为芯片匹配驱动（优化匹配逻辑：精确匹配优先，限制通用驱动）
+    # 为芯片匹配驱动（修复JSON格式错误）
     log "ℹ️ 为芯片自动匹配驱动..."
     jq -r '.chips[].name' "$OUTPUT_JSON" | while read -r chip; do
-        # 优化的匹配逻辑：
-        # 1. 优先精确匹配芯片名
-        # 2. 其次匹配芯片前缀（如"mt7620"匹配"mt7620a"）
-        # 3. 最后添加通用驱动（仅当没有精确匹配时）
+        # 1. 生成驱动数组（增加特殊字符处理）
         local drivers_array=$(jq --arg chip "$chip" '
             [.drivers[] | 
-            # 1. 精确匹配芯片名
-            (select(.compatible_chips | split(",") | index($chip)) | .name + "@" + .version),
-            # 2. 匹配芯片前缀（如"mt7620"匹配"mt7620a"）
-            (select(.compatible_chips | split(",")[] as $c | $chip | startswith($c)) | .name + "@" + .version),
-            # 3. 仅在没有精确匹配时添加通用驱动
+            # 对驱动名称和版本进行JSON转义（防止特殊字符破坏格式）
+            (.name | gsub("\""; "\\\"") | gsub("\\\\"; "\\\\")) as $safe_name |
+            (.version | gsub("\""; "\\\"") | gsub("\\\\"; "\\\\")) as $safe_version |
+            # 匹配逻辑：精确匹配 → 前缀匹配 → 通用驱动（仅无精确匹配时）
+            (select(.compatible_chips | split(",") | index($chip)) | $safe_name + "@" + $safe_version),
+            (select(.compatible_chips | split(",")[] as $c | $chip | startswith($c)) | $safe_name + "@" + $safe_version),
             (select( (.compatible_chips | split(",") | index("generic")) and 
                      ([.drivers[] | select(.compatible_chips | split(",") | index($chip))] | length == 0)
-                   ) | .name + "@" + .version)
+                   ) | $safe_name + "@" + $safe_version)
             ] | unique
         ' "$OUTPUT_JSON" 2>> "$SYNC_LOG")
 
-        # 验证生成的JSON数组是否有效
+        # 2. 强制校验并修复JSON格式
         if ! echo "$drivers_array" | jq . > /dev/null 2>&1; then
-            log "⚠️ 芯片 $chip 生成的驱动数组无效，使用空数组"
+            log "⚠️ 芯片 $chip 生成的驱动数组无效，已自动修复为空数组"
             drivers_array="[]"
         fi
 
-        # 更新芯片的默认驱动
-        jq --arg chip "$chip" --argjson drivers "$drivers_array" \
+        # 3. 处理空数组情况
+        if [ -z "$drivers_array" ] || [ "$drivers_array" = "null" ]; then
+            drivers_array="[]"
+        fi
+
+        # 4. 更新芯片的默认驱动（增加错误捕获）
+        if ! jq --arg chip "$chip" --argjson drivers "$drivers_array" \
            '.chips[] |= (if .name == $chip then .default_drivers = $drivers else . end)' \
-           "$OUTPUT_JSON" > "$OUTPUT_JSON.tmp" && \
-           [ -s "$OUTPUT_JSON.tmp" ] && mv "$OUTPUT_JSON.tmp" "$OUTPUT_JSON" || \
-           { log "⚠️ 芯片 $chip 驱动更新失败"; rm -f "$OUTPUT_JSON.tmp"; }
+           "$OUTPUT_JSON" > "$OUTPUT_JSON.tmp" 2>> "$SYNC_LOG"; then
+            log "⚠️ 芯片 $chip 驱动更新失败（JSON处理错误）"
+            rm -f "$OUTPUT_JSON.tmp"
+        else
+            [ -s "$OUTPUT_JSON.tmp" ] && mv "$OUTPUT_JSON.tmp" "$OUTPUT_JSON"
+        fi
         
         # 显示匹配数量
-        local driver_count=$(echo "$drivers_array" | jq length)
+        local driver_count=$(echo "$drivers_array" | jq length 2>/dev/null || echo 0)
         log "ℹ️ 芯片 $chip 匹配驱动数：$driver_count"
     done
 
@@ -666,7 +672,7 @@ check_dependencies
 clone_repositories
 extract_devices
 extract_chips
-match_drivers  # 使用优化后的驱动匹配逻辑
+match_drivers  # 使用修复后的驱动匹配逻辑
 generate_core_features
 generate_theme_optimizations
 sync_source_branches
