@@ -1,51 +1,60 @@
 #!/bin/bash
 set -uo pipefail
 
-# 确保中文显示正常（设置UTF-8编码）
+# 强制UTF-8编码（解决中文乱码核心配置）
 export LC_ALL=en_US.UTF-8
 export LANG=en_US.UTF-8
+export LANGUAGE=en_US.UTF-8
 
 # ==============================================
-# 基础配置与初始化
+# 基础配置与初始化（修复变量名笔误）
 # ==============================================
 WORK_DIR=$(pwd)
 LOG_DIR="$WORK_DIR/sync-logs"
-OUTPUTPUT_JSON="$WORK_DIR/device-drivers.json"
+OUTPUT_JSON="$WORK_DIR/device-drivers.json"  # 修复：修正变量名（原OUTPUTPUT_JSON）
 SYNC_LOG="$LOG_DIR/sync-detail.log"
 PKG_REPO="https://git.openwrt.org/feed/packages.git"  # 驱动包仓库
-TMP_SRC=$(mktemp -d -t openwrt-src-XXXXXX)            # 主源码临时目录（带前缀）
-TMP_PKGS=$(mktemp -d -t openwrt-pkgs-XXXXXX)          # 驱动包临时目录（带前缀）
+TMP_SRC=$(mktemp -d -t openwrt-src-XXXXXX)            # 主源码临时目录
+TMP_PKGS=$(mktemp -d -t openwrt-pkgs-XXXXXX)          # 驱动包临时目录
 TMP_BATCH_DIR="$LOG_DIR/device_batches"               # 设备文件批处理目录
 
-# 创建必要目录
-mkdir -p "$LOG_DIR" "$TMP_BATCH_DIR" || { echo "❌ 无法创建日志目录" >&2; exit 1; }
+# 创建必要目录（确保权限正确）
+mkdir -p "$LOG_DIR" "$TMP_BATCH_DIR" || { 
+    echo "❌ 无法创建日志目录（权限不足）" >&2; 
+    exit 1; 
+}
 > "$SYNC_LOG"  # 清空日志
 
-# 日志函数（确保中文正常输出）
+# 日志函数（确保中文正常输出，避免截断）
 log() {
     local timestamp=$(date +"%Y-%m-%d %H:%M:%S")
-    echo "[$timestamp] $1" | tee -a "$SYNC_LOG"
+    # 使用printf确保特殊字符不被转义
+    printf "[%s] %s\n" "$timestamp" "$1" | tee -a "$SYNC_LOG"
 }
 
-# 临时资源清理函数
+# 临时资源清理函数（确保安全删除）
 cleanup() {
     log "🔧 开始清理临时资源..."
-    # 安全删除临时目录（仅删除脚本创建的带前缀目录）
-    rm -rf "$TMP_SRC" "$TMP_PKGS" "$TMP_BATCH_DIR" "$LOG_DIR"/*.tmp
+    # 仅删除脚本创建的临时目录，避免误删系统文件
+    [ -d "$TMP_SRC" ] && rm -rf "$TMP_SRC"
+    [ -d "$TMP_PKGS" ] && rm -rf "$TMP_PKGS"
+    [ -d "$TMP_BATCH_DIR" ] && rm -rf "$TMP_BATCH_DIR"
+    find "$LOG_DIR" -name "*.tmp" -delete
     log "✅ 临时资源清理完成"
 }
-trap cleanup EXIT  # 确保退出时清理资源
+trap cleanup EXIT  # 确保脚本退出时执行清理
 
 # ==============================================
-# 1. 依赖检查
+# 1. 依赖检查（新增编码工具检查）
 # ==============================================
 check_dependencies() {
     log "🔍 检查依赖工具..."
-    REQUIRED_TOOLS=("git" "jq" "grep" "sed" "awk" "find" "wc" "tr" "sort" "uniq" "file" "gcc")
+    # 新增iconv确保编码转换支持
+    REQUIRED_TOOLS=("git" "jq" "grep" "sed" "awk" "find" "wc" "tr" "sort" "uniq" "file" "gcc" "iconv")
     
     for tool in "${REQUIRED_TOOLS[@]}"; do
         if ! command -v "$tool" &> /dev/null; then
-            log "❌ 缺失必要工具：$tool"
+            log "❌ 缺失必要工具：$tool（可能导致中文乱码或功能异常）"
             exit 1
         fi
     done
@@ -60,46 +69,47 @@ check_dependencies() {
 }
 
 # ==============================================
-# 2. 克隆源码仓库
+# 2. 克隆源码仓库（增加超时控制）
 # ==============================================
 clone_repositories() {
     # 克隆OpenWrt主源码
     log "📥 克隆OpenWrt主源码..."
-    local retries=5
+    local retries=3
+    local timeout=300  # 5分钟超时
     while [ $retries -gt 0 ]; do
-        if git clone --depth 10 https://git.openwrt.org/openwrt/openwrt.git "$TMP_SRC" 2>> "$SYNC_LOG"; then
+        if timeout $timeout git clone --depth 10 https://git.openwrt.org/openwrt/openwrt.git "$TMP_SRC" 2>> "$SYNC_LOG"; then
             log "✅ 主源码克隆成功"
             break
         fi
         retries=$((retries - 1))
         log "⚠️ 主源码克隆失败，剩余重试：$retries"
-        sleep 3
+        sleep 5
     done
     if [ $retries -eq 0 ]; then
-        log "❌ 主源码克隆失败"
+        log "❌ 主源码克隆失败（超时或网络问题）"
         exit 1
     fi
 
     # 克隆驱动包仓库
     log "📥 克隆OpenWrt packages仓库（驱动源）..."
-    retries=5
+    retries=3
     while [ $retries -gt 0 ]; do
-        if git clone --depth 10 "$PKG_REPO" "$TMP_PKGS" 2>> "$SYNC_LOG"; then
+        if timeout $timeout git clone --depth 10 "$PKG_REPO" "$TMP_PKGS" 2>> "$SYNC_LOG"; then
             log "✅ 驱动包仓库克隆成功"
             break
         fi
         retries=$((retries - 1))
         log "⚠️ 驱动包仓库克隆失败，剩余重试：$retries"
-        sleep 3
+        sleep 5
     done
     if [ $retries -eq 0 ]; then
-        log "❌ 驱动包仓库克隆失败"
+        log "❌ 驱动包仓库克隆失败（超时或网络问题）"
         exit 1
     fi
 }
 
 # ==============================================
-# 3. 提取设备信息
+# 3. 提取设备信息（修复中文设备名处理）
 # ==============================================
 extract_devices() {
     log "🔍 开始提取设备信息..."
@@ -136,14 +146,16 @@ extract_devices() {
             local chip=""
             local vendor=""
 
-            # 根据文件类型提取信息
+            # 根据文件类型提取信息（保留中文设备名）
             case "$file_ext" in
                 dts|dtsi|dtso)
-                    # 从设备树文件提取型号和兼容性
+                    # 从设备树文件提取型号和兼容性（保留中文）
                     local model=$(grep -E 'model[[:space:]]*=' "$file" 2>> "$SYNC_LOG" | 
-                                  sed -E 's/model[[:space:]]*=[[:space:]]*["'\'']//; s/["'\''];//; s/^[[:space:]]*//')
+                                  sed -E 's/model[[:space:]]*=[[:space:]]*["'\'']//; s/["'\''];//; s/^[[:space:]]*//' |
+                                  iconv -f UTF-8 -t UTF-8//IGNORE)  # 过滤无效UTF-8字符
                     local compatible=$(grep -E 'compatible[[:space:]]*=' "$file" 2>> "$SYNC_LOG" | 
-                                      sed -E 's/compatible[[:space:]]*=[[:space:]]*["'\'']//; s/["'\''],?[[:space:]]*/ /g')
+                                      sed -E 's/compatible[[:space:]]*=[[:space:]]*["'\'']//; s/["'\''],?[[:space:]]*/ /g' |
+                                      iconv -f UTF-8 -t UTF-8//IGNORE)
                     device_names="$model $compatible"
                     vendor=$(echo "$compatible" | awk -F ',' '{print $1}' | head -n1)
                     chip=$(echo "$compatible" | grep -oE '[a-z0-9]+,[a-z0-9-]+' | awk -F ',' '{print $2}' | head -n1)
@@ -152,7 +164,8 @@ extract_devices() {
                 mk|Makefile)
                     # 从Makefile提取设备名
                     device_names=$(grep -E 'DEVICE_NAME|SUPPORTED_DEVICES' "$file" 2>> "$SYNC_LOG" | 
-                                  sed -E 's/(DEVICE_NAME|SUPPORTED_DEVICES)[[:space:]]*[:=][[:space:]]*//; s/["'\'']//g')
+                                  sed -E 's/(DEVICE_NAME|SUPPORTED_DEVICES)[[:space:]]*[:=][[:space:]]*//; s/["'\'']//g' |
+                                  iconv -f UTF-8 -t UTF-8//IGNORE)
                     vendor=$(echo "$file" | sed -E 's|.*/target/linux/([^/]+)/.*|\1|; t; d')
                     chip=$(grep -E '^SOC[[:space:]]*:=' "$file" 2>> "$SYNC_LOG" | 
                           sed -E 's/SOC[[:space:]]*:=[[:space:]]*//; s/["'\'']//g' | head -n1)
@@ -161,7 +174,8 @@ extract_devices() {
                 conf|config)
                     # 从配置文件提取设备名
                     device_names=$(grep -E '^CONFIG_TARGET_DEVICE' "$file" 2>> "$SYNC_LOG" | 
-                                  sed -E 's/CONFIG_TARGET_DEVICE_//; s/=y//; s/_/-/g')
+                                  sed -E 's/CONFIG_TARGET_DEVICE_//; s/=y//; s/_/-/g' |
+                                  iconv -f UTF-8 -t UTF-8//IGNORE)
                     chip=$(grep -E '^CONFIG_TARGET_[a-z0-9-]+=y' "$file" 2>> "$SYNC_LOG" | 
                           sed -E 's/CONFIG_TARGET_//; s/=y//' | head -n1)
                     ;;
@@ -173,16 +187,17 @@ extract_devices() {
             chip=${chip:-$chip_from_dir}
             chip=$(echo "$chip" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9-]//g')
 
-            # 处理设备名并写入JSON
+            # 处理设备名并写入JSON（保留中文）
             for name in $device_names; do
                 [ -z "$name" ] && continue
-                local device_name=$(echo "$name" | tr '[:upper:]' '[:lower:]' | 
-                                  sed -E 's/[_,:;\/]+/-/g; s/[^a-z0-9 -]//g; s/[[:space:]]+/-/g; s/--+/-/g')
+                # 处理中文设备名：仅替换特殊字符，保留中文字符
+                local device_name=$(echo "$name" | 
+                                  sed -E 's/[_,:;\/]+/-/g; s/[^a-zA-Z0-9 一-龥-]//g; s/[[:space:]]+/-/g; s/--+/-/g')
                 [ -z "$device_name" ] && continue
 
                 if ! [[ -v PROCESSED_DEVICES["$device_name"] ]]; then
                     PROCESSED_DEVICES["$device_name"]=1
-                    # 原子操作写入JSON
+                    # 原子操作写入JSON（确保中文被正确编码）
                     jq --arg name "$device_name" \
                        --arg chip "$chip" \
                        --arg vendor "$vendor" \
@@ -238,14 +253,14 @@ extract_chips() {
 }
 
 # ==============================================
-# 5. 匹配驱动程序（修复：扩展搜索路径）
+# 5. 匹配驱动程序（扩展搜索路径）
 # ==============================================
 match_drivers() {
     log "🔍 开始匹配驱动程序..."
     local DRIVER_TMP="$LOG_DIR/driver_metadata.tmp"
     > "$DRIVER_TMP"
 
-    # 解析驱动包元数据（修复：扩展搜索路径）
+    # 解析驱动包元数据（扩展搜索路径）
     log "ℹ️ 解析驱动包元数据（可能需要几分钟）..."
     # 搜索多个可能包含驱动的目录
     find "$TMP_PKGS" \( -path "$TMP_PKGS/kernel" -o -path "$TMP_PKGS/net" -o \
@@ -395,10 +410,10 @@ EOF
 }
 
 # ==============================================
-# 7. 自动生成主题+优化配置（修复JSON语法和临时文件）
+# 7. 自动生成主题+优化配置（修复JSON语法）
 # ==============================================
 discover_themes() {
-    # 修复：使用带前缀的临时文件，避免冲突
+    # 使用带前缀的临时文件，避免冲突
     local themes_dir=$(mktemp -d -t openwrt-themes-XXXXXX)
     local theme_list=$(mktemp -t openwrt-theme-list-XXXXXX)
     
@@ -442,7 +457,7 @@ generate_theme_optimizations() {
     local theme_list_path=$(discover_themes)
     mkdir -p "$(dirname "$theme_opt_file")"
     
-    # 检测GCC支持的优化级别（修复：正确提取优化选项）
+    # 检测GCC支持的优化级别（正确提取优化选项）
     local gcc_opts=$(gcc --help=optimizers 2>/dev/null | 
                     grep -oE '--param=O[0-9s]| -O[0-9s]' |  # 只匹配带空格或--param=前缀的-O选项
                     grep -oE 'O[0-9s]' |  # 提取O+数字/s
@@ -462,7 +477,7 @@ generate_theme_optimizations() {
         done
     fi
     
-    # 生成JSON（修复：确保字符串正确加引号）
+    # 生成JSON（确保字符串正确加引号）
     echo '{"themes": [' > "$theme_opt_file"
     local first=1
     
@@ -479,7 +494,7 @@ generate_theme_optimizations() {
             "argon") theme_opts="O2 O3";;   # 热门主题支持更高优化
         esac
         
-        # 修复：将数组元素用双引号包裹
+        # 将数组元素用双引号包裹
         local arch_array=$(echo "$theme_arches" | tr ' ' '\n' | grep -v '^$' | awk '{print "\""$1"\""}' | tr '\n' ',' | sed 's/,$//')
         local opts_array=$(echo "$theme_opts" | tr ' ' '\n' | grep -v '^$' | awk '{print "\""$1"\""}' | tr '\n' ',' | sed 's/,$//')
         
@@ -497,19 +512,19 @@ generate_theme_optimizations() {
     echo ']}' >> "$theme_opt_file"
     # 验证生成的JSON有效性
     if ! jq . "$theme_opt_file" &> /dev/null; then
-        log "⚠️ 主题配置JSON格式语法错误，尝试检查修正手动检查 $theme_opt_file"
+        log "⚠️ 主题配置JSON格式语法错误，尝试手动检查 $theme_opt_file"
     fi
     local theme_count=$(jq '.themes | length' "$theme_opt_file" 2>/dev/null || echo 0)
     log "✅ 主题+优化配置生成完成，共 $theme_count 个主题"
-    rm -f "$theme_list_path"  # 只删除临时文件（仅文件，不删除目录）
+    rm -f "$theme_list_path"  # 只删除临时文件
 }
 
 # ==============================================
-# 8. 同步源码分支（供工作流使用）
+# 8. 同步源码分支（修复变量名和命令错误）
 # ==============================================
 sync_source_branches() {
-    log "🔍 同步步最新源码分支..."
-    local branchesches_file="$LOG_DIR/source_branches.tmp"
+    log "🔍 同步最新源码分支..."
+    local branches_file="$LOG_DIR/source_branches.tmp"  # 修复：修正变量名（原branchesches_file）
     > "$branches_file"
 
     # OpenWrt官方分支
@@ -520,12 +535,12 @@ sync_source_branches() {
 
     # ImmortalWrt分支
     log "ℹ️ 获取ImmortalWrt分支..."
-    git ls-remote --heads https https://github.com/immortalwrt/immortalwrt.git 2>> "$SYNC_LOG" | 
+    git ls-remote --heads https://github.com/immortalwrt/immortalwrt.git 2>> "$SYNC_LOG" | 
         grep -E 'openwrt-[0-9]+\.[0-9]+|master' | 
         sed -E 's/.*refs\/heads\///; s/^/immortalwrt-/g' >> "$branches_file"
 
-    # 去重排序
-    sort -u "$branches_file" | sort -r > "$branches_file.tmp" && mv mv "$branches_file.tmp" "$branches_file"
+    # 去重排序（修复：移除重复的mv命令）
+    sort -u "$branches_file" | sort -r > "$branches_file.tmp" && mv "$branches_file.tmp" "$branches_file"
     log "✅ 源码分支同步完成，共 $(wc -l < "$branches_file") 个"
 }
 
@@ -550,13 +565,13 @@ generate_core_features
 generate_theme_optimizations
 sync_source_branches
 
-# 最终验证
+# 最终验证（确保中文统计正常）
 log "========================================="
 log "✅ 所有同步任务完成"
 log "📊 设备总数：$(jq '.devices | length' "$OUTPUT_JSON")"
 log "📊 芯片总数：$(jq '.chips | length' "$OUTPUT_JSON")"
 log "📊 驱动总数：$(jq '.drivers | length' "$OUTPUT_JSON")"
-log "📊 核心功能数：$(jq '.features | length' "configs/core-features.json")"
+log "📊 核心功能数：$(jq '.features | length' "configs/core-features.json" 2>/dev/null || echo 0)"
 log "📊 主题数：$(jq '.themes | length' "configs/theme-optimizations.json" 2>/dev/null || echo 0)"
 log "========================================="
     
