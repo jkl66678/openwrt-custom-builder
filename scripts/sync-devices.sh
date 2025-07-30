@@ -336,28 +336,35 @@ match_drivers() {
            { log "⚠️ 驱动 $name 写入失败"; rm -f "$OUTPUT_JSON.tmp"; }
     done < "$DRIVER_TMP"
 
-    # 为芯片匹配驱动
+    # 为芯片匹配驱动（核心修复：使用jq安全生成数组）
     log "ℹ️ 为芯片自动匹配驱动..."
     jq -r '.chips[].name' "$OUTPUT_JSON" | while read -r chip; do
-        # 兼容芯片名包含驱动关键词的情况
-        local compatible_drivers=$(jq -r --arg chip "$chip" '
-            .drivers[] | 
+        # 使用jq直接生成JSON数组，避免手动拼接
+        local drivers_array=$(jq --arg chip "$chip" '
+            [.drivers[] | 
             select( (.compatible_chips | split(",") | index($chip)) or 
                     (.compatible_chips | split(",") | index("generic")) or
                     ($chip | contains(.compatible_chips | split(",")[])) ) |
-            .name + "@" + .version
-        ' "$OUTPUT_JSON" 2>> "$SYNC_LOG" | sort | uniq | tr '\n' ',' | sed 's/,$//')
+            .name + "@" + .version] |
+            unique
+        ' "$OUTPUT_JSON" 2>> "$SYNC_LOG")
 
-        if [ -n "$compatible_drivers" ]; then
-            local drivers_array=$(echo "$compatible_drivers" | sed -E 's/([^,]+)/"\1"/g; s/,/", "/g; s/^/[/; s/$/]/')
-            # 更新芯片的默认驱动
-            jq --arg chip "$chip" --argjson drivers "$drivers_array" \
-               '.chips[] |= (if .name == $chip then .default_drivers = $drivers else . end)' \
-               "$OUTPUT_JSON" > "$OUTPUT_JSON.tmp" && \
-               [ -s "$OUTPUT_JSON.tmp" ] && mv "$OUTPUT_JSON.tmp" "$OUTPUT_JSON" || \
-               { log "⚠️ 芯片 $chip 驱动更新失败"; rm -f "$OUTPUT_JSON.tmp"; }
-            log "ℹ️ 芯片 $chip 匹配驱动：$compatible_drivers"
+        # 验证生成的JSON数组是否有效
+        if ! echo "$drivers_array" | jq . > /dev/null 2>&1; then
+            log "⚠️ 芯片 $chip 生成的驱动数组无效，使用空数组"
+            drivers_array="[]"
         fi
+
+        # 更新芯片的默认驱动
+        jq --arg chip "$chip" --argjson drivers "$drivers_array" \
+           '.chips[] |= (if .name == $chip then .default_drivers = $drivers else . end)' \
+           "$OUTPUT_JSON" > "$OUTPUT_JSON.tmp" && \
+           [ -s "$OUTPUT_JSON.tmp" ] && mv "$OUTPUT_JSON.tmp" "$OUTPUT_JSON" || \
+           { log "⚠️ 芯片 $chip 驱动更新失败"; rm -f "$OUTPUT_JSON.tmp"; }
+        
+        # 仅在有驱动时才显示详细日志（避免过长输出）
+        local driver_count=$(echo "$drivers_array" | jq length)
+        log "ℹ️ 芯片 $chip 匹配驱动数：$driver_count"
     done
 
     # 为设备关联芯片的驱动
