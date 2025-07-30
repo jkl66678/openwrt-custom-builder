@@ -7,7 +7,7 @@ on:
   schedule:
     - cron: '0 3 * * *'
 
-# 全局环境变量（确保全流程UTF-8编码）
+# 全局环境变量（确保全流程UTF-8编码与统一时区）
 env:
   LC_ALL: en_US.UTF-8
   LANG: en_US.UTF-8
@@ -33,11 +33,11 @@ jobs:
           cd openwrt-builder
           pwd  # 输出当前目录，便于调试路径问题
 
-      - name: 安装系统依赖（自动适配最新版本）
+      - name: 安装系统依赖（自动适配最新版本，增强容错）
         run: |
           cd openwrt-builder
-          # 更新包索引
-          sudo apt update -y
+          # 更新包索引（带容错参数）
+          sudo apt update -y --fix-missing
           
           # 安装基础工具（无版本依赖的核心包）
           sudo apt install -y \
@@ -51,23 +51,48 @@ jobs:
           echo "当前系统编码: $(locale)"  # 验证编码配置
           
           # ==============================================
-          # 动态获取并安装最新版Go（自动适配版本更新）
+          # 动态获取并安装最新版Go（增加容错机制）
           # ==============================================
           echo "获取最新Go稳定版..."
-          # 通过GitHub API查询Go最新release版本（避免硬编码）
-          GO_LATEST_TAG=$(curl -s "https://api.github.com/repos/golang/go/releases/latest" | jq -r '.tag_name')
-          GO_LATEST_VERSION=$(echo "$GO_LATEST_TAG" | sed 's/^go//')  # 提取纯版本号（如1.22.5）
-          echo "检测到最新Go版本: $GO_LATEST_VERSION"
+          # 定义重试次数和默认版本（已知稳定版）
+          MAX_RETRIES=3
+          DEFAULT_GO_VERSION="1.22.5"
+          GO_LATEST_TAG="null"
           
-          # 下载并安装最新Go
+          # 重试机制：最多请求3次GitHub API（带超时和连接重试）
+          for ((i=1; i<=MAX_RETRIES; i++)); do
+            echo "尝试第$i次请求GitHub API..."
+            GO_LATEST_TAG=$(curl -s --retry 3 --connect-timeout 10 "https://api.github.com/repos/golang/go/releases/latest" | jq -r '.tag_name')
+            if [ "$GO_LATEST_TAG" != "null" ] && [ -n "$GO_LATEST_TAG" ]; then
+              echo "API请求成功，获取到最新版本标签: $GO_LATEST_TAG"
+              break
+            fi
+            echo "第$i次请求失败，等待2秒后重试..."
+            sleep 2
+          done
+          
+          # 如果多次重试后仍失败，使用默认版本
+          if [ "$GO_LATEST_TAG" = "null" ] || [ -z "$GO_LATEST_TAG" ]; then
+            echo "⚠️ 无法获取最新Go版本，使用默认稳定版: $DEFAULT_GO_VERSION"
+            GO_LATEST_TAG="go$DEFAULT_GO_VERSION"
+          fi
+          
+          # 提取纯版本号（如从go1.22.5提取1.22.5）
+          GO_LATEST_VERSION=$(echo "$GO_LATEST_TAG" | sed 's/^go//')
+          echo "最终使用的Go版本: $GO_LATEST_VERSION"
+          
+          # 下载并安装Go（双重链接保障）
           GO_TAR="go${GO_LATEST_VERSION}.linux-amd64.tar.gz"
-          wget "https://dl.google.com/go/${GO_TAR}" -O /tmp/${GO_TAR} || {
-            echo "❌ 下载Go失败，使用备用链接"
-            wget "https://gomirrors.org/dl/go/${GO_TAR}" -O /tmp/${GO_TAR}
-          }
+          if ! wget "https://dl.google.com/go/${GO_TAR}" -O /tmp/${GO_TAR}; then
+            echo "❌ 谷歌官方源下载失败，切换到备用源..."
+            if ! wget "https://gomirrors.org/dl/go/${GO_TAR}" -O /tmp/${GO_TAR}; then
+              echo "❌ 所有源下载失败，终止流程"
+              exit 1
+            fi
+          fi
           
-          # 安装Go到系统目录
-          sudo rm -rf /usr/local/go  # 清理旧版本
+          # 安装Go到系统目录（清理旧版本）
+          sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf /tmp/${GO_TAR}
           export PATH="/usr/local/go/bin:$PATH"  # 临时添加到环境变量
           go version  # 验证安装结果
@@ -100,32 +125,47 @@ jobs:
       - name: 准备脚本文件（确保证编码和权限）
         run: |
           cd openwrt-builder
-          # 创建必要目录
+          # 创建必要目录（若不存在）
           mkdir -p scripts sync-logs configs
           
-          # 赋予脚本执行权限
-          chmod +x scripts/*.sh
+          # 赋予脚本执行权限（递归处理所有.sh文件）
+          find scripts -name "*.sh" -exec chmod +x {} \;
           
           # 转换换行符（防止Windows格式导致脚本执行错误）
-          dos2unix scripts/sync-devices.sh scripts/generate-workflow.sh
+          find scripts -name "*.sh" -exec dos2unix {} \;
           
           # 验证文件编码（确保为UTF-8）
           echo "===== 脚本编码验证 ====="
-          file -i scripts/sync-devices.sh
-          file -i scripts/generate-workflow.sh
+          find scripts -name "*.sh" -exec file -i {} \;
           echo "======================="
 
-      - name: 执行设备数据同步（含驱动提取）
+      - name: 执行设备数据同步（含驱动提取，带超时控制）
         run: |
           cd openwrt-builder
-          # 执行同步脚本并记录详细日志（含时间戳）
-          ./scripts/sync-devices.sh | tee sync-logs/sync-$(date +%Y%m%d_%H%M%S).log
+          # 执行同步脚本并记录详细日志（含时间戳），超时控制为120分钟
+          timeout 7200 ./scripts/sync-devices.sh | tee sync-logs/sync-$(date +%Y%m%d_%H%M%S).log
+          exit_code=$?
+          if [ $exit_code -eq 124 ]; then
+            echo "❌ 设备同步脚本执行超时（超过120分钟）"
+            exit 1
+          elif [ $exit_code -ne 0 ]; then
+            echo "❌ 设备同步脚本执行失败（退出码：$exit_code）"
+            exit $exit_code
+          fi
 
-      - name: 生成编译工作流文件
+      - name: 生成编译工作流文件（带日志）
         run: |
           cd openwrt-builder
-          # 生成工作流并记录日志
-          ./scripts/generate-workflow.sh | tee sync-logs/workflow-$(date +%Y%m%d_%H%M%S).log
+          # 生成工作流并记录日志，超时控制为60分钟
+          timeout 3600 ./scripts/generate-workflow.sh | tee sync-logs/workflow-$(date +%Y%m%d_%H%M%S).log
+          exit_code=$?
+          if [ $exit_code -eq 124 ]; then
+            echo "❌ 工作流生成脚本执行超时（超过60分钟）"
+            exit 1
+          elif [ $exit_code -ne 0 ]; then
+            echo "❌ 工作流生成脚本执行失败（退出码：$exit_code）"
+            exit $exit_code
+          fi
 
       - name: 严格验证同步结果（防乱码和完整性）
         run: |
@@ -133,20 +173,21 @@ jobs:
           echo "===== 结果验证 ====="
           
           # 验证核心文件存在性
-          if [ ! -f ".github/workflows/build.yml" ]; then
-            echo "❌ 工作流文件未生成"
-            exit 1
-          fi
-          
-          if [ ! -s "device-drivers.json" ]; then
-            echo "❌ 设备驱动JSON文件为空或不存在"
-            exit 1
-          fi
-          
-          if [ ! -s "sync-logs/source_branches.tmp" ]; then
-            echo "❌ 源码分支文件为空或不存在"
-            exit 1
-          fi
+          critical_files=(
+            ".github/workflows/build.yml"
+            "device-drivers.json"
+            "sync-logs/source_branches.tmp"
+          )
+          for file in "${critical_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "❌ 核心文件不存在：$file"
+              exit 1
+            fi
+            if [ ! -s "$file" ]; then
+              echo "❌ 核心文件为空：$file"
+              exit 1
+            fi
+          done
           
           # 验证中文内容存在（非强制，作为警告）
           if ! grep -qE '[一-龥]' "device-drivers.json"; then
@@ -180,6 +221,7 @@ jobs:
           commit_user_name: "同步机器人"
           commit_user_email: "sync-bot@example.com"
           encoding: "utf-8"  # 强制UTF-8编码提交，避免中文乱码
+          push_options: --force-with-lease  # 安全推送，避免覆盖他人提交
 
       - name: 上传同步日志（便于调试）
         uses: actions/upload-artifact@v4
@@ -187,3 +229,4 @@ jobs:
           name: sync-logs-${{ github.run_id }}
           path: openwrt-builder/sync-logs/*.log
           retention-days: 7  # 日志保留7天，节省存储空间
+          if-no-files-found: warn  # 无日志时仅警告，不中断流程
