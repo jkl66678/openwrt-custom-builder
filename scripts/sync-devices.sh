@@ -77,22 +77,33 @@ if [ $retries -eq 0 ]; then
 fi
 
 # ==============================================
-# 4. 提取设备信息（核心逻辑，修复关联数组问题）
+# 4. 提取设备信息（优化：分批处理，避免内存溢出）
 # ==============================================
-log "🔍 开始提取设备信息..."
-declare -A PROCESSED_DEVICES  # 关联数组：用于设备去重（键为设备名）
+log "🔍 开始提取设备信息（分批处理）..."
+declare -A PROCESSED_DEVICES
+BATCH_SIZE=300  # 每批处理300个文件（根据Runner内存调整）
+TMP_BATCH_DIR="$LOG_DIR/dts_batches"
+mkdir -p "$TMP_BATCH_DIR" && rm -rf "$TMP_BATCH_DIR"/*  # 清空批次目录
 
-# 查找所有.dts文件并保存到临时文件（避免管道子shell导致数组无法共享）
-find "$TMP_SRC/target/linux" -name "*.dts" > "$LOG_DIR/dts_files.tmp"
+# 生成分批的.dts文件列表（避免一次性加载所有路径）
+find "$TMP_SRC/target/linux" -name "*.dts" | split -l $BATCH_SIZE - "$TMP_BATCH_DIR/batch_"
 
-# 遍历.dts文件（从临时文件读取，避免子shell问题）
-while read -r dts_file; do
-    # 解析设备名（从文件名提取，如"mt7621_redmi-ac2100.dts" → "redmi-ac2100"）
-    filename=$(basename "$dts_file" .dts)
-    device_name=$(echo "$filename" | sed -E 's/^[a-z0-9_-]+_//' | tr '_' '-')  # 移除前缀
-    if [ -z "$device_name" ]; then
-        device_name="$filename"  # 兜底：若提取失败则使用原始文件名
-    fi
+# 遍历每批文件处理
+for batch_file in "$TMP_BATCH_DIR"/batch_*; do
+    [ -f "$batch_file" ] || continue  # 跳过非文件
+    log "ℹ️ 处理批次：$(basename "$batch_file")（约$BATCH_SIZE个设备）"
+
+    # 处理当前批次的.dts文件
+    while read -r dts_file; do
+        # 跳过不存在的文件（防御性检查）
+        [ -f "$dts_file" ] || { log "⚠️ 跳过不存在的文件：$dts_file"; continue; }
+
+        # 解析设备名（添加特殊字符处理）
+        filename=$(basename "$dts_file" .dts | tr -d '[:cntrl:]')  # 移除控制字符
+        device_name=$(echo "$filename" | sed -E 's/^[a-z0-9_-]+_//' | tr '_' '-' || true)
+        if [ -z "$device_name" ] || [ "$device_name" = "." ]; then
+            device_name="$filename"  # 兜底逻辑
+        fi
 
     # 解析芯片型号和平台路径（如"target/linux/ramips/mt7621" → 芯片mt7621，平台ramips/mt7621）
     platform_path=$(dirname "$dts_file" | sed "s|$TMP_SRC/target/linux/||")  # 相对路径
