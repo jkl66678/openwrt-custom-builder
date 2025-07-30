@@ -1,216 +1,308 @@
 #!/bin/bash
 set -uo pipefail
 
-# 确保中文显示正常
+# 强制UTF-8编码（解决中文乱码）
 export LC_ALL=en_US.UTF-8
 export LANG=en_US.UTF-8
+export LANGUAGE=en_US.UTF-8
 
 # ==============================================
-# 基础配置
+# 基础配置与初始化
 # ==============================================
 WORK_DIR=$(pwd)
-OUTPUT_WORKFLOW="$WORK_DIR/.github/workflows/build.yml"
-THEME_OPTS_JSON="$WORK_DIR/configs/theme-optimizations.json"
-CORE_FEATURES_JSON="$WORK_DIR/configs/core-features.json"
-DEVICES_JSON="$WORK_DIR/device-drivers.json"
-BRANCHES_TMP="$WORK_DIR/sync-logs/source_branches.tmp"
-LOG_FILE="$WORK_DIR/sync-logs/workflow-generate.log"
+LOG_DIR="$WORK_DIR/sync-logs"
+OUTPUT_WORKFLOW=".github/workflows/build.yml"
+DEVICE_JSON="$WORK_DIR/device-drivers.json"
+BRANCHES_FILE="$LOG_DIR/source_branches.tmp"
+CORE_FEATURES="configs/core-features.json"
+THEME_OPTS="configs/theme-optimizations.json"
+WORKFLOW_LOG="$LOG_DIR/workflow-generate.log"
 
-# 创建日志目录
-mkdir -p "$(dirname "$LOG_FILE")" "$(dirname "$OUTPUT_WORKFLOW")"
-> "$LOG_FILE"  # 清空日志
+# 创建输出目录
+mkdir -p "$(dirname "$OUTPUT_WORKFLOW")" || {
+    echo "❌ 无法创建工作流目录: $(dirname "$OUTPUT_WORKFLOW")" >&2
+    exit 1
+}
+> "$WORKFLOW_LOG"  # 清空日志
 
-# 日志函数
+# 日志函数（确保中文正常输出）
 log() {
     local timestamp=$(date +"%Y-%m-%d %H:%M:%S")
-    echo "[$timestamp] $1" | tee -a "$LOG_FILE"
+    printf "[%s] %s\n" "$timestamp" "$1" | tee -a "$WORKFLOW_LOG"
 }
 
 # ==============================================
-# 1. 依赖检查
+# 1. 依赖与输入检查
 # ==============================================
-check_dependencies() {
-    log "🔍 检查依赖工具..."
-    REQUIRED_TOOLS=("jq" "yq" "sed" "grep" "awk")  # yq用于验证YAML格式
+check_requirements() {
+    log "🔍 检查工作流生成依赖..."
     
-    for tool in "${REQUIRED_TOOLS[@]}"; do
+    # 检查必要工具
+    local required_tools=("jq" "grep" "sed" "awk" "yamlfmt")
+    for tool in "${required_tools[@]}"; do
         if ! command -v "$tool" &> /dev/null; then
-            log "❌ 缺失必要工具：$tool"
+            log "❌ 缺失必要工具: $tool（请先安装）"
             exit 1
         fi
     done
-    
-    # 验证输入JSON文件存在且有效
-    local json_files=("$THEME_OPTS_JSON" "$CORE_FEATURES_JSON" "$DEVICES_JSON" "$BRANCHES_TMP")
-    for file in "${json_files[@]}"; do
-        if [ ! -f "$file" ] || [ ! -s "$file" ]; then
-            log "❌ 输入文件不存在或为空：$file"
+
+    # 检查输入文件
+    local input_files=("$BRANCHES_FILE" "$DEVICE_JSON" "$CORE_FEATURES" "$THEME_OPTS")
+    for file in "${input_files[@]}"; do
+        if [ ! -f "$file" ]; then
+            log "❌ 输入文件不存在: $file"
             exit 1
         fi
-        # 验证JSON格式有效性
-        if ! jq . "$file" &> /dev/null; then
-            log "❌ JSON格式错误：$file（请检查语法）"
+        if [ ! -s "$file" ]; then
+            log "❌ 输入文件为空: $file"
             exit 1
         fi
     done
-    
-    log "✅ 依赖工具检查通过"
+
+    log "✅ 依赖检查通过"
 }
 
 # ==============================================
-# 2. 提取配置数据（修复jq解析和变量为空问题）
+# 2. 提取构建参数（支持中文设备名）
 # ==============================================
-extract_configs() {
-    # 提取设备列表（限制最多50个，避免工作流过大）
-    log "🔧 提取设备列表..."
-    DEVICES=$(jq -r '.devices[0:50] | .[].name' "$DEVICES_JSON" | sort | uniq | tr '\n' ' ')
-    log "ℹ️ 设备列表：$DEVICES"
+extract_parameters() {
+    log "🔍 提取构建参数..."
 
-    # 提取芯片列表
-    log "🔧 提取芯片列表..."
-    CHIPS=$(jq -r '.chips[].name' "$DEVICES_JSON" | sort | uniq | grep -v '^$' | tr '\n' ' ')
-    log "ℹ️ 芯片列表：$CHIPS"
+    # 提取分支列表（去重排序）
+    BRANCHES=$(jq -Rn '[inputs]' "$BRANCHES_FILE" | jq -c '.')
+    log "ℹ️ 提取分支数: $(echo "$BRANCHES" | jq 'length')"
 
-    # 提取源码分支
-    log "🔧 提取源码分支..."
-    BRANCHES=$(cat "$BRANCHES_TMP" | sort -r | tr '\n' ' ')
-    log "ℹ️ 源码分支：$BRANCHES"
+    # 提取设备列表（保留中文，过滤特殊字符）
+    DEVICES=$(jq -c '.devices[].name' "$DEVICE_JSON" | 
+              sed -E 's/[\\"]/\\\\&/g' |  # 转义引号和反斜杠
+              jq -Rn '[inputs]')
+    log "ℹ️ 提取设备数: $(echo "$DEVICES" | jq 'length')"
 
-    # 生成主题+优化组合（修复jq解析错误）
-    log "🔧 生成主题+优化组合..."
-    # 验证theme-optimizations.json结构并提取有效数据
-    local valid_themes=$(jq -r '
-        .themes[] | 
-        select(.name != null and .architectures != null and .opts != null) |
-        {name: .name, arch: .architectures[], opt: .opts[]} |
-        "\(.name)-\(.arch)-\(.opt)"
-    ' "$THEME_OPTS_JSON" 2>> "$LOG_FILE")  # 捕获jq错误到日志
-    
-    # 处理可能的空值，设置默认值
-    THEME_COMBOS=$(echo "$valid_themes" | grep -v '^$' | sort | uniq | tr '\n' ' ')
-    theme_count=$(echo "$THEME_COMBOS" | wc -w | xargs)
-    theme_count=${theme_count:-0}  # 关键修复：设置默认值避免为空
-    log "ℹ️ 主题+优化组合（共$theme_count个）：$THEME_COMBOS"
+    # 提取芯片架构
+    ARCHITECTURES=$(jq -r '.chips[].platforms' "$DEVICE_JSON" | 
+                    tr ',' '\n' | sort -u | grep -v '^$' | 
+                    jq -Rn '[inputs]')
+    log "ℹ️ 提取架构数: $(echo "$ARCHITECTURES" | jq 'length')"
 
-    # 提取核心功能选项
-    log "🔧 提取核心功能选项..."
-    CORE_FEATURES=$(jq -r '.features[]' "$CORE_FEATURES_JSON" | sort | uniq | tr '\n' ' ')
-    log "ℹ️ 核心功能选项：$CORE_FEATURES"
+    # 提取核心功能
+    FEATURES=$(jq -c '.features' "$CORE_FEATURES")
+    log "ℹ️ 提取功能数: $(echo "$FEATURES" | jq 'length')"
+
+    # 提取主题列表
+    THEMES=$(jq -c '.themes[].name' "$THEME_OPTS" | jq -Rn '[inputs]')
+    log "ℹ️ 提取主题数: $(echo "$THEMES" | jq 'length')"
 }
 
 # ==============================================
-# 3. 生成工作流内容
+# 3. 生成工作流YAML（核心逻辑）
 # ==============================================
-generate_workflow() {
+generate_yaml() {
     log "📝 开始生成工作流文件..."
-    local tmp_workflow=$(mktemp)
+    local tmp_yaml=$(mktemp -t workflow-XXXXXX.yml)
 
-    # 写入工作流头部
-    cat <<EOF > "$tmp_workflow"
+    # 写入YAML头部
+    cat <<EOF > "$tmp_yaml"
+# 自动生成的OpenWrt编译工作流
+# 生成时间: $(date +"%Y-%m-%d %H:%M:%S")
 name: OpenWrt 自动编译
 
 on:
   workflow_dispatch:
     inputs:
-      source_branch:
+      branch:
         description: '源码分支'
         required: true
-        default: 'openwrt-master'
         type: choice
-        options:
-          - $(echo "$BRANCHES" | tr ' ' '\n' | head -n 20 | tr '\n' ' ' | sed 's/ $//')  # 限制选项数量
-
-      target_device:
-        description: '目标设备（留空则按芯片编译）'
-        required: false
-        default: ''
-        type: choice
-        options:
-          - ''
-          - $(echo "$DEVICES" | tr ' ' '\n' | head -n 20 | tr '\n' ' ' | sed 's/ $//')
-
-      target_chip:
-        description: '目标芯片（设备为空时生效）'
+        options: $(echo "$BRANCHES" | jq -r '.[] | "          - \"" + . + "\""')
+      
+      device:
+        description: '目标设备（支持中文）'
         required: true
-        default: 'mt7621'
         type: choice
-        options:
-          - $(echo "$CHIPS" | tr ' ' '\n' | head -n 20 | tr '\n' ' ' | sed 's/ $//')
-
-      core_features:
+        options: $(echo "$DEVICES" | jq -r '.[] | "          - \"" + . + "\""')
+      
+      arch:
+        description: '芯片架构'
+        required: true
+        type: choice
+        options: $(echo "$ARCHITECTURES" | jq -r '.[] | select(. != "") | "          - \"" + . + "\""')
+      
+      features:
         description: '核心功能组合'
         required: true
-        default: 'ipv6+qos'
         type: choice
-        options:
-          - $(echo "$CORE_FEATURES" | tr ' ' '\n' | head -n 10 | tr '\n' ' ' | sed 's/ $//')
-
-      theme_optimization:
-        description: '主题+编译优化'
+        options: $(echo "$FEATURES" | jq -r '.[] | "          - \"" + . + "\""')
+      
+      theme:
+        description: 'Web界面主题'
         required: true
-        default: 'argon-generic-O3'
+        type: choice
+        options: $(echo "$THEMES" | jq -r '.[] | "          - \"" + . + "\""')
+      
+      optimize:
+        description: '编译优化级别'
+        required: true
         type: choice
         options:
-          - $(echo "$THEME_COMBOS" | tr ' ' '\n' | head -n 20 | tr '\n' ' ' | sed 's/ $//')
+          - "O2"
+          - "O3"
+          - "Os"
+
+  schedule:
+    - cron: '0 0 * * 0'  # 每周日凌晨执行
 
 jobs:
   build:
     name: 编译 OpenWrt 固件
     runs-on: ubuntu-22.04
+    timeout-minutes: 360
+
     steps:
       - name: 检查源码
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: 初始化编译环境
         run: |
           sudo apt update -y
-          sudo apt install -y build-essential clang flex bison g++ gawk gcc-multilib gettext git libncurses5-dev libssl-dev python3-distutils rsync unzip zlib1g-dev file wget
+          sudo apt install -y build-essential clang flex bison g++ gawk \
+            gcc-multilib g++-multilib gettext git libncurses5-dev libssl-dev \
+            python3-distutils rsync unzip zlib1g-dev file wget curl jq
+          echo "编译环境初始化完成"
 
-      - name: 同步源码与配置
+      - name: 加载设备配置
+        id: device-config
         run: |
-          ./scripts/sync-devices.sh
+          # 从设备JSON中提取芯片信息
+          CHIP=\$(jq -r --arg device "\${{ github.event.inputs.device }}" \
+            '.devices[] | select(.name == \$device) | .chip' "$DEVICE_JSON")
+          echo "芯片型号: \$CHIP"
+          echo "chip=\$CHIP" >> \$GITHUB_OUTPUT
 
-      - name: 加载自定义配置
+          # 提取对应驱动
+          DRIVERS=\$(jq -r --arg chip "\$CHIP" \
+            '.chips[] | select(.name == \$chip) | .default_drivers | join(" ")' "$DEVICE_JSON")
+          echo "驱动列表: \$DRIVERS"
+          echo "drivers=\$DRIVERS" >> \$GITHUB_OUTPUT
+
+      - name: 克隆源码
         run: |
-          # 根据选择生成.config
-          ./scripts/generate-config.sh \${{ github.event.inputs.source_branch }} \${{ github.event.inputs.target_device }} \${{ github.event.inputs.target_chip }}
+          BRANCH=\${{ github.event.inputs.branch }}
+          # 拆分仓库前缀和分支名（如 openwrt-master → 仓库+分支）
+          REPO_PREFIX=\$(echo "\$BRANCH" | cut -d'-' -f1)
+          BRANCH_NAME=\$(echo "\$BRANCH" | cut -d'-' -f2-)
+          
+          # 对应仓库地址
+          if [ "\$REPO_PREFIX" = "immortalwrt" ]; then
+            git clone --depth 1 -b \$BRANCH_NAME https://github.com/immortalwrt/immortalwrt.git openwrt
+          else
+            git clone --depth 1 -b \$BRANCH_NAME https://git.openwrt.org/openwrt/openwrt.git openwrt
+          fi
+          cd openwrt
+
+      - name: 安装 feeds
+        run: |
+          cd openwrt
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+          # 安装设备所需驱动
+          echo "安装驱动: \${{ steps.device-config.outputs.drivers }}"
+          for driver in \${{ steps.device-config.outputs.drivers }}; do
+            ./scripts/feeds install \$(echo \$driver | cut -d'@' -f1) || true
+          done
+
+      - name: 配置编译选项
+        run: |
+          cd openwrt
+          # 加载默认配置
+          make defconfig
+          
+          # 应用架构配置
+          echo "CONFIG_TARGET_\${{ github.event.inputs.arch }}=y" >> .config
+          
+          # 应用功能配置
+          case "\${{ github.event.inputs.features }}" in
+            *ipv6*) echo "CONFIG_IPV6=y" >> .config ;;
+            *vpn*) echo "CONFIG_PACKAGE_luci-app-openvpn=y" >> .config ;;
+            *qos*) echo "CONFIG_PACKAGE_luci-app-qos=y" >> .config ;;
+          esac
+          
+          # 应用主题配置
+          THEME=\${{ github.event.inputs.theme }}
+          echo "CONFIG_PACKAGE_luci-theme-\$THEME=y" >> .config
+          
+          # 应用优化级别
+          echo "CONFIG_CFLAGS=-O\${{ github.event.inputs.optimize }}" >> .config
+          echo "CONFIG_CXXFLAGS=-O\${{ github.event.inputs.optimize }}" >> .config
+          
+          # 保存配置
+          make defconfig
 
       - name: 开始编译
         run: |
-          make defconfig
-          make -j\$(nproc) || make -j1 V=s  # 失败时单线程输出详细日志
+          cd openwrt
+          make download -j8
+          make -j\$(nproc) || make -j1 V=s  # 编译失败时单线程输出详细日志
 
-      - name: 整理固件
+      - name: 收集编译产物
+        id: collect
         run: |
-          mkdir -p ./output/firmware
-          find ./bin/targets/ -name "*.bin" -exec cp {} ./output/firmware/ \;
-          find ./bin/targets/ -name "*.img" -exec cp {} ./output/firmware/ \;
+          cd openwrt/bin/targets/*/*
+          FIRMWARE_FILE=\$(find . -name "*.bin" | head -n1)
+          echo "固件路径: \$FIRMWARE_FILE"
+          echo "firmware=\$(basename \$FIRMWARE_FILE)" >> \$GITHUB_OUTPUT
+          mv \$FIRMWARE_FILE ../../../..
 
       - name: 上传固件
         uses: actions/upload-artifact@v4
         with:
-          name: openwrt-firmware-\${{ github.sha }}
-          path: ./output/firmware/
+          name: openwrt-firmware-${{ github.event.inputs.device }}
+          path: ${{ steps.collect.outputs.firmware }}
+          retention-days: 30
 EOF
 
-    # 合并原有编译步骤（如果存在模板）
-    log "🔄 合并原有编译步骤..."
-    if [ -f ".github/workflows/build.template.yml" ]; then
-        # 提取模板中的自定义步骤并追加
-        yq eval '.jobs.build.steps[]' ".github/workflows/build.template.yml" 2>> "$LOG_FILE" | 
-            sed '/^null$/d' >> "$tmp_workflow"
+    # 格式化YAML（确保语法正确）
+    if ! yamlfmt "$tmp_yaml" &> /dev/null; then
+        log "⚠️ YAML格式化失败，尝试手动修复"
+        # 手动修复常见格式问题
+        sed -i 's/    - /  - /g' "$tmp_yaml"
+        sed -i 's/        - /    - /g' "$tmp_yaml"
     fi
 
-    # 验证YAML格式
-    log "🔍 验证工作流格式..."
-    if ! yq eval '.' "$tmp_workflow" &> /dev/null; then
-        log "❌ 生成的工作流文件格式错误（YAML语法无效）"
+    # 移动临时文件到目标位置
+    mv "$tmp_yaml" "$OUTPUT_WORKFLOW"
+    log "✅ 工作流文件生成完成: $OUTPUT_WORKFLOW"
+}
+
+# ==============================================
+# 4. 验证工作流文件
+# ==============================================
+validate_workflow() {
+    log "🔍 验证工作流文件有效性..."
+    
+    # 检查文件存在性
+    if [ ! -f "$OUTPUT_WORKFLOW" ]; then
+        log "❌ 工作流文件未生成: $OUTPUT_WORKFLOW"
         exit 1
     fi
-
-    # 输出最终工作流
-    mv "$tmp_workflow" "$OUTPUT_WORKFLOW"
-    log "✅ 工作流文件生成成功：$OUTPUT_WORKFLOW"
+    
+    # 检查YAML语法（使用jq间接验证）
+    if ! yq eval '.' "$OUTPUT_WORKFLOW" &> /dev/null; then
+        log "❌ 工作流文件语法错误: $OUTPUT_WORKFLOW"
+        exit 1
+    fi
+    
+    # 检查关键配置是否存在
+    local required_keys=("name" "on" "jobs.build.runs-on")
+    for key in "${required_keys[@]}"; do
+        if ! yq eval ".$key" "$OUTPUT_WORKFLOW" &> /dev/null; then
+            log "❌ 工作流缺少关键配置: $key"
+            exit 1
+        fi
+    done
+    
+    log "✅ 工作流文件验证通过"
 }
 
 # ==============================================
@@ -220,24 +312,12 @@ log "========================================="
 log "📌 OpenWrt工作流生成工具启动"
 log "========================================="
 
-check_dependencies
-extract_configs
-
-# 关键修复：检查主题组合数量是否有效（避免后续逻辑错误）
-if [ "$theme_count" -gt 0 ]; then
-    generate_workflow
-else
-    log "⚠️ 未检测到有效主题+优化组合，使用默认工作流模板"
-    #  fallback到默认模板
-    if [ -f ".github/workflows/build.template.yml" ]; then
-        cp ".github/workflows/build.template.yml" "$OUTPUT_WORKFLOW"
-        log "✅ 使用默认模板生成工作流"
-    else
-        log "❌ 无有效主题组合且无默认模板，生成失败"
-        exit 1
-    fi
-fi
+check_requirements
+extract_parameters
+generate_yaml
+validate_workflow
 
 log "========================================="
-log "✅ 工作流生成完成"
+log "✅ 工作流生成全部完成"
+log "📌 输出文件: $OUTPUT_WORKFLOW"
 log "========================================="
