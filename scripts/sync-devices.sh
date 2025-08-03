@@ -60,7 +60,7 @@ cleanup() {
 trap cleanup EXIT
 
 # ==============================================
-# 依赖检查
+# 依赖检查（修复jq版本解析）
 # ==============================================
 check_dependencies() {
     log "🔍 检查依赖工具..."
@@ -73,8 +73,15 @@ check_dependencies() {
         fi
     done
 
-    if ! jq --version &> /dev/null || [ "$(jq --version | cut -d' ' -f3 | cut -d'.' -f1)" -lt 1 ] || [ "$(jq --version | cut -d' ' -f3 | cut -d'.' -f2)" -lt 6 ]; then
-        log "❌ 请安装jq 1.6+"
+    # 修复jq版本解析：仅提取数字部分（如从"jq-1.6"或"1.6"中提取"1.6"）
+    if ! jq_version_str=$(jq --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -n1); then
+        log "❌ 无法解析jq版本，请确保安装jq 1.6+"
+        exit 1
+    fi
+    jq_major=$(echo "$jq_version_str" | cut -d'.' -f1)
+    jq_minor=$(echo "$jq_version_str" | cut -d'.' -f2)
+    if [ "$jq_major" -lt 1 ] || [ "$jq_minor" -lt 6 ]; then
+        log "❌ 请安装jq 1.6+（当前版本：$jq_version_str）"
         exit 1
     fi
 
@@ -87,19 +94,19 @@ check_dependencies() {
 }
 
 # ==============================================
-# 仓库克隆（确保关键目录完整）
+# 仓库克隆（修复目录检查逻辑）
 # ==============================================
 clone_repositories() {
     log "📥 克隆OpenWrt主源码..."
     local retries=3
     local timeout=600  # 延长超时至10分钟
-    local required_dirs=("drivers" "include/linux" "package")  # 关键目录检查列表
+    # 修正：OpenWrt主仓库根目录无drivers/include，检查核心目录target/linux和package
+    local required_dirs=("target/linux" "package")  
 
     while [ $retries -gt 0 ]; do
-        # 移除--depth限制，确保完整克隆；失败则清理目录重试
         rm -rf "$TMP_SRC"
         if timeout $timeout git clone https://git.openwrt.org/openwrt/openwrt.git "$TMP_SRC" 2>> "$SYNC_LOG"; then
-            # 检查所有关键目录是否存在
+            # 检查核心目录是否存在
             local missing=0
             for dir in "${required_dirs[@]}"; do
                 if [ ! -d "$TMP_SRC/$dir" ]; then
@@ -147,14 +154,13 @@ clone_repositories() {
 }
 
 # ==============================================
-# 设备信息提取
+# 设备信息提取（从正确目录target/linux提取）
 # ==============================================
 extract_devices() {
     log "🔍 提取设备信息..."
     declare -A PROCESSED_DEVICES
     local BATCH_SIZE=1000
     
-    # 仅在目标目录存在时查找文件
     local target_dir="$TMP_SRC/target/linux"
     if [ ! -d "$target_dir" ]; then
         log "❌ 设备文件目录不存在：$target_dir"
@@ -255,7 +261,7 @@ extract_devices() {
 }
 
 # ==============================================
-# 芯片信息提取（增强版，解决架构/系列为空）
+# 芯片信息提取（增强版）
 # ==============================================
 extract_chips() {
     log "🔍 提取芯片信息..."
@@ -268,14 +274,12 @@ extract_chips() {
     fi
 
     while read -r chip; do
-        # 扩展架构识别（增加更多关键词）
+        # 扩展架构识别
         local arch=$(echo "$chip" | grep -oE 'armv[0-9]+|x86|x86_64|mips|mipsel|riscv|riscv64|powerpc|aarch64|arm64|arm|i386' | head -n1)
-        # 架构识别失败时使用默认值
         arch=${arch:-"unknown-arch"}
 
-        # 扩展厂商系列识别（增加更多品牌关键词）
+        # 扩展厂商系列识别
         local family=$(echo "$chip" | grep -oE 'bcm|brcm|mtk|ipq|qca|rtl|ath|rk|rockchip|sunxi|exynos|imx|mvebu|qualcomm|realtek|awm|zlt|zr|zte|huawei|deco|tp-link|tplink|xiaomi|mediatek' | head -n1)
-        # 系列识别失败时使用默认值
         family=${family:-"unknown-family"}
         
         local platforms=$(jq --arg c "$chip" '.devices[] | select(.chip == $c) | .kernel_target' "$OUTPUT_JSON" | 
@@ -297,7 +301,7 @@ extract_chips() {
 }
 
 # ==============================================
-# 驱动匹配（增强版，解决JSON无效和匹配失败）
+# 驱动匹配（调整驱动查找路径）
 # ==============================================
 match_drivers() {
     log "🔍 开始匹配驱动程序（扩展模式）..."
@@ -305,20 +309,14 @@ match_drivers() {
     > "$DRIVER_TMP"
 
     log "ℹ️ 解析驱动包元数据（多仓库+多文件类型）..."
-    # 构建要查找的文件路径列表（仅包含存在的目录）
+    # 构建要查找的文件路径列表（从正确目录查找）
     local find_paths=()
+    # 1. 扩展驱动仓库
     [ -d "$TMP_PKGS_BASE" ] && find_paths+=("$(find "$TMP_PKGS_BASE" \( -name "Makefile" -o -name "*.mk" \))")
+    # 2. OpenWrt主仓库的package目录
     [ -d "$TMP_SRC/package" ] && find_paths+=("$(find "$TMP_SRC/package" \( -name "Makefile" -o -name "*.mk" \))")
-    if [ -d "$TMP_SRC/drivers" ]; then
-        find_paths+=("$(find "$TMP_SRC/drivers" -name "*.c")")
-    else
-        log "WARN" "主源码drivers目录缺失，跳过该目录的驱动提取"
-    fi
-    if [ -d "$TMP_SRC/include/linux" ]; then
-        find_paths+=("$(find "$TMP_SRC/include/linux" -name "*.h")")
-    else
-        log "WARN" "主源码include/linux目录缺失，跳过该目录的驱动提取"
-    fi
+    # 3. OpenWrt主仓库的target/linux下的驱动文件
+    [ -d "$TMP_SRC/target/linux" ] && find_paths+=("$(find "$TMP_SRC/target/linux" -name "*.c" -o -name "*.h")")
 
     # 解析驱动元数据
     printf "%s\n" "${find_paths[@]}" | grep -v -E '^$|doc/|test/|examples/|README' |
@@ -341,7 +339,7 @@ match_drivers() {
 
         [ -z "$pkg_name" ] && continue
 
-        # 提取兼容性信息（增加更多关键词）
+        # 提取兼容性信息
         local pkg_deps=$(grep -E '^DEPENDS:=' "$pkg_file" 2>> "$SYNC_LOG" | sed 's/DEPENDS:=//')
         local pkg_config=$(grep -E '^CONFIG_' "$pkg_file" 2>> "$SYNC_LOG" | sed 's/CONFIG_//')
         local pkg_source=$(grep -E '^PKG_SOURCE:=' "$pkg_file" 2>> "$SYNC_LOG" | sed 's/PKG_SOURCE:=//')
@@ -363,7 +361,6 @@ match_drivers() {
     
     if [ "$driver_count" -eq 0 ]; then
         log "⚠️ 未找到任何驱动包，添加基础驱动作为 fallback"
-        # 手动添加几个核心基础驱动
         cat <<EOF >> "$DRIVER_TMP"
 kmod-core|latest|generic|all|all|核心内核模块
 kmod-usb-core|latest|generic|all|all|USB核心驱动
@@ -392,24 +389,23 @@ EOF
            { log "⚠️ 驱动 $name 写入失败"; rm -f "$OUTPUT_JSON.tmp"; }
     done < "$DRIVER_TMP"
 
-    # 分级匹配驱动（确保JSON格式有效）
+    # 分级匹配驱动
     log "ℹ️ 为芯片自动匹配驱动（分级匹配）..."
     jq -r '.chips[] | .name + "|" + .architecture + "|" + .family' "$OUTPUT_JSON" | while IFS='|' read -r chip arch family; do
         log "ℹ️ 调试：芯片 $chip（架构：$arch，系列：$family）"
         
-        # 1. 精确匹配（默认空数组）
+        # 1. 精确匹配
         local exact_matches=$(jq --arg chip "$chip" '
             [.drivers[] | 
             select(.supported_chips | split(",") | index($chip)) |
             .name + "@" + .version] | unique
         ' "$OUTPUT_JSON" 2>> "$SYNC_LOG" || echo '[]')
-        # 确保是有效JSON数组
         if ! echo "$exact_matches" | jq . >/dev/null 2>&1; then
             exact_matches='[]'
             log "WARN" "芯片 $chip 精确匹配结果格式无效，已重置为空数组"
         fi
 
-        # 2. 系列匹配（默认空数组）
+        # 2. 系列匹配
         local family_matches='[]'
         if [ -n "$family" ] && [ "$family" != "unknown-family" ]; then
             family_matches=$(jq --arg family "$family" '
@@ -423,7 +419,7 @@ EOF
             fi
         fi
 
-        # 3. 架构匹配（默认空数组）
+        # 3. 架构匹配
         local arch_matches='[]'
         if [ -n "$arch" ] && [ "$arch" != "unknown-arch" ]; then
             arch_matches=$(jq --arg arch "$arch" '
@@ -437,7 +433,7 @@ EOF
             fi
         fi
 
-        # 4. 通用驱动（放宽条件，确保至少有结果）
+        # 4. 通用驱动
         local generic_matches=$(jq '
             [.drivers[] | 
             select(
@@ -445,7 +441,7 @@ EOF
                 .supported_chips | split(",") | index("common") or
                 .supported_chips | split(",") | index("base") or
                 .name | contains("core") or .name | contains("base") or
-                .name | contains("kmod")  # 增加内核模块关键词
+                .name | contains("kmod")
             ) |
             .name + "@" + .version] | unique
         ' "$OUTPUT_JSON" 2>> "$SYNC_LOG" || echo '[]')
@@ -454,7 +450,7 @@ EOF
             log "WARN" "芯片 $chip 通用匹配结果格式无效，已重置为空数组"
         fi
 
-        # 合并结果（使用jq确保JSON格式正确）
+        # 合并结果
         local drivers_array=$(jq -n --argjson e "$exact_matches" \
                                    --argjson f "$family_matches" \
                                    --argjson a "$arch_matches" \
@@ -464,7 +460,7 @@ EOF
         # 最终校验JSON格式
         if ! echo "$drivers_array" | jq . >/dev/null 2>&1; then
             log "WARN" "芯片 $chip 驱动数组无效，强制使用基础驱动"
-            drivers_array='["kmod-core@latest", "kmod-net-core@latest"]'  # 强制基础驱动
+            drivers_array='["kmod-core@latest", "kmod-net-core@latest"]'
         fi
 
         # 更新芯片的驱动列表
@@ -477,7 +473,7 @@ EOF
             [ -s "$OUTPUT_JSON.tmp" ] && mv "$OUTPUT_JSON.tmp" "$OUTPUT_JSON"
         fi
         
-        # 显示匹配统计（确保数字正确）
+        # 显示匹配统计
         local e_count=$(echo "$exact_matches" | jq length 2>/dev/null || echo 0)
         local f_count=$(echo "$family_matches" | jq length 2>/dev/null || echo 0)
         local a_count=$(echo "$arch_matches" | jq length 2>/dev/null || echo 0)
