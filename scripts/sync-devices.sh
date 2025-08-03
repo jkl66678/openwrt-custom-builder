@@ -329,7 +329,7 @@ match_drivers() {
         echo "$pkg_name|$pkg_version|$supported_chips|$supported_arch|$supported_family|$pkg_desc" >> "$DRIVER_TMP"
     done
 
-    local driver_count_count=$(=$(wc -l < "$DRIVER_TMP")
+    local driver_count=$(wc -l < "$DRIVER_TMP")
     log "ℹ️ 共解析到 $driver_count 个驱动包元数据（扩展模式）"
     
     if [ "$driver_count" -eq 0 ]; then
