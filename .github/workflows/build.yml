@@ -88,7 +88,7 @@ jobs:
 
       - name: 检查核心配置文件
         run: |
-          # 检查设备配置文件
+          # 修复语法错误：[ 和 ! 之间必须有空格
           if [ ! -f "device-drivers.json" ]; then
             echo "❌ 未找到设备配置文件 device-drivers.json，请先运行同步工作流"
             exit 1
@@ -123,13 +123,11 @@ jobs:
           sudo update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
           echo "✅ 系统编码配置完成：$(locale)"
           
-          # ==============================================
           # 动态安装最新版Go（自动适配上游更新）
-          # ==============================================
           echo "🔍 检测最新Go稳定版..."
           GO_LATEST_TAG=$(curl -s "https://api.github.com/repos/golang/go/releases/latest" | jq -r '.tag_name')
           if [ "$GO_LATEST_TAG" = "null" ]; then
-            echo "❌ 获取Go版本失败，使用备用版本"
+            echo "⚠️ 获取Go版本失败，使用备用版本"
             GO_LATEST_TAG="go1.22.5"  # 降级到已知稳定版
           fi
           GO_VERSION=$(echo "$GO_LATEST_TAG" | sed 's/^go//')
@@ -152,16 +150,12 @@ jobs:
           export PATH="/usr/local/go/bin:$PATH"
           echo "✅ Go安装完成：$(go version)"
           
-          # ==============================================
           # 安装最新版yq（通过snap自动更新）
-          # ==============================================
           echo "📦 安装最新版yq..."
           sudo snap install yq
           echo "✅ yq安装完成：$(yq --version)"
           
-          # ==============================================
           # 安装最新版yamlfmt（通过go动态拉取）
-          # ==============================================
           echo "📦 安装最新版yamlfmt..."
           go install github.com/google/yamlfmt/cmd/yamlfmt@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
@@ -171,29 +165,10 @@ jobs:
           fi
           echo "✅ yamlfmt安装完成：$(yamlfmt --version)"
           
-          # ==============================================
           # 升级Python工具链
-          # ==============================================
           pip3 install --upgrade pip
           pip3 install requests
           echo "✅ Python工具链升级完成：$(pip3 --version)"
-          
-          # ==============================================
-          # 完整版本验证
-          # ==============================================
-          echo -e "\n===== 工具版本完整性验证 ====="
-          gcc --version | head -n1
-          g++ --version | head -n1
-          make --version | head -n1
-          jq --version
-          git --version
-          python3 --version
-          go version
-          yq --version
-          yamlfmt --version
-          echo "=============================="
-          
-          echo "✅ 所有依赖安装完成（自动适配最新版本）"
 
       - name: 硬件资源详细检测
         run: |
@@ -210,7 +185,7 @@ jobs:
           echo "CPU_CORES=$CPU_CORES" >> $GITHUB_ENV
           echo "AVAIL_MEM_MB=$AVAIL_MEM_MB" >> $GITHUB_ENV
 
-      - name: 智能计算编译线程数
+      - name: 智能计算编译线程数（防OOM优化）
         run: |
           # 解析优化级别和架构
           OPT_LEVEL=$(echo "${{ github.event.inputs.theme_and_optimization }}" | cut -d'-' -f2)
@@ -394,7 +369,6 @@ jobs:
           fi
           
           echo "✅ 自定义脚本执行成功"
-          echo "📄 脚本输出日志已保存至custom-init.log"
 
       - name: 解析设备/芯片配置（增强容错）
         run: |
@@ -572,33 +546,6 @@ jobs:
             ${{ env.SRC_DIR }}/.config  # 编译配置文件（便于复现）
           retention-days: 30  # 保留30天
           if-no-files-found: error  # 无文件时标记错误
-
-      - name: 固件类型说明与列表
-        run: |
-          echo "📌 固件类型说明："
-          echo "  - sysupgrade.bin：设备升级文件（保留配置，适用于已安装OpenWrt的设备）"
-          echo "  - factory.bin：工厂固件（首次刷写，适用于原厂系统设备）"
-          echo "  - *.sha256：固件校验和文件（用于验证完整性）"
-          
-          echo -e "\n📋 编译成果列表："
-          find "${{ env.SRC_DIR }}/bin/targets/" -name "*.bin" | grep -E "sysupgrade|factory" | while read -r file; do
-            echo "  - $(basename "$file")（大小：$(du -h "$file" | awk '{print $1}')）"
-          done
-
-      - name: 固件信息摘要
-        run: |
-          # 查找第一个固件文件作为示例
-          firmware_path=$(find "${{ env.SRC_DIR }}/bin/targets/" -name "*.bin" | head -n1)
-          if [ -n "$firmware_path" ]; then
-            echo -e "\n📊 固件信息摘要："
-            echo "  - 路径：$firmware_path"
-            echo "  - 大小：$(du -h "$firmware_path" | awk '{print $1}')"
-            echo "  - 适用设备/芯片：${{ github.event.inputs.device || github.event.inputs.chip }}"
-            echo "  - 源码分支：${{ github.event.inputs.source_branch }}"
-            echo "  - 主题：${{ env.THEME }}"
-            echo "  - 优化级别：${{ env.CFLAGS }}"
-            echo "  - 编译时间：$(date +"%Y-%m-%d %H:%M:%S")"
-          fi
 
       - name: 清理编译缓存（条件触发）
         run: |
