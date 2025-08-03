@@ -7,15 +7,26 @@ export LANG=en_US.UTF-8
 export LANGUAGE=en_US.UTF-8
 
 # ==============================================
-# 基础配置（与之前一致）
+# 基础配置
 # ==============================================
 WORK_DIR=$(pwd)
 LOG_DIR="$WORK_DIR/sync-logs"
 OUTPUT_JSON="$WORK_DIR/device-drivers.json"
 SYNC_LOG="$LOG_DIR/sync-detail.log"
-PKG_REPO="https://git.openwrt.org/feed/packages.git"
+
+# 扩展驱动来源仓库
+PKG_REPOS=(
+    "https://git.openwrt.org/feed/packages.git"
+    "https://git.openwrt.org/project/luci.git"
+    "https://git.openwrt.org/feed/routing.git"
+    "https://git.openwrt.org/feed/telephony.git"
+    "https://github.com/coolsnowwolf/lede-packages.git"
+    "https://github.com/immortalwrt/packages.git"
+    "https://github.com/openwrt/packages.git"
+)
+
 TMP_SRC=$(mktemp -d -t openwrt-src-XXXXXX)
-TMP_PKGS=$(mktemp -d -t openwrt-pkgs-XXXXXX)
+TMP_PKGS_BASE=$(mktemp -d -t openwrt-pkgs-XXXXXX)
 TMP_BATCH_DIR="$LOG_DIR/device_batches"
 
 mkdir -p "$LOG_DIR" "$TMP_BATCH_DIR" || { 
@@ -24,6 +35,9 @@ mkdir -p "$LOG_DIR" "$TMP_BATCH_DIR" || {
 }
 > "$SYNC_LOG"
 
+# ==============================================
+# 工具函数
+# ==============================================
 log() {
     local timestamp=$(date +"%Y-%m-%d %H:%M:%S")
     printf "[%s] %s\n" "$timestamp" "$1" | tee -a "$SYNC_LOG"
@@ -32,7 +46,7 @@ log() {
 cleanup() {
     log "🔧 清理临时资源..."
     [ -d "$TMP_SRC" ] && rm -rf "$TMP_SRC"
-    [ -d "$TMP_PKGS" ] && rm -rf "$TMP_PKGS"
+    [ -d "$TMP_PKGS_BASE" ] && rm -rf "$TMP_PKGS_BASE"
     [ -d "$TMP_BATCH_DIR" ] && rm -rf "$TMP_BATCH_DIR"
     find "$LOG_DIR" -name "*.tmp" -not -name "source_branches.tmp" -delete
     log "✅ 临时资源清理完成"
@@ -40,7 +54,7 @@ cleanup() {
 trap cleanup EXIT
 
 # ==============================================
-# 1-4. 依赖检查、仓库克隆、设备与芯片提取（与之前一致）
+# 依赖检查
 # ==============================================
 check_dependencies() {
     log "🔍 检查依赖工具..."
@@ -66,6 +80,9 @@ check_dependencies() {
     log "✅ 依赖工具检查通过"
 }
 
+# ==============================================
+# 仓库克隆
+# ==============================================
 clone_repositories() {
     log "📥 克隆OpenWrt主源码..."
     local retries=3
@@ -84,23 +101,32 @@ clone_repositories() {
         exit 1
     fi
 
-    log "📥 克隆packages仓库..."
-    retries=3
-    while [ $retries -gt 0 ]; do
-        if timeout $timeout git clone --depth 10 "$PKG_REPO" "$TMP_PKGS" 2>> "$SYNC_LOG"; then
-            log "✅ 驱动包仓库克隆成功"
-            break
+    log "📥 克隆扩展驱动仓库（共 ${#PKG_REPOS[@]} 个）..."
+    local repo_idx=1
+    for repo in "${PKG_REPOS[@]}"; do
+        local repo_name=$(basename "$repo" .git)
+        local repo_dir="$TMP_PKGS_BASE/$repo_name"
+        
+        retries=3
+        while [ $retries -gt 0 ]; do
+            if timeout $timeout git clone --depth 10 "$repo" "$repo_dir" 2>> "$SYNC_LOG"; then
+                log "✅ 驱动仓库 $repo_idx/${#PKG_REPOS[@]} 克隆成功：$repo_name"
+                break
+            fi
+            retries=$((retries - 1))
+            log "⚠️ 驱动仓库 $repo_idx/${#PKG_REPOS[@]} 克隆失败（剩余重试：$retries）：$repo_name"
+            sleep 5
+        done
+        if [ $retries -eq 0 ]; then
+            log "⚠️ 驱动仓库 $repo_name 克隆失败，跳过"
         fi
-        retries=$((retries - 1))
-        log "⚠️ 驱动包仓库克隆失败，剩余重试：$retries"
-        sleep 5
+        repo_idx=$((repo_idx + 1))
     done
-    if [ $retries -eq 0 ]; then
-        log "❌ 驱动包仓库克隆失败"
-        exit 1
-    fi
 }
 
+# ==============================================
+# 设备信息提取
+# ==============================================
 extract_devices() {
     log "🔍 提取设备信息..."
     declare -A PROCESSED_DEVICES
@@ -199,6 +225,9 @@ extract_devices() {
     log "✅ 设备提取完成，共 $device_count 个"
 }
 
+# ==============================================
+# 芯片信息提取（优化版）
+# ==============================================
 extract_chips() {
     log "🔍 提取芯片信息..."
     jq -r '.devices[].chip' "$OUTPUT_JSON" | sort | uniq | grep -v '^$' > "$LOG_DIR/all_chips.tmp"
@@ -210,15 +239,20 @@ extract_chips() {
     fi
 
     while read -r chip; do
-        # 关键改进：解析芯片的架构和系列信息（用于精准匹配）
-        local arch=$(echo "$chip" | grep -oE 'armv[0-9]+|x86|mips|riscv|powerpc' | head -n1)
-        local family=$(echo "$chip" | grep -oE 'bcm|brcm|mtk|ipq|qca|rtl|ath|rk|rockchip|sunxi|exynos|imx|mvebu|qualcomm|realtek|awm' | head -n1)
+        # 扩展架构识别
+        local arch=$(echo "$chip" | grep -oE 'armv[0-9]+|x86|x86_64|mips|mipsel|riscv|riscv64|powerpc|aarch64' | head -n1)
+        # 扩展厂商系列识别
+        local family=$(echo "$chip" | grep -oE 'bcm|brcm|mtk|ipq|qca|rtl|ath|rk|rockchip|sunxi|exynos|imx|mvebu|qualcomm|realtek|awm|zlt|zr|zte|huawei' | head -n1)
+        # 补充：从芯片名前缀提取厂商
+        if [ -z "$family" ]; then
+            family=$(echo "$chip" | grep -oE '^[a-z0-9]+' | head -n1)
+        fi
+        
         local platforms=$(jq --arg c "$chip" '.devices[] | select(.chip == $c) | .kernel_target' "$OUTPUT_JSON" | 
                          sort | uniq | tr '\n' ',' | sed 's/,$//')
         local vendors=$(jq --arg c "$chip" '.devices[] | select(.chip == $c) | .vendor' "$OUTPUT_JSON" | 
                        sort | uniq | tr '\n' ',' | sed 's/,$//')
         
-        # 将芯片的架构和系列信息存入JSON（用于后续匹配）
         jq --arg name "$chip" --arg p "$platforms" --arg v "$vendors" \
            --arg arch "$arch" --arg family "$family" \
            '.chips += [{"name": $name, "platforms": $p, "vendors": $v, 
@@ -233,53 +267,74 @@ extract_chips() {
 }
 
 # ==============================================
-# 5. 匹配驱动程序（核心改进：分级匹配机制）
+# 驱动匹配（增强版）
 # ==============================================
 match_drivers() {
-    log "🔍 开始匹配驱动程序..."
+    log "🔍 开始匹配驱动程序（扩展模式）..."
     local DRIVER_TMP="$LOG_DIR/driver_metadata.tmp"
     > "$DRIVER_TMP"
 
-    # 步骤1：解析驱动包元数据（保留宽松搜索，确保1400+驱动）
-    log "ℹ️ 解析驱动包元数据（可能需要几分钟）..."
-    (find "$TMP_PKGS" -name "Makefile" -type f;
-     find "$TMP_SRC/package" -name "Makefile" -type f) |
-        grep -v -E 'doc/|test/|examples/' |  # 保持宽松过滤
-        while read -r pkg_makefile; do
+    log "ℹ️ 解析驱动包元数据（多仓库+多文件类型）..."
+    (
+        # 搜索所有克隆的驱动仓库
+        find "$TMP_PKGS_BASE" \( -name "Makefile" -o -name "*.mk" \)
+        
+        # 搜索主源码中的驱动相关文件
+        find "$TMP_SRC/package" \( -name "Makefile" -o -name "*.mk" \)
+        find "$TMP_SRC/drivers" -name "*.c"
+        find "$TMP_SRC/include/linux" -name "*.h"
+    ) | grep -v -E 'doc/|test/|examples/|README' |
+        while read -r pkg_file; do
         
         # 提取驱动基本信息
-        local pkg_name=$(grep -E '^PKG_NAME:=' "$pkg_makefile" 2>> "$SYNC_LOG" | sed -E 's/PKG_NAME:=//')
-        [ -z "$pkg_name" ] && pkg_name=$(basename "$(dirname "$pkg_makefile")")  # 从目录名提取
+        local pkg_name=""
+        local pkg_version="unknown"
+        local pkg_desc=""
+        local pkg_path=$(dirname "$pkg_file")
+
+        # 根据文件类型解析
+        if [[ "$pkg_file" == *.c || "$pkg_file" == *.h ]]; then
+            # 从C源码中提取驱动名
+            pkg_name=$(grep -E 'MODULE_NAME|DRIVER_NAME|MODULE_DESCRIPTION' "$pkg_file" 2>> "$SYNC_LOG" | head -n1 | sed -E 's/.*"([^"]+)".*/\1/')
+            [ -z "$pkg_name" ] && pkg_name=$(basename "$pkg_path")
+            
+            # 从源码中提取支持的设备/芯片
+            pkg_desc=$(grep -E 'SUPPORTED_DEVICES|COMPATIBLE_DEVICES|DEVICE_TABLE' "$pkg_file" 2>> "$SYNC_LOG" | sed -E 's/.*"([^"]+)".*/\1/')
+        else
+            # 从Makefile/.mk中提取
+            pkg_name=$(grep -E '^PKG_NAME:=' "$pkg_file" 2>> "$SYNC_LOG" | sed -E 's/PKG_NAME:=//')
+            [ -z "$pkg_name" ] && pkg_name=$(basename "$pkg_path")
+            
+            pkg_version=$(grep -E '^PKG_VERSION:=' "$pkg_file" 2>> "$SYNC_LOG" | sed -E 's/PKG_VERSION:=//')
+            pkg_desc=$(grep -E '^TITLE:=' "$pkg_file" 2>> "$SYNC_LOG" | sed 's/TITLE:=//')
+        fi
+
         [ -z "$pkg_name" ] && continue
 
-        local pkg_version=$(grep -E '^PKG_VERSION:=' "$pkg_makefile" 2>> "$SYNC_LOG" | sed -E 's/PKG_VERSION:=//')
-        [ -z "$pkg_version" ] && pkg_version="unknown"
+        # 提取兼容性信息
+        local pkg_deps=$(grep -E '^DEPENDS:=' "$pkg_file" 2>> "$SYNC_LOG" | sed 's/DEPENDS:=//')
+        local pkg_config=$(grep -E '^CONFIG_' "$pkg_file" 2>> "$SYNC_LOG" | sed 's/CONFIG_//')
+        local pkg_source=$(grep -E '^PKG_SOURCE:=' "$pkg_file" 2>> "$SYNC_LOG" | sed 's/PKG_SOURCE:=//')
+        local code_comments=$(grep -E '/\*.*\*/' "$pkg_file" 2>> "$SYNC_LOG" | sed -E 's/\/\*|\*\///g')
 
-        # 步骤1.1：提取驱动的详细兼容性信息（用于分级匹配）
-        local pkg_desc=$(grep -E '^TITLE:=' "$pkg_makefile" 2>> "$SYNC_LOG" | sed 's/TITLE:=//')
-        local pkg_deps=$(grep -E '^DEPENDS:=' "$pkg_makefile" 2>> "$SYNC_LOG" | sed 's/DEPENDS:=//')
-        local pkg_config=$(grep -E '^CONFIG_' "$pkg_makefile" 2>> "$SYNC_LOG" | sed 's/CONFIG_//')
-        local pkg_path=$(dirname "$pkg_makefile")
-        
-        # 提取驱动支持的：芯片型号、架构、系列、供应商
-        local supported_chips=$(echo "$pkg_desc $pkg_deps $pkg_config $pkg_path" | 
-                              grep -oE '[a-z0-9-]+' | grep -v -E '^$|make|file' | sort | uniq | tr '\n' ',' | sed 's/,$//')
-        local supported_arch=$(echo "$pkg_desc $pkg_deps $pkg_config" | 
-                             grep -oE 'armv[0-9]+|x86|mips|riscv|powerpc' | sort | uniq | tr '\n' ',' | sed 's/,$//')
-        local supported_family=$(echo "$pkg_desc $pkg_deps $pkg_config" | 
-                               grep -oE 'bcm|brcm|mtk|ipq|qca|rtl|ath|rk|rockchip|sunxi|exynos|imx|mvebu|qualcomm|realtek|awm' | 
+        # 合并所有关键词
+        local supported_chips=$(echo "$pkg_desc $pkg_deps $pkg_config $pkg_source $code_comments $pkg_path" | 
+                              grep -oE '[a-z0-9-]+' | grep -v -E '^$|make|file|git|tar|gz|zip' | sort | uniq | tr '\n' ',' | sed 's/,$//')
+        local supported_arch=$(echo "$pkg_desc $pkg_deps $pkg_config $code_comments" | 
+                             grep -oE 'armv[0-9]+|x86|x86_64|mips|mipsel|riscv|riscv64|powerpc|aarch64' | sort | uniq | tr '\n' ',' | sed 's/,$//')
+        local supported_family=$(echo "$pkg_desc $pkg_deps $pkg_config $code_comments" | 
+                               grep -oE 'bcm|brcm|mtk|ipq|qca|rtl|ath|rk|rockchip|sunxi|exynos|imx|mvebu|qualcomm|realtek|awm|zlt|zr|zte|huawei' | 
                                sort | uniq | tr '\n' ',' | sed 's/,$//')
 
-        # 关键改进：将详细兼容性信息存入临时文件
         echo "$pkg_name|$pkg_version|$supported_chips|$supported_arch|$supported_family|$pkg_desc" >> "$DRIVER_TMP"
     done
 
-    local driver_count=$(wc -l < "$DRIVER_TMP")
-    log "ℹ️ 共解析到 $driver_count 个驱动包元数据"  # 应保持1400+
+    local driver_count_count=$(=$(wc -l < "$DRIVER_TMP")
+    log "ℹ️ 共解析到 $driver_count 个驱动包元数据（扩展模式）"
     
     if [ "$driver_count" -eq 0 ]; then
         log "⚠️ 未找到任何驱动包，尝试无过滤搜索"
-        (find "$TMP_PKGS" -name "Makefile" -type f;
+        (find "$TMP_PKGS_BASE" -name "Makefile" -type f;
          find "$TMP_SRC/package" -name "Makefile" -type f) | while read -r pkg_makefile; do
             local pkg_name=$(basename "$(dirname "$pkg_makefile")")
             [ -z "$pkg_name" ] && continue
@@ -292,8 +347,7 @@ match_drivers() {
         fi
     fi
 
-    # 步骤2：写入驱动信息到JSON（包含详细兼容性）
-    log "ℹ️ 写入驱动信息到JSON..."
+    # 写入驱动信息到JSON
     jq '.drivers = []' "$OUTPUT_JSON" > "$OUTPUT_JSON.tmp" && mv "$OUTPUT_JSON.tmp" "$OUTPUT_JSON"
     
     while IFS='|' read -r name version chips arch family desc; do
@@ -312,14 +366,10 @@ match_drivers() {
            { log "⚠️ 驱动 $name 写入失败"; rm -f "$OUTPUT_JSON.tmp"; }
     done < "$DRIVER_TMP"
 
-    # 步骤3：分级匹配驱动（核心改进）
+    # 分级匹配驱动
     log "ℹ️ 为芯片自动匹配驱动（分级匹配）..."
     jq -r '.chips[] | .name + "|" + .architecture + "|" + .family' "$OUTPUT_JSON" | while IFS='|' read -r chip arch family; do
-        # 分级匹配规则（优先级从高到低）
-        # 1. 精确匹配：驱动明确支持该芯片型号
-        # 2. 系列匹配：驱动支持该芯片所属系列（如mtk系列）
-        # 3. 架构匹配：驱动支持该芯片架构（如armv8）
-        # 4. 通用驱动：以上都不匹配但标记为通用的驱动
+        log "ℹ️ 调试：芯片 $chip（架构：$arch，系列：$family）"
         
         # 1. 精确匹配
         local exact_matches=$(jq --arg chip "$chip" '
@@ -328,7 +378,7 @@ match_drivers() {
             .name + "@" + .version] | unique
         ' "$OUTPUT_JSON" 2>> "$SYNC_LOG")
 
-        # 2. 系列匹配（仅当无精确匹配时）
+        # 2. 系列匹配
         local family_matches="[]"
         if [ "$(echo "$exact_matches" | jq length)" -eq 0 ] && [ -n "$family" ]; then
             family_matches=$(jq --arg family "$family" '
@@ -338,7 +388,7 @@ match_drivers() {
             ' "$OUTPUT_JSON" 2>> "$SYNC_LOG")
         fi
 
-        # 3. 架构匹配（仅当无系列匹配时）
+        # 3. 架构匹配
         local arch_matches="[]"
         if [ "$(echo "$exact_matches" | jq length)" -eq 0 ] && 
            [ "$(echo "$family_matches" | jq length)" -eq 0 ] && 
@@ -350,26 +400,31 @@ match_drivers() {
             ' "$OUTPUT_JSON" 2>> "$SYNC_LOG")
         fi
 
-        # 4. 通用驱动（仅当以上都无匹配时）
+        # 4. 通用驱动（放宽条件）
         local generic_matches="[]"
         if [ "$(echo "$exact_matches" | jq length)" -eq 0 ] && 
            [ "$(echo "$family_matches" | jq length)" -eq 0 ] && 
            [ "$(echo "$arch_matches" | jq length)" -eq 0 ]; then
             generic_matches=$(jq '
                 [.drivers[] | 
-                select(.supported_chips | split(",") | index("generic")) |
+                select(
+                    .supported_chips | split(",") | index("generic") or 
+                    .supported_chips | split(",") | index("common") or
+                    .supported_chips | split(",") | index("base") or
+                    .name | contains("core") or .name | contains("base")
+                ) |
                 .name + "@" + .version] | unique
             ' "$OUTPUT_JSON" 2>> "$SYNC_LOG")
         fi
 
-        # 合并结果（保留优先级顺序）
+        # 合并结果
         local drivers_array=$(jq -n --argjson e "$exact_matches" \
                                    --argjson f "$family_matches" \
                                    --argjson a "$arch_matches" \
                                    --argjson g "$generic_matches" \
                                    '$e + $f + $a + $g | unique')
 
-        # 验证并修复JSON格式
+        # 验证JSON格式
         if ! echo "$drivers_array" | jq . > /dev/null 2>&1; then
             log "⚠️ 芯片 $chip 驱动数组无效，已修复"
             drivers_array="[]"
@@ -385,7 +440,7 @@ match_drivers() {
             [ -s "$OUTPUT_JSON.tmp" ] && mv "$OUTPUT_JSON.tmp" "$OUTPUT_JSON"
         fi
         
-        # 显示各级匹配数量（方便调试）
+        # 显示匹配统计
         local e_count=$(echo "$exact_matches" | jq length 2>/dev/null || echo 0)
         local f_count=$(echo "$family_matches" | jq length 2>/dev/null || echo 0)
         local a_count=$(echo "$arch_matches" | jq length 2>/dev/null || echo 0)
@@ -409,7 +464,7 @@ match_drivers() {
 }
 
 # ==============================================
-# 6-8. 其他函数（与之前一致）
+# 核心功能配置生成
 # ==============================================
 generate_core_features() {
     log "🔍 生成核心功能配置..."
@@ -478,6 +533,9 @@ EOF
     rm -f "$tmp_features" "$tmp_features.uniq"
 }
 
+# ==============================================
+# 主题发现与优化配置
+# ==============================================
 discover_themes() {
     local themes_dir=$(mktemp -d -t openwrt-themes-XXXXXX)
     local theme_list=$(mktemp -t openwrt-theme-list-XXXXXX)
@@ -578,6 +636,9 @@ generate_theme_optimizations() {
     rm -f "$theme_list_path"
 }
 
+# ==============================================
+# 源码分支同步
+# ==============================================
 sync_source_branches() {
     log "🔍 同步源码分支..."
     local branches_file="$LOG_DIR/source_branches.tmp"
@@ -637,7 +698,7 @@ sync_source_branches() {
 # 主流程
 # ==============================================
 log "========================================="
-log "📌 OpenWrt设备同步系统启动"
+log "📌 OpenWrt设备同步系统启动（扩展驱动模式）"
 log "📅 同步时间：$(date +"%Y-%m-%d %H:%M:%S")"
 log "========================================="
 
@@ -647,7 +708,7 @@ check_dependencies
 clone_repositories
 extract_devices
 extract_chips
-match_drivers  # 使用分级匹配机制
+match_drivers
 generate_core_features
 generate_theme_optimizations
 sync_source_branches
@@ -656,5 +717,5 @@ log "========================================="
 log "✅ 所有同步任务完成"
 log "📊 设备总数：$(jq '.devices | length' "$OUTPUT_JSON" 2>/dev/null || echo 0)"
 log "📊 芯片总数：$(jq '.chips | length' "$OUTPUT_JSON" 2>/dev/null || echo 0)"
-log "📊 驱动总数：$(jq '.drivers | length' "$OUTPUT_JSON" 2>/dev/null || echo 0)"  # 保持1400+
+log "📊 驱动总数：$(jq '.drivers | length' "$OUTPUT_JSON" 2>/dev/null || echo 0)"
 log "========================================="
